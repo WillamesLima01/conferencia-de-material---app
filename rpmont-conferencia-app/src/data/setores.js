@@ -1,4 +1,4 @@
-export const setoresRPMont = [
+export const setoresDaUnidade = [
   'Comando',
   'Sub-Comando',
   'P1',

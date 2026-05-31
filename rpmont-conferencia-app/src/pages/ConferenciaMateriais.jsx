@@ -7,23 +7,30 @@ import {
   FaMagnifyingGlass,
   FaPlus,
   FaXmark,
+  FaPenToSquare,
 } from 'react-icons/fa6';
-import { materiaisMock } from '../data/materiais';
+
 import '../styles/ConferenciaMateriais.css';
 
-function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
-  const [todosMateriais, setTodosMateriais] = useState(materiaisMock);
+function ConferenciaMateriais({
+  usuario,
+  configuracao,
+  materiais,
+  setMateriais,
+  onVoltar,
+  onAbrirCadastro,
+  onEditarMaterial,
+}) {
+  const todosMateriais = materiais;
+  const setTodosMateriais = setMateriais;
+
   const [codigoLido, setCodigoLido] = useState('');
   const [codigoPendente, setCodigoPendente] = useState('');
   const [modalNaoEncontrado, setModalNaoEncontrado] = useState(false);
-  const [modalCadastro, setModalCadastro] = useState(false);
   const [modalOutroSetor, setModalOutroSetor] = useState(null);
   const [mensagem, setMensagem] = useState('');
 
-  const [novoMaterial, setNovoMaterial] = useState({
-    descricao: '',
-    observacao: '',
-  });
+  const usuarioEhAdmin = Number(usuario.nivel) === 1;
 
   const materiaisDaConferencia = useMemo(() => {
     return todosMateriais.filter((material) => {
@@ -38,9 +45,11 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
   }, [todosMateriais, usuario.unidade, configuracao]);
 
   const total = materiaisDaConferencia.length;
+
   const conferidos = materiaisDaConferencia.filter(
     (material) => material.Conferido === 1
   ).length;
+
   const pendentes = total - conferidos;
 
   const normalizarCodigo = (valor) => {
@@ -95,11 +104,7 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
 
     if (!materialEncontrado) {
       setModalNaoEncontrado(false);
-      setModalCadastro(true);
-      setNovoMaterial({
-        descricao: '',
-        observacao: '',
-      });
+      onAbrirCadastro(codigoPendente);
       return;
     }
 
@@ -126,43 +131,7 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
 
   const abrirCadastroRapido = () => {
     setModalNaoEncontrado(false);
-    setModalCadastro(true);
-    setNovoMaterial({
-      descricao: '',
-      observacao: '',
-    });
-  };
-
-  const salvarCadastroRapido = () => {
-    if (!novoMaterial.descricao.trim()) {
-      setMensagem('Informe a descrição do material.');
-      return;
-    }
-
-    const novoId =
-      todosMateriais.length > 0
-        ? Math.max(...todosMateriais.map((material) => material.ID)) + 1
-        : 1;
-
-    const materialCriado = {
-      ID: novoId,
-      NSerie: codigoPendente,
-      descricao: novoMaterial.descricao.trim(),
-      observacao: novoMaterial.observacao.trim() || '-',
-      setor: configuracao.tipo === 'SETOR' ? configuracao.setor : usuario.setor,
-      unidade: usuario.unidade,
-      dataCadastro: new Date().toISOString().slice(0, 10),
-      userID: usuario.id,
-      dataModificacao: new Date().toISOString(),
-      userModificador: usuario.id,
-      Conferido: 1,
-    };
-
-    setTodosMateriais((materiaisAtuais) => [...materiaisAtuais, materialCriado]);
-    setModalCadastro(false);
-    setCodigoLido('');
-    setCodigoPendente('');
-    setMensagem(`Material cadastrado e conferido: ${materialCriado.descricao}`);
+    onAbrirCadastro(codigoPendente);
   };
 
   const atualizarSetorEConferir = () => {
@@ -183,8 +152,9 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
     );
 
     setMensagem(
-      `Setor atualizado para ${configuracao.setor} e material conferido.`
+      `Material transferido para ${configuracao.setor} e conferido com sucesso.`
     );
+
     setModalOutroSetor(null);
     setCodigoLido('');
     setCodigoPendente('');
@@ -192,7 +162,6 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
 
   const fecharModais = () => {
     setModalNaoEncontrado(false);
-    setModalCadastro(false);
     setModalOutroSetor(null);
     setCodigoPendente('');
   };
@@ -293,6 +262,17 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
                     <span>{material.setor}</span>
                     <span>{material.unidade}</span>
                   </div>
+
+                  {usuarioEhAdmin && (
+                    <button
+                      type="button"
+                      className="editar-material-button"
+                      onClick={() => onEditarMaterial(material)}
+                    >
+                      <FaPenToSquare />
+                      Editar
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
@@ -350,80 +330,6 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
           </div>
         )}
 
-        {modalCadastro && (
-          <div className="modal-overlay">
-            <div className="modal-card cadastro-card">
-              <div className="modal-icon cadastro">
-                <FaPlus />
-              </div>
-
-              <h2>Cadastro rápido</h2>
-              <p>
-                O material será cadastrado na unidade{' '}
-                <strong>{usuario.unidade}</strong> e no setor{' '}
-                <strong>
-                  {configuracao.tipo === 'SETOR'
-                    ? configuracao.setor
-                    : usuario.setor}
-                </strong>
-                .
-              </p>
-
-              <label className="cadastro-label">
-                Nº Série
-                <input type="text" value={codigoPendente} disabled />
-              </label>
-
-              <label className="cadastro-label">
-                Descrição
-                <input
-                  type="text"
-                  value={novoMaterial.descricao}
-                  placeholder="Digite a descrição do material"
-                  onChange={(event) =>
-                    setNovoMaterial((dados) => ({
-                      ...dados,
-                      descricao: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <label className="cadastro-label">
-                Observação
-                <textarea
-                  value={novoMaterial.observacao}
-                  placeholder="Observação, se houver"
-                  onChange={(event) =>
-                    setNovoMaterial((dados) => ({
-                      ...dados,
-                      observacao: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-primary"
-                  onClick={salvarCadastroRapido}
-                >
-                  Salvar e continuar
-                </button>
-
-                <button
-                  type="button"
-                  className="modal-cancel"
-                  onClick={fecharModais}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {modalOutroSetor && (
           <div className="modal-overlay">
             <div className="modal-card">
@@ -437,10 +343,10 @@ function ConferenciaMateriais({ usuario, configuracao, onVoltar }) {
               </p>
 
               <div className="divergencia-box">
-                <span>Setor cadastrado</span>
+                <span>Setor cadastrado no banco</span>
                 <strong>{modalOutroSetor.setor}</strong>
 
-                <span>Setor atual da conferência</span>
+                <span>Setor onde o material foi encontrado agora</span>
                 <strong>{configuracao.setor}</strong>
               </div>
 

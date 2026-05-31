@@ -5,13 +5,26 @@ import {
   FaChevronRight,
   FaCheck,
   FaArrowLeft,
+  FaRotateRight,
+  FaLock,
+  FaXmark,
 } from 'react-icons/fa6';
-import { setoresRPMont } from '../data/setores';
+import { setoresDaUnidade } from '../data/setores';
 import '../styles/SelecionarConferencia.css';
 
-function SelecionarConferencia({ usuario, onIniciarConferencia }) {
+  function SelecionarConferencia({
+    usuario,
+    onIniciarConferencia,
+    onZerarConferencia,
+    onAbrirCadastroManual,
+  }) {
   const [modoConferencia, setModoConferencia] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
+  const [modalZerar, setModalZerar] = useState(false);
+  const [senhaAdmin, setSenhaAdmin] = useState('');
+  const [mensagemZerar, setMensagemZerar] = useState('');
+
+  const usuarioEhAdmin = Number(usuario.nivel) === 1;
 
   const selecionarTodosMateriais = () => {
     setModoConferencia('TODOS');
@@ -37,8 +50,39 @@ function SelecionarConferencia({ usuario, onIniciarConferencia }) {
         tipo: 'SETOR',
         setor: setorSelecionado,
       });
+    }
+  };
+
+  const abrirModalZerar = () => {
+    setSenhaAdmin('');
+    setMensagemZerar('');
+    setModalZerar(true);
+  };
+
+  const fecharModalZerar = () => {
+    setSenhaAdmin('');
+    setMensagemZerar('');
+    setModalZerar(false);
+  };
+
+  const confirmarZeramento = () => {
+    /*
+      Simulação no React.
+      No sistema real, essa senha será validada no backend/MySQL.
+      Como o usuário de teste usa senha 123456, vamos usar ela aqui.
+    */
+    if (senhaAdmin !== '123456') {
+      setMensagemZerar('Senha de administrador incorreta.');
       return;
     }
+
+    onZerarConferencia(usuario);
+
+    setMensagemZerar('Conferência zerada com sucesso.');
+
+    setTimeout(() => {
+      fecharModalZerar();
+    }, 900);
   };
 
   return (
@@ -71,6 +115,30 @@ function SelecionarConferencia({ usuario, onIniciarConferencia }) {
             </div>
           </div>
         </section>
+
+        {usuarioEhAdmin && (
+          <section className="admin-card admin-card-duplo">
+            <div className="admin-card-texto">
+              <span>Ações administrativas</span>
+              <h3>Gerenciar conferência</h3>
+              <p>
+                Cadastre novos materiais ou reinicie a conferência da unidade{' '}
+                {usuario.unidade}.
+              </p>
+            </div>
+
+            <div className="admin-card-acoes">
+              <button type="button" onClick={onAbrirCadastroManual}>
+                Cadastrar material
+              </button>
+
+              <button type="button" onClick={abrirModalZerar}>
+                <FaRotateRight />
+                Zerar
+              </button>
+            </div>
+          </section>
+        )}
 
         <section className="resumo-card">
           <span>Próximo passo</span>
@@ -146,7 +214,7 @@ function SelecionarConferencia({ usuario, onIniciarConferencia }) {
             </div>
 
             <div className="setores-lista">
-              {setoresRPMont.map((setor) => (
+              {setoresDaUnidade.map((setor) => (
                 <button
                   key={setor}
                   type="button"
@@ -174,6 +242,73 @@ function SelecionarConferencia({ usuario, onIniciarConferencia }) {
               ? 'Continuar com todos os materiais'
               : `Continuar com ${setorSelecionado}`}
           </button>
+        )}
+
+        {modalZerar && (
+          <div className="modal-zerar-overlay">
+            <div className="modal-zerar-card">
+              <button
+                type="button"
+                className="fechar-modal-zerar"
+                onClick={fecharModalZerar}
+              >
+                <FaXmark />
+              </button>
+
+              <div className="modal-zerar-icon">
+                <FaLock />
+              </div>
+
+              <h2>Zerar conferência?</h2>
+
+              <p>
+                Esta ação marcará todos os materiais da unidade{' '}
+                <strong>{usuario.unidade}</strong> como{' '}
+                <strong>não conferidos</strong>.
+              </p>
+
+              <label>
+                Senha de administrador
+                <input
+                  type="password"
+                  value={senhaAdmin}
+                  placeholder="Digite a senha"
+                  onChange={(event) => {
+                    setSenhaAdmin(event.target.value);
+                    setMensagemZerar('');
+                  }}
+                />
+              </label>
+
+              {mensagemZerar && (
+                <div
+                  className={
+                    mensagemZerar.includes('sucesso')
+                      ? 'mensagem-zerar sucesso'
+                      : 'mensagem-zerar erro'
+                  }
+                >
+                  {mensagemZerar}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="confirmar-zerar-button"
+                onClick={confirmarZeramento}
+              >
+                Confirmar zeramento
+              </button>
+
+              <button
+                type="button"
+                className="cancelar-zerar-button"
+                onClick={fecharModalZerar}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         )}
       </section>
     </main>

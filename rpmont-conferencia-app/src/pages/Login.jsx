@@ -78,6 +78,16 @@ function Login({ onLoginSuccess }) {
         nivel: 4,
         senha: '123456',
       },
+      {
+        id: 33,
+        matricula: '520.381-3',
+        nome: 'Charles',
+        postGrad: 'ST',
+        unidade: 'RPMont',
+        setor: 'P4',
+        nivel: 1,
+        senha: '123456',
+      },
     ];
 
     const usuario = usuariosTeste.find(

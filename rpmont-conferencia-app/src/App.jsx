@@ -2,13 +2,84 @@ import { useState } from 'react';
 import Login from './pages/Login';
 import SelecionarConferencia from './pages/SelecionarConferencia';
 import ConferenciaMateriais from './pages/ConferenciaMateriais';
+import CadastroMaterial from './pages/CadastroMaterial';
+import EditarMaterial from './pages/EditarMaterial';
+import { materiaisMock } from './data/materiais';
 
 function App() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [configuracaoConferencia, setConfiguracaoConferencia] = useState(null);
+  const [materiais, setMateriais] = useState(materiaisMock);
+
+  const [cadastroPendente, setCadastroPendente] = useState(null);
+  const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
+
+  const zerarConferenciaDaUnidade = (usuario) => {
+    setMateriais((materiaisAtuais) =>
+      materiaisAtuais.map((material) =>
+        material.unidade === usuario.unidade
+          ? {
+              ...material,
+              Conferido: 0,
+              dataModificacao: new Date().toISOString(),
+              userModificador: usuario.id,
+            }
+          : material
+      )
+    );
+  };
+
+  const salvarMaterialCadastrado = (dadosNovoMaterial) => {
+    const novoId =
+      materiais.length > 0
+        ? Math.max(...materiais.map((material) => material.ID)) + 1
+        : 1;
+
+    const materialCompleto = {
+      ID: novoId,
+      ...dadosNovoMaterial,
+    };
+
+    setMateriais((materiaisAtuais) => [...materiaisAtuais, materialCompleto]);
+    setCadastroPendente(null);
+  };
+
+  const salvarMaterialEditado = (materialAtualizado) => {
+    setMateriais((materiaisAtuais) =>
+      materiaisAtuais.map((material) =>
+        material.ID === materialAtualizado.ID ? materialAtualizado : material
+      )
+    );
+
+    setMaterialEmEdicao(null);
+  };
 
   if (!usuarioLogado) {
     return <Login onLoginSuccess={setUsuarioLogado} />;
+  }
+
+  if (materialEmEdicao) {
+    return (
+      <EditarMaterial
+        material={materialEmEdicao}
+        usuario={usuarioLogado}
+        onSalvar={salvarMaterialEditado}
+        onCancelar={() => setMaterialEmEdicao(null)}
+      />
+    );
+  }
+
+  if (cadastroPendente) {
+    return (
+      <CadastroMaterial
+        usuario={usuarioLogado}
+        configuracao={configuracaoConferencia}
+        codigo={cadastroPendente.codigo}
+        modo={cadastroPendente.modo}
+        onSalvar={salvarMaterialCadastrado}
+        onCancelar={() => setCadastroPendente(null)}
+      />
+    );
   }
 
   if (!configuracaoConferencia) {
@@ -16,6 +87,13 @@ function App() {
       <SelecionarConferencia
         usuario={usuarioLogado}
         onIniciarConferencia={setConfiguracaoConferencia}
+        onZerarConferencia={zerarConferenciaDaUnidade}
+        onAbrirCadastroManual={() =>
+          setCadastroPendente({
+            modo: 'MANUAL',
+            codigo: '',
+          })
+        }
       />
     );
   }
@@ -24,7 +102,16 @@ function App() {
     <ConferenciaMateriais
       usuario={usuarioLogado}
       configuracao={configuracaoConferencia}
+      materiais={materiais}
+      setMateriais={setMateriais}
       onVoltar={() => setConfiguracaoConferencia(null)}
+      onAbrirCadastro={(codigo) =>
+        setCadastroPendente({
+          modo: 'CONFERENCIA',
+          codigo,
+        })
+      }
+      onEditarMaterial={setMaterialEmEdicao}
     />
   );
 }

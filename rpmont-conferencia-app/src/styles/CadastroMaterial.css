@@ -1,0 +1,289 @@
+.cadastro-material-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.cadastro-material-phone {
+  width: 390px;
+  min-height: 844px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 42px;
+  background: linear-gradient(160deg, #fffdf4 0%, #ffffff 48%, #f7f4ea 100%);
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 8px #121212,
+    inset 0 0 0 10px #343434;
+  padding: 54px 24px 28px;
+}
+
+.cadastro-material-phone::before {
+  content: '';
+  position: absolute;
+  top: -90px;
+  right: -80px;
+  width: 300px;
+  height: 210px;
+  background: #ed1c24;
+  border-bottom-left-radius: 220px;
+  z-index: 1;
+}
+
+.cadastro-material-phone::after {
+  content: '';
+  position: absolute;
+  top: 58px;
+  right: -35px;
+  width: 260px;
+  height: 28px;
+  background: #111;
+  border-bottom: 7px solid #ffe600;
+  transform: rotate(-16deg);
+  border-radius: 999px;
+  z-index: 1;
+}
+
+.cadastro-material-header,
+.cadastro-alerta,
+.cadastro-info-grid,
+.cadastro-form-card {
+  position: relative;
+  z-index: 2;
+}
+
+.cadastro-material-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.voltar-cadastro-button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 15px;
+  background: #111;
+  color: #ffe600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.cadastro-material-header span {
+  color: #df1b24;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.cadastro-material-header h1 {
+  margin: 2px 0;
+  color: #222;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.cadastro-material-header p {
+  margin: 0;
+  color: #666;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cadastro-alerta {
+  background: #111;
+  color: #ffffff;
+  border: 2px solid #ffe600;
+  border-radius: 22px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.cadastro-alerta svg {
+  color: #ffe600;
+  font-size: 24px;
+}
+
+.cadastro-alerta strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 3px;
+}
+
+.cadastro-alerta p {
+  margin: 0;
+  color: #d6d6d6;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cadastro-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.cadastro-info-card {
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 18px;
+  padding: 13px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.07);
+}
+
+.cadastro-info-card-full {
+  grid-column: span 2;
+}
+
+.cadastro-info-card svg {
+  color: #df1b24;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.cadastro-info-card span {
+  display: block;
+  color: #777;
+  font-size: 11px;
+  font-weight: 900;
+  margin-bottom: 3px;
+}
+
+.cadastro-info-card strong {
+  display: block;
+  color: #222;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.cadastro-form-card {
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
+}
+
+.cadastro-material-label {
+  display: block;
+  color: #222;
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 13px;
+}
+
+.cadastro-material-label input,
+.cadastro-material-label textarea {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #dedede;
+  border-radius: 15px;
+  padding: 13px;
+  font-size: 14px;
+  outline: none;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #fafafa;
+}
+
+.cadastro-material-label textarea {
+  min-height: 96px;
+  resize: none;
+}
+
+.cadastro-material-mensagem {
+  background: #ffe5e5;
+  color: #9c0000;
+  border: 1px solid #ffc2c2;
+  border-radius: 14px;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.salvar-material-button,
+.cancelar-material-button {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.salvar-material-button {
+  background: #df1b24;
+  color: #ffffff;
+  border: 2px solid #ffe600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.cancelar-material-button {
+  background: #eeeeee;
+  color: #333;
+}
+
+@media (max-width: 430px) {
+  .cadastro-material-page {
+    padding: 0;
+    background: #fffdf4;
+  }
+
+  .cadastro-material-phone {
+    width: 100vw;
+    min-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+.input-com-icone {
+  margin-top: 6px;
+  border: 1px solid #dedede;
+  border-radius: 15px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  background: #fafafa;
+}
+
+.input-com-icone svg {
+  color: #df1b24;
+  margin-right: 10px;
+}
+
+.input-com-icone input {
+  border: 0 !important;
+  margin-top: 0 !important;
+  padding-left: 0 !important;
+  background: transparent !important;
+}
+
+.cadastro-material-label select {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #dedede;
+  border-radius: 15px;
+  padding: 13px;
+  font-size: 14px;
+  outline: none;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #fafafa;
+}
