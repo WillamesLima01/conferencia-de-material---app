@@ -8,6 +8,8 @@ import {
   FaPlus,
   FaXmark,
   FaPenToSquare,
+  FaTrashCan,
+  FaTriangleExclamation,
 } from 'react-icons/fa6';
 
 import '../styles/ConferenciaMateriais.css';
@@ -20,6 +22,7 @@ function ConferenciaMateriais({
   onVoltar,
   onAbrirCadastro,
   onEditarMaterial,
+  onExcluirMaterial,
 }) {
   const todosMateriais = materiais;
   const setTodosMateriais = setMateriais;
@@ -30,17 +33,22 @@ function ConferenciaMateriais({
   const [modalOutroSetor, setModalOutroSetor] = useState(null);
   const [mensagem, setMensagem] = useState('');
 
+  const [modalExcluir, setModalExcluir] = useState(null);
+  const [senhaExcluir, setSenhaExcluir] = useState('');
+  const [mensagemExcluir, setMensagemExcluir] = useState('');
+
   const usuarioEhAdmin = Number(usuario.nivel) === 1;
 
   const materiaisDaConferencia = useMemo(() => {
     return todosMateriais.filter((material) => {
+      const materialAtivo = material.situacao !== 'INATIVO';
       const mesmaUnidade = material.unidade === usuario.unidade;
 
       if (configuracao.tipo === 'TODOS') {
-        return mesmaUnidade;
+        return materialAtivo && mesmaUnidade;
       }
 
-      return mesmaUnidade && material.setor === configuracao.setor;
+      return materialAtivo && mesmaUnidade && material.setor === configuracao.setor;
     });
   }, [todosMateriais, usuario.unidade, configuracao]);
 
@@ -166,6 +174,33 @@ function ConferenciaMateriais({
     setCodigoPendente('');
   };
 
+  const abrirModalExcluir = (material) => {
+    setModalExcluir(material);
+    setSenhaExcluir('');
+    setMensagemExcluir('');
+  };
+
+  const fecharModalExcluir = () => {
+    setModalExcluir(null);
+    setSenhaExcluir('');
+    setMensagemExcluir('');
+  };
+
+  const confirmarExclusao = () => {
+    if (!modalExcluir) return;
+
+    if (senhaExcluir !== '123456') {
+      setMensagemExcluir('Senha de administrador incorreta.');
+      return;
+    }
+
+    onExcluirMaterial(modalExcluir);
+
+    setMensagem(`Material excluído: ${modalExcluir.descricao}`);
+
+    fecharModalExcluir();
+  };
+
   return (
     <main className="conferencia-page">
       <section className="conferencia-phone">
@@ -264,14 +299,25 @@ function ConferenciaMateriais({
                   </div>
 
                   {usuarioEhAdmin && (
-                    <button
-                      type="button"
-                      className="editar-material-button"
-                      onClick={() => onEditarMaterial(material)}
-                    >
-                      <FaPenToSquare />
-                      Editar
-                    </button>
+                    <div className="material-acoes-admin">
+                      <button
+                        type="button"
+                        className="editar-material-button"
+                        onClick={() => onEditarMaterial(material)}
+                      >
+                        <FaPenToSquare />
+                        Editar
+                      </button>
+
+                      <button
+                        type="button"
+                        className="excluir-material-button"
+                        onClick={() => abrirModalExcluir(material)}
+                      >
+                        <FaTrashCan />
+                        Excluir
+                      </button>
+                    </div>
                   )}
                 </div>
               </article>
@@ -363,6 +409,73 @@ function ConferenciaMateriais({
                   type="button"
                   className="modal-cancel"
                   onClick={fecharModais}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {modalExcluir && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <div className="modal-icon excluir">
+                <FaTriangleExclamation />
+              </div>
+
+              <h2>Excluir material?</h2>
+
+              <p>
+                O material será removido das listagens ativas, mas continuará no
+                banco como <strong>INATIVO</strong>.
+              </p>
+
+              <div className="divergencia-box">
+                <span>Nº Série</span>
+                <strong>{modalExcluir.NSerie}</strong>
+
+                <span>Descrição</span>
+                <strong>{modalExcluir.descricao}</strong>
+
+                <span>Setor</span>
+                <strong>{modalExcluir.setor}</strong>
+
+                <span>Unidade</span>
+                <strong>{modalExcluir.unidade}</strong>
+              </div>
+
+              <label className="senha-excluir-label">
+                Senha de administrador
+                <input
+                  type="password"
+                  value={senhaExcluir}
+                  placeholder="Digite a senha"
+                  onChange={(event) => {
+                    setSenhaExcluir(event.target.value);
+                    setMensagemExcluir('');
+                  }}
+                />
+              </label>
+
+              {mensagemExcluir && (
+                <div className="mensagem-excluir-erro">{mensagemExcluir}</div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-primary"
+                  onClick={confirmarExclusao}
+                >
+                  <FaTrashCan />
+                  Confirmar exclusão
+                </button>
+
+                <button
+                  type="button"
+                  className="modal-cancel"
+                  onClick={fecharModalExcluir}
                 >
                   Cancelar
                 </button>

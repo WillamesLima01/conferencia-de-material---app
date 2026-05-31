@@ -6,18 +6,27 @@ import {
   FaFloppyDisk,
   FaLayerGroup,
   FaPenToSquare,
+  FaTrashCan,
+  FaTriangleExclamation,
+  FaXmark,
 } from 'react-icons/fa6';
 import { setoresDaUnidade } from '../data/setores';
 import '../styles/EditarMaterial.css';
 
 const unidadesSistema = ['RPMont', '3º EPMont'];
 
-function EditarMaterial({ material, usuario, onSalvar, onCancelar }) {
+function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar }) {
   const [descricao, setDescricao] = useState(material.descricao || '');
   const [observacao, setObservacao] = useState(material.observacao || '');
   const [setor, setSetor] = useState(material.setor || '');
   const [unidade, setUnidade] = useState(material.unidade || usuario.unidade);
   const [mensagem, setMensagem] = useState('');
+
+  const [modalInativar, setModalInativar] = useState(false);
+  const [senhaAdmin, setSenhaAdmin] = useState('');
+  const [mensagemInativar, setMensagemInativar] = useState('');
+
+  const usuarioEhAdmin = Number(usuario.nivel) === 1;
 
   const salvarAlteracoes = () => {
     if (!descricao.trim()) {
@@ -41,9 +50,35 @@ function EditarMaterial({ material, usuario, onSalvar, onCancelar }) {
       observacao: observacao.trim() || '-',
       setor,
       unidade,
+      situacao: material.situacao || 'ATIVO',
       dataModificacao: new Date().toISOString(),
       userModificador: usuario.id,
     });
+  };
+
+  const abrirModalInativar = () => {
+    setSenhaAdmin('');
+    setMensagemInativar('');
+    setModalInativar(true);
+  };
+
+  const fecharModalInativar = () => {
+    setSenhaAdmin('');
+    setMensagemInativar('');
+    setModalInativar(false);
+  };
+
+  const confirmarInativacao = () => {
+    /*
+      Simulação no React.
+      Depois, no backend, essa senha será validada contra a tabela TB_Usuario_P4.
+    */
+    if (senhaAdmin !== '123456') {
+      setMensagemInativar('Senha de administrador incorreta.');
+      return;
+    }
+
+    onInativar(material);
   };
 
   return (
@@ -165,6 +200,17 @@ function EditarMaterial({ material, usuario, onSalvar, onCancelar }) {
             Salvar alterações
           </button>
 
+          {usuarioEhAdmin && (
+            <button
+              type="button"
+              className="inativar-material-button"
+              onClick={abrirModalInativar}
+            >
+              <FaTrashCan />
+              Inativar material
+            </button>
+          )}
+
           <button
             type="button"
             className="cancelar-editar-button"
@@ -173,6 +219,77 @@ function EditarMaterial({ material, usuario, onSalvar, onCancelar }) {
             Cancelar
           </button>
         </section>
+
+        {modalInativar && (
+          <div className="modal-inativar-overlay">
+            <div className="modal-inativar-card">
+              <button
+                type="button"
+                className="fechar-modal-inativar"
+                onClick={fecharModalInativar}
+              >
+                <FaXmark />
+              </button>
+
+              <div className="modal-inativar-icon">
+                <FaTriangleExclamation />
+              </div>
+
+              <h2>Inativar material?</h2>
+
+              <p>
+                O material <strong>{material.NSerie}</strong> será removido das
+                listagens ativas da conferência.
+              </p>
+
+              <div className="material-inativar-resumo">
+                <span>Descrição</span>
+                <strong>{material.descricao}</strong>
+
+                <span>Setor</span>
+                <strong>{material.setor}</strong>
+
+                <span>Unidade</span>
+                <strong>{material.unidade}</strong>
+              </div>
+
+              <label>
+                Senha de administrador
+                <input
+                  type="password"
+                  value={senhaAdmin}
+                  placeholder="Digite a senha"
+                  onChange={(event) => {
+                    setSenhaAdmin(event.target.value);
+                    setMensagemInativar('');
+                  }}
+                />
+              </label>
+
+              {mensagemInativar && (
+                <div className="mensagem-inativar erro">
+                  {mensagemInativar}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="confirmar-inativar-button"
+                onClick={confirmarInativacao}
+              >
+                Confirmar inativação
+              </button>
+
+              <button
+                type="button"
+                className="cancelar-inativar-button"
+                onClick={fecharModalInativar}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );

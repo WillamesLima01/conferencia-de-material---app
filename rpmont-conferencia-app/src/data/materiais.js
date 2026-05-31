@@ -11,6 +11,7 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 4,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
   {
     ID: 2,
@@ -24,6 +25,7 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 4,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
   {
     ID: 3,
@@ -37,6 +39,7 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 4,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
   {
     ID: 4,
@@ -50,6 +53,7 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 4,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
   {
     ID: 5,
@@ -63,6 +67,7 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 4,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
   {
     ID: 6,
@@ -76,6 +81,7 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 4,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
   {
     ID: 7,
@@ -89,6 +95,7 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 4,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
   {
     ID: 8,
@@ -102,5 +109,6 @@ export const materiaisMock = [
     dataModificacao: '2025-11-26 00:00:00',
     userModificador: 30,
     Conferido: 0,
+    situacao: 'ATIVO',
   },
 ];

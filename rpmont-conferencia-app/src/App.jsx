@@ -17,7 +17,7 @@ function App() {
   const zerarConferenciaDaUnidade = (usuario) => {
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
-        material.unidade === usuario.unidade
+        material.unidade === usuario.unidade && material.situacao !== 'INATIVO'
           ? {
               ...material,
               Conferido: 0,
@@ -37,6 +37,7 @@ function App() {
 
     const materialCompleto = {
       ID: novoId,
+      situacao: 'ATIVO',
       ...dadosNovoMaterial,
     };
 
@@ -54,6 +55,23 @@ function App() {
     setMaterialEmEdicao(null);
   };
 
+  const excluirMaterial = (materialParaExcluir) => {
+    setMateriais((materiaisAtuais) =>
+      materiaisAtuais.map((material) =>
+        material.ID === materialParaExcluir.ID
+          ? {
+              ...material,
+              situacao: 'INATIVO',
+              dataModificacao: new Date().toISOString(),
+              userModificador: usuarioLogado.id,
+            }
+          : material
+      )
+    );
+
+    setMaterialEmEdicao(null);
+  };
+
   if (!usuarioLogado) {
     return <Login onLoginSuccess={setUsuarioLogado} />;
   }
@@ -64,6 +82,7 @@ function App() {
         material={materialEmEdicao}
         usuario={usuarioLogado}
         onSalvar={salvarMaterialEditado}
+        onInativar={excluirMaterial}
         onCancelar={() => setMaterialEmEdicao(null)}
       />
     );
@@ -112,6 +131,7 @@ function App() {
         })
       }
       onEditarMaterial={setMaterialEmEdicao}
+      onExcluirMaterial={excluirMaterial}
     />
   );
 }
