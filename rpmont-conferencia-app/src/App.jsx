@@ -4,12 +4,14 @@ import SelecionarConferencia from './pages/SelecionarConferencia';
 import ConferenciaMateriais from './pages/ConferenciaMateriais';
 import CadastroMaterial from './pages/CadastroMaterial';
 import EditarMaterial from './pages/EditarMaterial';
+import ConsultaMateriais from './pages/ConsultaMateriais';
 import { materiaisMock } from './data/materiais';
 
 function App() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [configuracaoConferencia, setConfiguracaoConferencia] = useState(null);
   const [materiais, setMateriais] = useState(materiaisMock);
+  const [abrirConsulta, setAbrirConsulta] = useState(false);
 
   const [cadastroPendente, setCadastroPendente] = useState(null);
   const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
@@ -101,6 +103,16 @@ function App() {
     );
   }
 
+  if (abrirConsulta) {
+    return (
+      <ConsultaMateriais
+        usuario={usuarioLogado}
+        materiais={materiais}
+        onVoltar={() => setAbrirConsulta(false)}
+      />
+    );
+  }
+
   if (!configuracaoConferencia) {
     return (
       <SelecionarConferencia
@@ -113,6 +125,7 @@ function App() {
             codigo: '',
           })
         }
+        onAbrirConsulta={() => setAbrirConsulta(true)}
       />
     );
   }

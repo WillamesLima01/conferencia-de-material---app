@@ -8,16 +8,18 @@ import {
   FaRotateRight,
   FaLock,
   FaXmark,
+  FaMagnifyingGlassChart,
 } from 'react-icons/fa6';
 import { setoresDaUnidade } from '../data/setores';
 import '../styles/SelecionarConferencia.css';
 
-  function SelecionarConferencia({
-    usuario,
-    onIniciarConferencia,
-    onZerarConferencia,
-    onAbrirCadastroManual,
-  }) {
+function SelecionarConferencia({
+  usuario,
+  onIniciarConferencia,
+  onZerarConferencia,
+  onAbrirCadastroManual,
+  onAbrirConsulta,
+}) {
   const [modoConferencia, setModoConferencia] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
   const [modalZerar, setModalZerar] = useState(false);
@@ -69,7 +71,6 @@ import '../styles/SelecionarConferencia.css';
     /*
       Simulação no React.
       No sistema real, essa senha será validada no backend/MySQL.
-      Como o usuário de teste usa senha 123456, vamos usar ela aqui.
     */
     if (senhaAdmin !== '123456') {
       setMensagemZerar('Senha de administrador incorreta.');
@@ -77,7 +78,6 @@ import '../styles/SelecionarConferencia.css';
     }
 
     onZerarConferencia(usuario);
-
     setMensagemZerar('Conferência zerada com sucesso.');
 
     setTimeout(() => {
@@ -120,10 +120,10 @@ import '../styles/SelecionarConferencia.css';
           <section className="admin-card admin-card-duplo">
             <div className="admin-card-texto">
               <span>Ações administrativas</span>
-              <h3>Gerenciar conferência</h3>
+              <h3>Gerenciar materiais</h3>
               <p>
-                Cadastre novos materiais ou reinicie a conferência da unidade{' '}
-                {usuario.unidade}.
+                Cadastre materiais, consulte filtros avançados ou reinicie a
+                conferência da unidade {usuario.unidade}.
               </p>
             </div>
 
@@ -132,9 +132,14 @@ import '../styles/SelecionarConferencia.css';
                 Cadastrar material
               </button>
 
+              <button type="button" onClick={onAbrirConsulta}>
+                <FaMagnifyingGlassChart />
+                Filtros avançados
+              </button>
+
               <button type="button" onClick={abrirModalZerar}>
                 <FaRotateRight />
-                Zerar
+                Zerar conferência
               </button>
             </div>
           </section>
