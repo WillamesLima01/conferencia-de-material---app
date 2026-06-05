@@ -5,13 +5,17 @@ import ConferenciaMateriais from './pages/ConferenciaMateriais';
 import CadastroMaterial from './pages/CadastroMaterial';
 import EditarMaterial from './pages/EditarMaterial';
 import ConsultaMateriais from './pages/ConsultaMateriais';
+import AdminPainel from './pages/AdminPainel';
 import { materiaisMock } from './data/materiais';
+import './App.css';
 
 function App() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [configuracaoConferencia, setConfiguracaoConferencia] = useState(null);
   const [materiais, setMateriais] = useState(materiaisMock);
+
   const [abrirConsulta, setAbrirConsulta] = useState(false);
+  const [abrirAdmin, setAbrirAdmin] = useState(false);
 
   const [cadastroPendente, setCadastroPendente] = useState(null);
   const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
@@ -74,6 +78,32 @@ function App() {
     setMaterialEmEdicao(null);
   };
 
+  const abrirTelaCadastroManual = () => {
+    setCadastroPendente({
+      modo: 'MANUAL',
+      codigo: '',
+    });
+  };
+
+  const abrirTelaCadastroConferencia = (codigo) => {
+    setCadastroPendente({
+      modo: 'CONFERENCIA',
+      codigo,
+    });
+  };
+
+  const voltarDaConsulta = () => {
+    setAbrirConsulta(false);
+  };
+
+  const voltarDoAdmin = () => {
+    setAbrirAdmin(false);
+  };
+
+  const voltarDaConferencia = () => {
+    setConfiguracaoConferencia(null);
+  };
+
   if (!usuarioLogado) {
     return <Login onLoginSuccess={setUsuarioLogado} />;
   }
@@ -103,12 +133,21 @@ function App() {
     );
   }
 
+  if (abrirAdmin) {
+    return (
+      <AdminPainel
+        usuario={usuarioLogado}
+        onVoltar={voltarDoAdmin}
+      />
+    );
+  }
+
   if (abrirConsulta) {
     return (
       <ConsultaMateriais
         usuario={usuarioLogado}
         materiais={materiais}
-        onVoltar={() => setAbrirConsulta(false)}
+        onVoltar={voltarDaConsulta}
       />
     );
   }
@@ -119,13 +158,9 @@ function App() {
         usuario={usuarioLogado}
         onIniciarConferencia={setConfiguracaoConferencia}
         onZerarConferencia={zerarConferenciaDaUnidade}
-        onAbrirCadastroManual={() =>
-          setCadastroPendente({
-            modo: 'MANUAL',
-            codigo: '',
-          })
-        }
+        onAbrirCadastroManual={abrirTelaCadastroManual}
         onAbrirConsulta={() => setAbrirConsulta(true)}
+        onAbrirAdmin={() => setAbrirAdmin(true)}
       />
     );
   }
@@ -136,13 +171,8 @@ function App() {
       configuracao={configuracaoConferencia}
       materiais={materiais}
       setMateriais={setMateriais}
-      onVoltar={() => setConfiguracaoConferencia(null)}
-      onAbrirCadastro={(codigo) =>
-        setCadastroPendente({
-          modo: 'CONFERENCIA',
-          codigo,
-        })
-      }
+      onVoltar={voltarDaConferencia}
+      onAbrirCadastro={abrirTelaCadastroConferencia}
       onEditarMaterial={setMaterialEmEdicao}
       onExcluirMaterial={excluirMaterial}
     />

@@ -1,0 +1,256 @@
+.admin-painel-page {
+  width: 100%;
+  min-height: 100dvh;
+  height: 100dvh;
+  background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.admin-painel-phone {
+  width: 390px;
+  height: 100%;
+  max-height: 844px;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 42px;
+  background: linear-gradient(160deg, #fffdf4 0%, #ffffff 48%, #f7f4ea 100%);
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 8px #121212,
+    inset 0 0 0 10px #343434;
+  padding: 54px 24px 28px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-painel-phone::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-painel-phone::before {
+  content: '';
+  position: absolute;
+  top: -90px;
+  right: -80px;
+  width: 300px;
+  height: 210px;
+  background: #ed1c24;
+  border-bottom-left-radius: 220px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.admin-painel-phone::after {
+  content: '';
+  position: absolute;
+  top: 58px;
+  right: -35px;
+  width: 260px;
+  height: 28px;
+  background: #111;
+  border-bottom: 7px solid #ffe600;
+  transform: rotate(-16deg);
+  border-radius: 999px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.admin-painel-header,
+.admin-boas-vindas,
+.admin-modulos {
+  position: relative;
+  z-index: 2;
+}
+
+.admin-painel-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.admin-voltar-button {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border: 0;
+  border-radius: 15px;
+  background: #111;
+  color: #ffe600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.admin-painel-header span {
+  color: #df1b24;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-painel-header h1 {
+  margin: 2px 0;
+  color: #222;
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.admin-painel-header p {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-boas-vindas {
+  background: #111;
+  color: #ffffff;
+  border: 2px solid #ffe600;
+  border-radius: 24px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
+}
+
+.admin-boas-vindas span {
+  display: block;
+  color: #ffe600;
+  font-size: 11px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.admin-boas-vindas h2 {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.admin-boas-vindas p {
+  margin: 0;
+  color: #d6d6d6;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.admin-modulos {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.admin-modulo-card {
+  width: 100%;
+  border: 1px solid #eeeeee;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 48px 1fr 20px;
+  gap: 13px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.075);
+}
+
+.admin-modulo-card:active {
+  transform: scale(0.98);
+}
+
+.admin-modulo-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.admin-modulo-icon.vermelho {
+  background: #ffe5e7;
+  color: #df1b24;
+}
+
+.admin-modulo-icon.amarelo {
+  background: #fff6bf;
+  color: #7c6500;
+}
+
+.admin-modulo-icon.preto {
+  background: #111;
+  color: #ffe600;
+}
+
+.admin-modulo-texto {
+  min-width: 0;
+}
+
+.admin-modulo-texto h3 {
+  margin: 0 0 4px;
+  color: #222;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.admin-modulo-texto p {
+  margin: 0;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-modulo-seta {
+  color: #aaa;
+  font-size: 15px;
+}
+
+@media (max-width: 430px) {
+  .admin-painel-page {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+    background: #fffdf4;
+    overflow: hidden;
+  }
+
+  .admin-painel-phone {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 34px 20px 24px;
+  }
+
+  .admin-painel-header h1 {
+    font-size: 21px;
+  }
+
+  .admin-boas-vindas {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .admin-modulo-card {
+    padding: 13px;
+    border-radius: 18px;
+    grid-template-columns: 44px 1fr 18px;
+  }
+
+  .admin-modulo-icon {
+    width: 44px;
+    height: 44px;
+  }
+}

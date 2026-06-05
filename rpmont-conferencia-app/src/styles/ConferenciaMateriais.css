@@ -1,15 +1,18 @@
 .conferencia-page {
-  min-height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
+  height: 100dvh;
   background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 18px;
+  overflow: hidden;
 }
 
 .conferencia-phone {
   width: 390px;
-  min-height: 844px;
+  height: 100%;
   max-height: 844px;
   position: relative;
   overflow: hidden;
@@ -33,6 +36,7 @@
 .voltar-button {
   width: 42px;
   height: 42px;
+  min-width: 42px;
   border: 0;
   border-radius: 15px;
   background: #111;
@@ -143,11 +147,13 @@
   outline: none;
   font-size: 15px;
   font-weight: 800;
+  min-width: 0;
 }
 
 .codigo-area button {
   width: 50px;
   height: 48px;
+  min-width: 50px;
   border: 2px solid #ffe600;
   border-radius: 14px;
   background: #df1b24;
@@ -202,6 +208,12 @@
   display: flex;
   flex-direction: column;
   gap: 9px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.materiais-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .material-card {
@@ -234,6 +246,10 @@
 .material-conferido .material-status {
   background: #22c55e;
   color: #ffffff;
+}
+
+.material-info {
+  min-width: 0;
 }
 
 .material-info strong {
@@ -271,6 +287,61 @@
   padding: 4px 8px;
   font-size: 10px;
   font-weight: 900;
+}
+
+.material-acoes-admin {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.material-acoes-admin button {
+  flex: 1;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  margin: 0;
+  padding: 0 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.material-acoes-admin button svg {
+  width: 11px;
+  height: 11px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.editar-material-button {
+  border: 1px solid #ffe600;
+  background: #111;
+  color: #ffe600;
+}
+
+.excluir-material-button {
+  border: 1px solid #ffc2c2;
+  background: #ffe5e5;
+  color: #9c0000;
+}
+
+.editar-material-button:active,
+.excluir-material-button:active {
+  transform: scale(0.98);
 }
 
 .lista-vazia {
@@ -320,6 +391,11 @@
 .modal-icon.cadastro {
   background: #e8fff0;
   color: #15803d;
+}
+
+.modal-icon.excluir {
+  background: #ffe5e5;
+  color: #b91c1c;
 }
 
 .modal-card h2 {
@@ -439,85 +515,6 @@
   font-weight: 900;
 }
 
-@media (max-width: 430px) {
-  .conferencia-page {
-    padding: 0;
-    background: #fffdf4;
-  }
-
-  .conferencia-phone {
-    width: 100vw;
-    min-height: 100vh;
-    max-height: none;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .materiais-scroll {
-    max-height: calc(100vh - 410px);
-  }
-}
-
-.editar-material-button:active {
-  transform: scale(0.98);
-}
-
-.material-acoes-admin {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 10px;
-  align-items: center;
-}
-
-.editar-material-button,
-.excluir-material-button {
-  width: 100%;
-  height: 36px;
-  min-height: 36px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 900;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 8px;
-  line-height: 1;
-  white-space: nowrap;
-  box-sizing: border-box;
-}
-
-.editar-material-button {
-  border: 1px solid #ffe600;
-  background: #111;
-  color: #ffe600;
-}
-
-.excluir-material-button {
-  border: 1px solid #ffc2c2;
-  background: #ffe5e5;
-  color: #9c0000;
-}
-
-.editar-material-button svg,
-.excluir-material-button svg {
-  font-size: 11px;
-  flex-shrink: 0;
-}
-
-.editar-material-button:active,
-.excluir-material-button:active {
-  transform: scale(0.98);
-}
-
-.modal-icon.excluir {
-  background: #ffe5e5;
-  color: #b91c1c;
-}
-
 .senha-excluir-label {
   display: block;
   text-align: left;
@@ -549,59 +546,150 @@
   margin-bottom: 12px;
 }
 
-.material-acoes-admin {
-  width: 100%;
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
+@media (max-width: 430px) {
+  .conferencia-page {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+    background: #fffdf4;
+    overflow: hidden;
+  }
+
+  .conferencia-phone {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+    padding: 24px 18px 18px;
+  }
+
+  .conferencia-header {
+    margin-top: 0;
+    margin-bottom: 12px;
+  }
+
+  .conferencia-header h1 {
+    font-size: 20px;
+  }
+
+  .contador-grid {
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .contador-grid div {
+    padding: 10px 7px;
+    border-radius: 15px;
+  }
+
+  .contador-grid strong {
+    font-size: 19px;
+  }
+
+  .scanner-card {
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+  }
+
+  .scanner-titulo {
+    margin-bottom: 10px;
+  }
+
+  .scanner-titulo h2 {
+    font-size: 15px;
+  }
+
+  .codigo-area input {
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .codigo-area button {
+    height: 44px;
+    width: 46px;
+    min-width: 46px;
+  }
+
+  .lista-materiais {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .lista-topo {
+    margin-bottom: 10px;
+  }
+
+  .materiais-scroll {
+    max-height: calc(100dvh - 335px);
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .materiais-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    padding: 18px;
+  }
 }
 
-.material-acoes-admin button {
-  flex: 1;
-  height: 36px;
-  min-height: 36px;
-  max-height: 36px;
-  margin: 0;
-  padding: 0 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
-  font-family: inherit;
-  cursor: pointer;
+@media (max-height: 720px) {
+  .conferencia-phone {
+    padding-top: 18px;
+    padding-bottom: 14px;
+  }
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  .conferencia-header {
+    margin-bottom: 9px;
+  }
 
-  box-sizing: border-box;
-  appearance: none;
-  -webkit-appearance: none;
-}
+  .conferencia-header h1 {
+    font-size: 18px;
+  }
 
-.material-acoes-admin button svg {
-  width: 11px;
-  height: 11px;
-  display: block;
-  flex-shrink: 0;
-}
+  .contador-grid {
+    margin-bottom: 8px;
+  }
 
-.editar-material-button {
-  border: 1px solid #ffe600;
-  background: #111;
-  color: #ffe600;
-}
+  .contador-grid div {
+    padding: 8px 6px;
+  }
 
-.excluir-material-button {
-  border: 1px solid #ffc2c2;
-  background: #ffe5e5;
-  color: #9c0000;
-}
+  .contador-grid span {
+    font-size: 10px;
+  }
 
-.editar-material-button:active,
-.excluir-material-button:active {
-  transform: scale(0.98);
+  .contador-grid strong {
+    font-size: 17px;
+  }
+
+  .scanner-card {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .scanner-titulo p {
+    font-size: 11px;
+  }
+
+  .lista-materiais {
+    padding: 10px;
+  }
+
+  .materiais-scroll {
+    max-height: calc(100dvh - 295px);
+  }
+
+  .material-card {
+    padding: 9px;
+  }
 }

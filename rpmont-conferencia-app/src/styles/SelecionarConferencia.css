@@ -1,24 +1,35 @@
 .selecao-page {
-  min-height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
+  height: 100dvh;
   background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 18px;
+  overflow: hidden;
 }
 
 .selecao-phone {
   width: 390px;
-  min-height: 844px;
+  height: 100%;
+  max-height: 844px;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-radius: 42px;
   background: linear-gradient(160deg, #fffdf4 0%, #ffffff 48%, #f7f4ea 100%);
   box-shadow:
     0 28px 70px rgba(0, 0, 0, 0.65),
     inset 0 0 0 8px #121212,
     inset 0 0 0 10px #343434;
-  padding: 34px 24px 28px;
+  padding: 34px 24px 96px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.selecao-phone::-webkit-scrollbar {
+  display: none;
 }
 
 .selecao-phone::before {
@@ -31,6 +42,7 @@
   background: #ed1c24;
   border-bottom-left-radius: 220px;
   z-index: 1;
+  pointer-events: none;
 }
 
 .selecao-phone::after {
@@ -45,12 +57,16 @@
   transform: rotate(-16deg);
   border-radius: 999px;
   z-index: 1;
+  pointer-events: none;
 }
 
 .selecao-header,
 .usuario-card,
+.admin-card,
 .resumo-card,
-.opcoes-conferencia {
+.opcoes-conferencia,
+.setores-area,
+.continuar-conferencia-button {
   position: relative;
   z-index: 2;
 }
@@ -60,7 +76,8 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-top: 22px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
+  gap: 12px;
 }
 
 .selecao-header span {
@@ -88,16 +105,17 @@
   font-weight: 900;
   max-width: 120px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .usuario-card {
   background: linear-gradient(135deg, #ed1c24 0%, #b90008 100%);
   color: #ffffff;
   border-radius: 24px;
-  padding: 22px 20px;
+  padding: 20px;
   box-shadow: 0 16px 32px rgba(237, 28, 36, 0.28);
   border: 2px solid #ffe600;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .usuario-card p {
@@ -107,9 +125,10 @@
 }
 
 .usuario-card h2 {
-  margin: 4px 0 18px;
+  margin: 4px 0 16px;
   font-size: 22px;
   font-weight: 900;
+  line-height: 1.15;
 }
 
 .usuario-info-grid {
@@ -122,6 +141,7 @@
   background: rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   padding: 10px;
+  min-width: 0;
 }
 
 .usuario-info-grid span {
@@ -134,15 +154,93 @@
 .usuario-info-grid strong {
   display: block;
   font-size: 13px;
+  word-break: break-word;
+}
+
+.admin-card {
+  background: #111;
+  color: #ffffff;
+  border: 2px solid #ffe600;
+  border-radius: 22px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+  margin-bottom: 14px;
+}
+
+.admin-card span {
+  display: block;
+  color: #ffe600;
+  font-size: 11px;
+  font-weight: 900;
+  margin-bottom: 3px;
+}
+
+.admin-card h3 {
+  margin: 0 0 5px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.admin-card p {
+  margin: 0;
+  color: #d6d6d6;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.admin-card-duplo {
+  grid-template-columns: 1fr;
+}
+
+.admin-card-texto {
+  width: 100%;
+}
+
+.admin-card-acoes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+}
+
+.admin-card-acoes button {
+  width: 100%;
+  height: 44px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.admin-card-acoes button:nth-child(1),
+.admin-card-acoes button:nth-child(2),
+.admin-card-acoes button:nth-child(3) {
+  border: 1px solid #ffe600;
+  background: #ffffff;
+  color: #111;
+}
+
+.admin-card-acoes button:nth-child(4) {
+  border: 1px solid #ffe600;
+  background: #df1b24;
+  color: #ffffff;
 }
 
 .resumo-card {
   background: #ffffff;
   border: 1px solid #eeeeee;
   border-radius: 22px;
-  padding: 18px;
+  padding: 16px;
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .resumo-card span {
@@ -191,6 +289,11 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.09);
 }
 
+.opcao-card-ativa {
+  border-color: #ffe600;
+  background: #fffbea;
+}
+
 .opcao-icon {
   width: 48px;
   height: 48px;
@@ -209,6 +312,10 @@
 .opcao-icon.amarelo {
   background: #fff6bf;
   color: #7c6500;
+}
+
+.opcao-texto {
+  min-width: 0;
 }
 
 .opcao-texto h3 {
@@ -230,33 +337,12 @@
   font-size: 15px;
 }
 
-@media (max-width: 430px) {
-  .selecao-page {
-    padding: 0;
-    background: #fffdf4;
-  }
-
-  .selecao-phone {
-    width: 100vw;
-    min-height: 100vh;
-    border-radius: 0;
-    box-shadow: none;
-  }
-}
-
-.opcao-card-ativa {
-  border-color: #ffe600;
-  background: #fffbea;
-}
-
 .opcao-check {
   color: #15803d;
   font-size: 17px;
 }
 
 .setores-area {
-  position: relative;
-  z-index: 2;
   background: #ffffff;
   border: 1px solid #eeeeee;
   border-radius: 24px;
@@ -275,6 +361,7 @@
 .voltar-setores {
   width: 38px;
   height: 38px;
+  min-width: 38px;
   border: 0;
   border-radius: 14px;
   background: #111;
@@ -302,10 +389,17 @@
 .setores-lista {
   max-height: 315px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.setores-lista::-webkit-scrollbar {
+  display: none;
 }
 
 .setor-item {
@@ -335,8 +429,6 @@
 }
 
 .continuar-conferencia-button {
-  position: relative;
-  z-index: 2;
   width: 100%;
   min-height: 56px;
   border: 2px solid #ffe600;
@@ -348,64 +440,14 @@
   cursor: pointer;
   box-shadow: 0 10px 22px rgba(220, 0, 12, 0.28);
   padding: 0 14px;
+  position: sticky;
+  bottom: 12px;
+  z-index: 50;
+  margin-top: 12px;
 }
 
 .continuar-conferencia-button:active {
   transform: scale(0.98);
-}
-
-.admin-card {
-  position: relative;
-  z-index: 2;
-  background: #111;
-  color: #ffffff;
-  border: 2px solid #ffe600;
-  border-radius: 22px;
-  padding: 16px;
-  display: grid;
-  grid-template-columns: 1fr 92px;
-  gap: 12px;
-  align-items: center;
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
-  margin-bottom: 16px;
-}
-
-.admin-card span {
-  display: block;
-  color: #ffe600;
-  font-size: 11px;
-  font-weight: 900;
-  margin-bottom: 3px;
-}
-
-.admin-card h3 {
-  margin: 0 0 5px;
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.admin-card p {
-  margin: 0;
-  color: #d6d6d6;
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.admin-card button {
-  height: 46px;
-  border: 0;
-  border-radius: 15px;
-  background: #df1b24;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 1px solid #ffe600;
 }
 
 .modal-zerar-overlay {
@@ -532,113 +574,259 @@
   color: #333;
 }
 
-.admin-card-duplo {
-  grid-template-columns: 1fr;
+@media (max-width: 430px) {
+  .selecao-page {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+    background: #fffdf4;
+    overflow: hidden;
+  }
+
+  .selecao-phone {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 18px 18px 96px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .selecao-header {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+
+  .selecao-header h1 {
+    font-size: 20px;
+    line-height: 1.05;
+  }
+
+  .selecao-header span {
+    font-size: 11px;
+  }
+
+  .usuario-chip {
+    padding: 7px 9px;
+    font-size: 9px;
+    max-width: 110px;
+  }
+
+  .usuario-card {
+    padding: 14px;
+    margin-bottom: 10px;
+    border-radius: 19px;
+  }
+
+  .usuario-card p {
+    font-size: 11px;
+  }
+
+  .usuario-card h2 {
+    font-size: 18px;
+    margin: 3px 0 10px;
+  }
+
+  .usuario-info-grid {
+    gap: 8px;
+  }
+
+  .usuario-info-grid div {
+    padding: 8px;
+    border-radius: 13px;
+  }
+
+  .usuario-info-grid span {
+    font-size: 9px;
+  }
+
+  .usuario-info-grid strong {
+    font-size: 11px;
+  }
+
+  .admin-card {
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+    gap: 9px;
+  }
+
+  .admin-card span {
+    font-size: 10px;
+  }
+
+  .admin-card h3 {
+    font-size: 14px;
+    margin-bottom: 3px;
+  }
+
+  .admin-card p {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .admin-card-acoes {
+    gap: 7px;
+  }
+
+  .admin-card-acoes button {
+    height: 38px;
+    font-size: 11px;
+    border-radius: 13px;
+  }
+
+  .resumo-card {
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+  }
+
+  .resumo-card span {
+    font-size: 10px;
+  }
+
+  .resumo-card h3 {
+    font-size: 15px;
+    margin: 3px 0 4px;
+  }
+
+  .resumo-card p {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .opcoes-conferencia {
+    gap: 8px;
+  }
+
+  .opcao-card {
+    padding: 11px;
+    border-radius: 17px;
+    grid-template-columns: 40px 1fr 16px;
+    gap: 10px;
+  }
+
+  .opcao-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    font-size: 17px;
+  }
+
+  .opcao-texto h3 {
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+
+  .opcao-texto p {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .setores-area {
+    padding: 12px;
+    border-radius: 18px;
+    margin-bottom: 12px;
+  }
+
+  .setores-lista {
+    max-height: 260px;
+  }
+
+  .continuar-conferencia-button {
+    min-height: 50px;
+    font-size: 12px;
+    border-radius: 14px;
+  }
+
+  .modal-zerar-overlay {
+    position: fixed;
+    inset: 0;
+    padding: 18px;
+  }
 }
 
-.admin-card-texto {
-  width: 100%;
-}
+@media (max-height: 720px) {
+  .selecao-phone {
+    padding: 14px 16px 96px;
+  }
 
-.admin-card-acoes {
-  display: grid;
-  grid-template-columns: 1fr 92px;
-  gap: 10px;
-}
+  .selecao-header {
+    margin-bottom: 7px;
+  }
 
-.admin-card-acoes button:first-child {
-  height: 46px;
-  border: 1px solid #ffe600;
-  border-radius: 15px;
-  background: #ffffff;
-  color: #111;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-}
+  .selecao-header h1 {
+    font-size: 18px;
+  }
 
-.admin-card-acoes button:last-child {
-  height: 46px;
-  border: 1px solid #ffe600;
-  border-radius: 15px;
-  background: #df1b24;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
+  .usuario-card {
+    padding: 12px;
+    margin-bottom: 8px;
+  }
 
-.admin-card-acoes {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 9px;
-}
+  .usuario-card h2 {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
 
-.admin-card-acoes button {
-  height: 44px;
-  border-radius: 15px;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-}
+  .usuario-info-grid div {
+    padding: 7px;
+  }
 
-.admin-card-acoes button:nth-child(1),
-.admin-card-acoes button:nth-child(2) {
-  border: 1px solid #ffe600;
-  background: #ffffff;
-  color: #111;
-}
+  .admin-card {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
 
-.admin-card-acoes button:nth-child(3) {
-  border: 1px solid #ffe600;
-  background: #df1b24;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
+  .admin-card h3 {
+    font-size: 13px;
+  }
 
-.admin-card-duplo {
-  grid-template-columns: 1fr;
-}
+  .admin-card p {
+    font-size: 9px;
+  }
 
-.admin-card-texto {
-  width: 100%;
-}
+  .admin-card-acoes button {
+    height: 34px;
+    font-size: 10px;
+  }
 
-.admin-card-acoes {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 9px;
-}
+  .resumo-card {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
 
-.admin-card-acoes button {
-  width: 100%;
-  height: 44px;
-  border-radius: 15px;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-}
+  .resumo-card h3 {
+    font-size: 14px;
+  }
 
-.admin-card-acoes button:nth-child(1),
-.admin-card-acoes button:nth-child(2) {
-  border: 1px solid #ffe600;
-  background: #ffffff;
-  color: #111;
-}
+  .resumo-card p {
+    font-size: 10px;
+  }
 
-.admin-card-acoes button:nth-child(3) {
-  border: 1px solid #ffe600;
-  background: #df1b24;
-  color: #ffffff;
+  .opcao-card {
+    padding: 9px;
+  }
+
+  .opcao-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .opcao-texto h3 {
+    font-size: 12px;
+  }
+
+  .opcao-texto p {
+    font-size: 9px;
+  }
+
+  .setores-lista {
+    max-height: 220px;
+  }
 }

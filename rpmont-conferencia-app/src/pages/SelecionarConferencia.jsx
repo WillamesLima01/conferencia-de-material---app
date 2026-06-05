@@ -9,6 +9,7 @@ import {
   FaLock,
   FaXmark,
   FaMagnifyingGlassChart,
+  FaUserGear,
 } from 'react-icons/fa6';
 import { setoresDaUnidade } from '../data/setores';
 import '../styles/SelecionarConferencia.css';
@@ -19,6 +20,7 @@ function SelecionarConferencia({
   onZerarConferencia,
   onAbrirCadastroManual,
   onAbrirConsulta,
+  onAbrirAdmin,
 }) {
   const [modoConferencia, setModoConferencia] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
@@ -122,8 +124,9 @@ function SelecionarConferencia({
               <span>Ações administrativas</span>
               <h3>Gerenciar materiais</h3>
               <p>
-                Cadastre materiais, consulte filtros avançados ou reinicie a
-                conferência da unidade {usuario.unidade}.
+                Cadastre materiais, consulte filtros avançados, acesse a
+                administração ou reinicie a conferência da unidade{' '}
+                {usuario.unidade}.
               </p>
             </div>
 
@@ -135,6 +138,11 @@ function SelecionarConferencia({
               <button type="button" onClick={onAbrirConsulta}>
                 <FaMagnifyingGlassChart />
                 Filtros avançados
+              </button>
+
+              <button type="button" onClick={onAbrirAdmin}>
+                <FaUserGear />
+                Administração
               </button>
 
               <button type="button" onClick={abrirModalZerar}>
