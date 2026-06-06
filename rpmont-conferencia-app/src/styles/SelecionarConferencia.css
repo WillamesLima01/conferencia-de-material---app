@@ -830,3 +830,14 @@
     max-height: 220px;
   }
 }
+
+.setores-vazio {
+  background: #fffbea;
+  border: 1px solid #ffe600;
+  border-radius: 16px;
+  padding: 14px;
+  color: #333;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}

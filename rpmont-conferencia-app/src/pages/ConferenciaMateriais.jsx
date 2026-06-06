@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FaArrowLeft,
   FaBarcode,
+  FaCamera,
   FaCheck,
   FaCircleExclamation,
   FaMagnifyingGlass,
@@ -33,6 +34,13 @@ function ConferenciaMateriais({
   const [modalOutroSetor, setModalOutroSetor] = useState(null);
   const [mensagem, setMensagem] = useState('');
 
+  const [cameraAberta, setCameraAberta] = useState(false);
+  const [carregandoCamera, setCarregandoCamera] = useState(false);
+
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const leitorAtivoRef = useRef(false);
+
   const [modalExcluir, setModalExcluir] = useState(null);
   const [senhaExcluir, setSenhaExcluir] = useState('');
   const [mensagemExcluir, setMensagemExcluir] = useState('');
@@ -61,17 +69,17 @@ function ConferenciaMateriais({
   const pendentes = total - conferidos;
 
   const normalizarCodigo = (valor) => {
-    return valor.trim();
+    return String(valor || '').trim();
   };
 
   const limparMensagens = () => {
     setMensagem('');
   };
 
-  const conferirCodigo = () => {
+  const conferirCodigoPorValor = (valorCodigo) => {
     limparMensagens();
 
-    const codigo = normalizarCodigo(codigoLido);
+    const codigo = normalizarCodigo(valorCodigo);
 
     if (!codigo) {
       setMensagem('Informe ou leia um código de barras.');
@@ -104,6 +112,104 @@ function ConferenciaMateriais({
     setCodigoPendente(codigo);
     setModalNaoEncontrado(true);
   };
+
+  const conferirCodigo = () => {
+    conferirCodigoPorValor(codigoLido);
+  };
+
+  const pararCamera = () => {
+    leitorAtivoRef.current = false;
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraAberta(false);
+    setCarregandoCamera(false);
+  };
+
+  const processarCodigoCamera = (codigo) => {
+    setCodigoLido(codigo);
+    pararCamera();
+    conferirCodigoPorValor(codigo);
+  };
+
+  const abrirLeitorCodigoBarra = async () => {
+    limparMensagens();
+
+    if (!('BarcodeDetector' in window)) {
+      setMensagem(
+        'Leitor de código de barras não disponível neste navegador. No app Android final, vamos usar o leitor nativo.'
+      );
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMensagem('Câmera não disponível neste dispositivo.');
+      return;
+    }
+
+    try {
+      setCarregandoCamera(true);
+      setCameraAberta(true);
+      leitorAtivoRef.current = true;
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      setTimeout(async () => {
+        if (!videoRef.current) return;
+
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+
+        const detector = new window.BarcodeDetector();
+
+        const detectarCodigo = async () => {
+          if (!leitorAtivoRef.current || !videoRef.current) return;
+
+          try {
+            const codigos = await detector.detect(videoRef.current);
+
+            if (codigos.length > 0) {
+              const codigoDetectado = codigos[0].rawValue;
+              processarCodigoCamera(codigoDetectado);
+              return;
+            }
+          } catch {
+            setMensagem('Não foi possível ler o código. Tente novamente.');
+            pararCamera();
+            return;
+          }
+
+          requestAnimationFrame(detectarCodigo);
+        };
+
+        setCarregandoCamera(false);
+        detectarCodigo();
+      }, 300);
+    } catch {
+      setMensagem('Não foi possível abrir a câmera. Verifique a permissão.');
+      pararCamera();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      pararCamera();
+    };
+  }, []);
 
   const verificarEmTodosItens = () => {
     const materialEncontrado = todosMateriais.find(
@@ -266,6 +372,15 @@ function ConferenciaMateriais({
               <FaMagnifyingGlass />
             </button>
           </div>
+
+          <button
+            type="button"
+            className="leitor-codigo-button"
+            onClick={abrirLeitorCodigoBarra}
+          >
+            <FaCamera />
+            Leitor de código de barras
+          </button>
 
           {mensagem && <div className="mensagem-conferencia">{mensagem}</div>}
         </section>
@@ -478,6 +593,41 @@ function ConferenciaMateriais({
                   onClick={fecharModalExcluir}
                 >
                   Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {cameraAberta && (
+          <div className="modal-overlay">
+            <div className="modal-card camera-card">
+              <div className="modal-icon cadastro">
+                <FaCamera />
+              </div>
+
+              <h2>Leitor de código</h2>
+
+              <p>
+                Aponte a câmera para o código de barras do material patrimonial.
+              </p>
+
+              <div className="camera-preview">
+                <video ref={videoRef} playsInline muted />
+              </div>
+
+              {carregandoCamera && (
+                <div className="mensagem-conferencia">Abrindo câmera...</div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-cancel"
+                  onClick={pararCamera}
+                >
+                  <FaXmark />
+                  Fechar leitor
                 </button>
               </div>
             </div>

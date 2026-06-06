@@ -693,3 +693,44 @@
     padding: 9px;
   }
 }
+
+.leitor-codigo-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 10px;
+  border: 2px solid #ffe600;
+  border-radius: 14px;
+  background: #111;
+  color: #ffe600;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.leitor-codigo-button:active {
+  transform: scale(0.98);
+}
+
+.camera-card {
+  text-align: center;
+}
+
+.camera-preview {
+  width: 100%;
+  height: 260px;
+  background: #111;
+  border: 2px solid #ffe600;
+  border-radius: 18px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+
+.camera-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

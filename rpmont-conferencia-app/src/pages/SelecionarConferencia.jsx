@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FaBoxesStacked,
   FaBuildingUser,
@@ -11,8 +11,21 @@ import {
   FaMagnifyingGlassChart,
   FaUserGear,
 } from 'react-icons/fa6';
-import { setoresDaUnidade } from '../data/setores';
 import '../styles/SelecionarConferencia.css';
+
+const STORAGE_KEY_SETORES = 'setores';
+
+const carregarSetoresCadastrados = () => {
+  const setoresSalvos = localStorage.getItem(STORAGE_KEY_SETORES);
+
+  if (!setoresSalvos) return [];
+
+  try {
+    return JSON.parse(setoresSalvos);
+  } catch {
+    return [];
+  }
+};
 
 function SelecionarConferencia({
   usuario,
@@ -24,11 +37,28 @@ function SelecionarConferencia({
 }) {
   const [modoConferencia, setModoConferencia] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
+  const [setoresCadastrados, setSetoresCadastrados] = useState(() =>
+    carregarSetoresCadastrados()
+  );
   const [modalZerar, setModalZerar] = useState(false);
   const [senhaAdmin, setSenhaAdmin] = useState('');
   const [mensagemZerar, setMensagemZerar] = useState('');
 
   const usuarioEhAdmin = Number(usuario.nivel) === 1;
+
+  const unidadeUsuarioLogada = String(usuario?.unidade || '')
+    .trim()
+    .toLowerCase();
+
+  const setoresDaUnidade = useMemo(() => {
+    return setoresCadastrados.filter((setor) => {
+      const unidadeSetor = String(setor.unidadeNome || '')
+        .trim()
+        .toLowerCase();
+
+      return unidadeSetor === unidadeUsuarioLogada;
+    });
+  }, [setoresCadastrados, unidadeUsuarioLogada]);
 
   const selecionarTodosMateriais = () => {
     setModoConferencia('TODOS');
@@ -36,6 +66,7 @@ function SelecionarConferencia({
   };
 
   const abrirSelecaoSetor = () => {
+    setSetoresCadastrados(carregarSetoresCadastrados());
     setModoConferencia('SETOR');
     setSetorSelecionado('');
   };
@@ -226,21 +257,27 @@ function SelecionarConferencia({
               </div>
             </div>
 
-            <div className="setores-lista">
-              {setoresDaUnidade.map((setor) => (
-                <button
-                  key={setor}
-                  type="button"
-                  className={`setor-item ${
-                    setorSelecionado === setor ? 'setor-item-ativo' : ''
-                  }`}
-                  onClick={() => setSetorSelecionado(setor)}
-                >
-                  <span>{setor}</span>
-                  {setorSelecionado === setor && <FaCheck />}
-                </button>
-              ))}
-            </div>
+            {setoresDaUnidade.length === 0 ? (
+              <div className="setores-vazio">
+                Nenhum setor cadastrado para a unidade {usuario.unidade}.
+              </div>
+            ) : (
+              <div className="setores-lista">
+                {setoresDaUnidade.map((setor) => (
+                  <button
+                    key={setor.id}
+                    type="button"
+                    className={`setor-item ${
+                      setorSelecionado === setor.nome ? 'setor-item-ativo' : ''
+                    }`}
+                    onClick={() => setSetorSelecionado(setor.nome)}
+                  >
+                    <span>{setor.nome}</span>
+                    {setorSelecionado === setor.nome && <FaCheck />}
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

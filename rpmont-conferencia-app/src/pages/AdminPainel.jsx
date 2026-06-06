@@ -8,13 +8,25 @@ import {
 } from 'react-icons/fa6';
 import '../styles/AdminPainel.css';
 import AdminUnidades from './AdminUnidades';
+import AdminSetores from './AdminSetores';
+import AdminUsuarios from './AdminUsuarios';
 
 function AdminPainel({ usuario, onVoltar }) {
   const [telaAtual, setTelaAtual] = useState('painel');
 
   const abrirModulo = (modulo) => {
+    if (modulo === 'Usuários') {
+      setTelaAtual('usuarios');
+      return;
+    }
+
     if (modulo === 'Unidades') {
       setTelaAtual('unidades');
+      return;
+    }
+
+    if (modulo === 'Setores') {
+      setTelaAtual('setores');
       return;
     }
 
@@ -28,6 +40,24 @@ function AdminPainel({ usuario, onVoltar }) {
   if (telaAtual === 'unidades') {
     return (
       <AdminUnidades
+        usuario={usuario}
+        onVoltar={voltarParaPainel}
+      />
+    );
+  }
+
+  if (telaAtual === 'setores') {
+    return (
+      <AdminSetores
+        usuario={usuario}
+        onVoltar={voltarParaPainel}
+      />
+    );
+  }
+
+  if (telaAtual === 'usuarios') {
+    return (
+      <AdminUsuarios
         usuario={usuario}
         onVoltar={voltarParaPainel}
       />

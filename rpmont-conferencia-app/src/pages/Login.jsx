@@ -3,6 +3,8 @@ import { FaUser, FaLock, FaEye, FaEyeSlash, FaSignInAlt } from 'react-icons/fa';
 import rpmontBrasao from '../assets/RPMONT.png';
 import '../styles/Login.css';
 
+const STORAGE_KEY_USUARIOS = 'usuarios';
+
 function Login({ onLoginSuccess }) {
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
@@ -11,7 +13,7 @@ function Login({ onLoginSuccess }) {
   const [mensagem, setMensagem] = useState('');
 
   const formatarMatricula = (valor) => {
-    const apenasNumeros = valor.replace(/\D/g, '').slice(0, 7);
+    const apenasNumeros = String(valor || '').replace(/\D/g, '').slice(0, 7);
 
     if (apenasNumeros.length <= 3) {
       return apenasNumeros;
@@ -21,11 +23,42 @@ function Login({ onLoginSuccess }) {
       return `${apenasNumeros.slice(0, 3)}.${apenasNumeros.slice(3)}`;
     }
 
-    return `${apenasNumeros.slice(0, 3)}.${apenasNumeros.slice(3, 6)}-${apenasNumeros.slice(6)}`;
+    return `${apenasNumeros.slice(0, 3)}.${apenasNumeros.slice(
+      3,
+      6
+    )}-${apenasNumeros.slice(6)}`;
   };
 
   const normalizarMatricula = (valor) => {
-    return valor.replace(/\D/g, '');
+    return String(valor || '').replace(/\D/g, '');
+  };
+
+  const carregarUsuariosCadastrados = () => {
+    const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
+
+    if (!usuariosSalvos) return [];
+
+    try {
+      return JSON.parse(usuariosSalvos);
+    } catch {
+      return [];
+    }
+  };
+
+  const normalizarUsuario = (usuario) => {
+    return {
+      id: usuario.ID || usuario.id,
+      matricula: usuario.MATRICULA || usuario.matricula,
+      nome: usuario.NOME || usuario.nome,
+      nomeCompleto: usuario.NOMECOMPLETO || usuario.nomeCompleto || '',
+      postGrad: usuario.POSTGRAD || usuario.postGrad,
+      unidade: usuario.UNIDADE || usuario.unidade,
+      setor: usuario.SETOR || usuario.setor,
+      nivel: usuario.NIVEL || usuario.nivel,
+      senha: usuario.SENHA || usuario.senha,
+      email: usuario.EMAIL || usuario.email || '',
+      digital: usuario.DIGITAL || usuario.digital || null,
+    };
   };
 
   const formatarNomeExibicao = (postGrad, nome) => {
@@ -53,54 +86,22 @@ function Login({ onLoginSuccess }) {
       return;
     }
 
-    /*
-      Simulação inicial.
-      Depois vamos trocar essa parte por consulta real na API/MySQL.
-    */
-    const usuariosTeste = [
-      {
-        id: 4,
-        matricula: '525.709-3',
-        nome: 'willames',
-        postGrad: 'cb',
-        unidade: 'RPMont',
-        setor: 'P4',
-        nivel: 1,
-        senha: '123456',
-      },
-      {
-        id: 30,
-        matricula: '123.456-7',
-        nome: 'campina',
-        postGrad: '2º Ten',
-        unidade: '3º EPMont',
-        setor: 'Corregedoria',
-        nivel: 4,
-        senha: '123456',
-      },
-      {
-        id: 33,
-        matricula: '520.381-3',
-        nome: 'Charles',
-        postGrad: 'ST',
-        unidade: 'RPMont',
-        setor: 'P4',
-        nivel: 1,
-        senha: '123456',
-      },
-    ];
+    const usuariosCadastrados = carregarUsuariosCadastrados();
 
-    const usuario = usuariosTeste.find(
-      (item) => normalizarMatricula(item.matricula) === matriculaNormalizada
-    );
+    const usuarioLocalizado = usuariosCadastrados
+      .map(normalizarUsuario)
+      .find(
+        (item) =>
+          normalizarMatricula(item.matricula) === matriculaNormalizada
+      );
 
-    if (!usuario) {
+    if (!usuarioLocalizado) {
       setUsuarioEncontrado(null);
       setMensagem('Usuário não cadastrado. Procure o administrador do sistema.');
       return;
     }
 
-    setUsuarioEncontrado(usuario);
+    setUsuarioEncontrado(usuarioLocalizado);
     setMensagem('');
   };
 
@@ -115,23 +116,27 @@ function Login({ onLoginSuccess }) {
       return;
     }
 
-    /*
-      Simulação inicial.
-      Depois vamos validar essa senha no backend.
-    */
     if (senha === usuarioEncontrado.senha) {
+      const nomeExibicao = formatarNomeExibicao(
+        usuarioEncontrado.postGrad,
+        usuarioEncontrado.nome
+      );
+
       setMensagem('Acesso liberado.');
 
       setTimeout(() => {
         onLoginSuccess({
           id: usuarioEncontrado.id,
-          matricula: usuarioEncontrado.matricula,
+          matricula: formatarMatricula(usuarioEncontrado.matricula),
           nome: usuarioEncontrado.nome,
+          nomeCompleto: usuarioEncontrado.nomeCompleto,
           postGrad: usuarioEncontrado.postGrad,
           nomeExibicao,
           unidade: usuarioEncontrado.unidade,
           setor: usuarioEncontrado.setor,
           nivel: usuarioEncontrado.nivel,
+          email: usuarioEncontrado.email,
+          digital: usuarioEncontrado.digital,
         });
       }, 700);
 
