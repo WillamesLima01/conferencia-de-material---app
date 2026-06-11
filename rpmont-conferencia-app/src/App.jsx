@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import Login from './pages/Login';
 import SelecionarConferencia from './pages/SelecionarConferencia';
 import ConferenciaMateriais from './pages/ConferenciaMateriais';
@@ -6,7 +7,10 @@ import CadastroMaterial from './pages/CadastroMaterial';
 import EditarMaterial from './pages/EditarMaterial';
 import ConsultaMateriais from './pages/ConsultaMateriais';
 import AdminPainel from './pages/AdminPainel';
+import CadastroFenoRacao from './pages/CadastroFenoRacao';
+
 import { materiaisMock } from './data/materiais';
+
 import './App.css';
 
 function App() {
@@ -16,6 +20,8 @@ function App() {
 
   const [abrirConsulta, setAbrirConsulta] = useState(false);
   const [abrirAdmin, setAbrirAdmin] = useState(false);
+  const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] =
+    useState(false);
 
   const [cadastroPendente, setCadastroPendente] = useState(null);
   const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
@@ -23,7 +29,8 @@ function App() {
   const zerarConferenciaDaUnidade = (usuario) => {
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
-        material.unidade === usuario.unidade && material.situacao !== 'INATIVO'
+        material.unidade === usuario.unidade &&
+        material.situacao !== 'INATIVO'
           ? {
               ...material,
               Conferido: 0,
@@ -47,14 +54,20 @@ function App() {
       ...dadosNovoMaterial,
     };
 
-    setMateriais((materiaisAtuais) => [...materiaisAtuais, materialCompleto]);
+    setMateriais((materiaisAtuais) => [
+      ...materiaisAtuais,
+      materialCompleto,
+    ]);
+
     setCadastroPendente(null);
   };
 
   const salvarMaterialEditado = (materialAtualizado) => {
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
-        material.ID === materialAtualizado.ID ? materialAtualizado : material
+        material.ID === materialAtualizado.ID
+          ? materialAtualizado
+          : material
       )
     );
 
@@ -69,7 +82,7 @@ function App() {
               ...material,
               situacao: 'INATIVO',
               dataModificacao: new Date().toISOString(),
-              userModificador: usuarioLogado.id,
+              userModificador: usuarioLogado?.id || 1,
             }
           : material
       )
@@ -92,6 +105,20 @@ function App() {
     });
   };
 
+  const abrirTelaCadastroAlimentacao = () => {
+    setAbrirCadastroAlimentacao(true);
+  };
+
+  const voltarDoCadastroAlimentacao = () => {
+    setAbrirCadastroAlimentacao(false);
+
+    /*
+      Garante que o retorno seja para Selecionar Conferência,
+      e não para uma conferência patrimonial já iniciada.
+    */
+    setConfiguracaoConferencia(null);
+  };
+
   const voltarDaConsulta = () => {
     setAbrirConsulta(false);
   };
@@ -106,6 +133,15 @@ function App() {
 
   if (!usuarioLogado) {
     return <Login onLoginSuccess={setUsuarioLogado} />;
+  }
+
+  if (abrirCadastroAlimentacao) {
+    return (
+      <CadastroFenoRacao
+        usuario={usuarioLogado}
+        onVoltar={voltarDoCadastroAlimentacao}
+      />
+    );
   }
 
   if (materialEmEdicao) {
@@ -161,6 +197,7 @@ function App() {
         onAbrirCadastroManual={abrirTelaCadastroManual}
         onAbrirConsulta={() => setAbrirConsulta(true)}
         onAbrirAdmin={() => setAbrirAdmin(true)}
+        onAbrirCadastroAlimentacao={abrirTelaCadastroAlimentacao}
       />
     );
   }

@@ -1,9 +1,54 @@
 import { useState } from 'react';
-import { FaUser, FaLock, FaEye, FaEyeSlash, FaSignInAlt } from 'react-icons/fa';
+import {
+  FaUser,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaSignInAlt,
+} from 'react-icons/fa';
 import rpmontBrasao from '../assets/RPMONT.png';
 import '../styles/Login.css';
 
 const STORAGE_KEY_USUARIOS = 'usuarios';
+
+const criarUsuariosIniciais = () => {
+  const agora = new Date();
+
+  return [
+    {
+      ID: 1,
+      MATRICULA: '525.709-3',
+      NOME: 'willames',
+      SENHA: '123456',
+      EMAIL: '',
+      NIVEL: 1,
+      POSTGRAD: 'CB',
+      SETOR: 'P4',
+      NOMECOMPLETO: 'Willames Pereira',
+      UNIDADE: 'RPMont',
+      DATACADASTRO: agora.toISOString().slice(0, 10),
+      DATAMODIFICACAO: agora.toISOString(),
+      userModificador: 1,
+      DIGITAL: null,
+    },
+    {
+      ID: 2,
+      MATRICULA: '530.381-8',
+      NOME: 'Nascimento',
+      SENHA: '123456',
+      EMAIL: '',
+      NIVEL: 1,
+      POSTGRAD: '1 Ten',
+      SETOR: 'Comando',
+      NOMECOMPLETO: 'Nome completo do militar',
+      UNIDADE: 'RPMont',
+      DATACADASTRO: agora.toISOString().slice(0, 10),
+      DATAMODIFICACAO: agora.toISOString(),
+      userModificador: 1,
+      DIGITAL: null,
+    },
+  ];
+};
 
 function Login({ onLoginSuccess }) {
   const [matricula, setMatricula] = useState('');
@@ -13,7 +58,9 @@ function Login({ onLoginSuccess }) {
   const [mensagem, setMensagem] = useState('');
 
   const formatarMatricula = (valor) => {
-    const apenasNumeros = String(valor || '').replace(/\D/g, '').slice(0, 7);
+    const apenasNumeros = String(valor || '')
+      .replace(/\D/g, '')
+      .slice(0, 7);
 
     if (apenasNumeros.length <= 3) {
       return apenasNumeros;
@@ -34,37 +81,80 @@ function Login({ onLoginSuccess }) {
   };
 
   const carregarUsuariosCadastrados = () => {
+    const usuariosIniciais = criarUsuariosIniciais();
     const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
-
-    if (!usuariosSalvos) return [];
-
-    try {
-      return JSON.parse(usuariosSalvos);
-    } catch {
-      return [];
+  
+    let usuariosAtuais = [];
+  
+    if (usuariosSalvos) {
+      try {
+        const dadosConvertidos = JSON.parse(usuariosSalvos);
+  
+        if (Array.isArray(dadosConvertidos)) {
+          usuariosAtuais = dadosConvertidos;
+        }
+      } catch {
+        usuariosAtuais = [];
+      }
     }
+  
+    const usuariosAtualizados = [...usuariosAtuais];
+  
+    usuariosIniciais.forEach((usuarioInicial) => {
+      const matriculaInicial = normalizarMatricula(
+        usuarioInicial.MATRICULA
+      );
+  
+      const indiceUsuarioExistente = usuariosAtualizados.findIndex(
+        (usuarioAtual) =>
+          normalizarMatricula(
+            usuarioAtual.MATRICULA || usuarioAtual.matricula
+          ) === matriculaInicial
+      );
+  
+      if (indiceUsuarioExistente >= 0) {
+        usuariosAtualizados[indiceUsuarioExistente] = {
+          ...usuariosAtualizados[indiceUsuarioExistente],
+          ...usuarioInicial,
+        };
+      } else {
+        usuariosAtualizados.push(usuarioInicial);
+      }
+    });
+  
+    localStorage.setItem(
+      STORAGE_KEY_USUARIOS,
+      JSON.stringify(usuariosAtualizados)
+    );
+  
+    return usuariosAtualizados;
   };
 
   const normalizarUsuario = (usuario) => {
     return {
-      id: usuario.ID || usuario.id,
-      matricula: usuario.MATRICULA || usuario.matricula,
-      nome: usuario.NOME || usuario.nome,
-      nomeCompleto: usuario.NOMECOMPLETO || usuario.nomeCompleto || '',
-      postGrad: usuario.POSTGRAD || usuario.postGrad,
-      unidade: usuario.UNIDADE || usuario.unidade,
-      setor: usuario.SETOR || usuario.setor,
-      nivel: usuario.NIVEL || usuario.nivel,
-      senha: usuario.SENHA || usuario.senha,
-      email: usuario.EMAIL || usuario.email || '',
-      digital: usuario.DIGITAL || usuario.digital || null,
+      id: usuario.ID ?? usuario.id,
+      matricula: usuario.MATRICULA ?? usuario.matricula ?? '',
+      nome: usuario.NOME ?? usuario.nome ?? '',
+      nomeCompleto:
+        usuario.NOMECOMPLETO ?? usuario.nomeCompleto ?? '',
+      postGrad: usuario.POSTGRAD ?? usuario.postGrad ?? '',
+      unidade: usuario.UNIDADE ?? usuario.unidade ?? '',
+      setor: usuario.SETOR ?? usuario.setor ?? '',
+      nivel: usuario.NIVEL ?? usuario.nivel ?? 2,
+      senha: usuario.SENHA ?? usuario.senha ?? '',
+      email: usuario.EMAIL ?? usuario.email ?? '',
+      digital: usuario.DIGITAL ?? usuario.digital ?? null,
     };
   };
 
   const formatarNomeExibicao = (postGrad, nome) => {
-    const postGradFormatado = postGrad?.toUpperCase() || '';
-    const nomeFormatado = nome
-      ? nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase()
+    const postGradFormatado = String(postGrad || '').toUpperCase();
+
+    const nomeTexto = String(nome || '').trim();
+
+    const nomeFormatado = nomeTexto
+      ? nomeTexto.charAt(0).toUpperCase() +
+        nomeTexto.slice(1).toLowerCase()
       : '';
 
     return `${postGradFormatado} ${nomeFormatado}`.trim();
@@ -97,7 +187,9 @@ function Login({ onLoginSuccess }) {
 
     if (!usuarioLocalizado) {
       setUsuarioEncontrado(null);
-      setMensagem('Usuário não cadastrado. Procure o administrador do sistema.');
+      setMensagem(
+        'Usuário não cadastrado. Procure o administrador do sistema.'
+      );
       return;
     }
 
@@ -116,7 +208,7 @@ function Login({ onLoginSuccess }) {
       return;
     }
 
-    if (senha === usuarioEncontrado.senha) {
+    if (senha === String(usuarioEncontrado.senha || '')) {
       const nomeExibicao = formatarNomeExibicao(
         usuarioEncontrado.postGrad,
         usuarioEncontrado.nome
@@ -134,7 +226,7 @@ function Login({ onLoginSuccess }) {
           nomeExibicao,
           unidade: usuarioEncontrado.unidade,
           setor: usuarioEncontrado.setor,
-          nivel: usuarioEncontrado.nivel,
+          nivel: Number(usuarioEncontrado.nivel),
           email: usuarioEncontrado.email,
           digital: usuarioEncontrado.digital,
         });
@@ -147,7 +239,10 @@ function Login({ onLoginSuccess }) {
   };
 
   const nomeExibicao = usuarioEncontrado
-    ? formatarNomeExibicao(usuarioEncontrado.postGrad, usuarioEncontrado.nome)
+    ? formatarNomeExibicao(
+        usuarioEncontrado.postGrad,
+        usuarioEncontrado.nome
+      )
     : '';
 
   return (
@@ -166,7 +261,11 @@ function Login({ onLoginSuccess }) {
         <div className="decor-top"></div>
 
         <div className="login-content">
-          <img src={rpmontBrasao} alt="Brasão do RPMont" className="brasao" />
+          <img
+            src={rpmontBrasao}
+            alt="Brasão do RPMont"
+            className="brasao"
+          />
 
           <div className="titulo-area">
             <h1>REGIMENTO DE</h1>
@@ -192,6 +291,7 @@ function Login({ onLoginSuccess }) {
           <div className="form-area">
             <label className="input-box">
               <FaUser className="input-icon" />
+
               <input
                 type="text"
                 placeholder="Matrícula"
@@ -215,12 +315,17 @@ function Login({ onLoginSuccess }) {
                     setSenha(event.target.value);
                     setMensagem('');
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      entrar();
+                    }
+                  }}
                 />
 
                 <button
                   type="button"
                   className="eye-button"
-                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  onClick={() => setMostrarSenha((valorAtual) => !valorAtual)}
                   aria-label="Mostrar ou ocultar senha"
                 >
                   {mostrarSenha ? <FaEyeSlash /> : <FaEye />}
@@ -228,9 +333,16 @@ function Login({ onLoginSuccess }) {
               </label>
             )}
 
-            <button type="button" className="entrar-button" onClick={entrar}>
+            <button
+              type="button"
+              className="entrar-button"
+              onClick={entrar}
+            >
               <FaSignInAlt />
-              <span>{usuarioEncontrado ? 'Entrar' : 'Continuar'}</span>
+
+              <span>
+                {usuarioEncontrado ? 'Entrar' : 'Continuar'}
+              </span>
             </button>
 
             {mensagem && (

@@ -10,7 +10,9 @@ import {
   FaXmark,
   FaMagnifyingGlassChart,
   FaUserGear,
+  FaWheatAwn,
 } from 'react-icons/fa6';
+
 import '../styles/SelecionarConferencia.css';
 
 const STORAGE_KEY_SETORES = 'setores';
@@ -21,7 +23,11 @@ const carregarSetoresCadastrados = () => {
   if (!setoresSalvos) return [];
 
   try {
-    return JSON.parse(setoresSalvos);
+    const setoresConvertidos = JSON.parse(setoresSalvos);
+
+    return Array.isArray(setoresConvertidos)
+      ? setoresConvertidos
+      : [];
   } catch {
     return [];
   }
@@ -34,17 +40,20 @@ function SelecionarConferencia({
   onAbrirCadastroManual,
   onAbrirConsulta,
   onAbrirAdmin,
+  onAbrirCadastroAlimentacao,
 }) {
   const [modoConferencia, setModoConferencia] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
+
   const [setoresCadastrados, setSetoresCadastrados] = useState(() =>
     carregarSetoresCadastrados()
   );
+
   const [modalZerar, setModalZerar] = useState(false);
   const [senhaAdmin, setSenhaAdmin] = useState('');
   const [mensagemZerar, setMensagemZerar] = useState('');
 
-  const usuarioEhAdmin = Number(usuario.nivel) === 1;
+  const usuarioEhAdmin = Number(usuario?.nivel) === 1;
 
   const unidadeUsuarioLogada = String(usuario?.unidade || '')
     .trim()
@@ -52,7 +61,7 @@ function SelecionarConferencia({
 
   const setoresDaUnidade = useMemo(() => {
     return setoresCadastrados.filter((setor) => {
-      const unidadeSetor = String(setor.unidadeNome || '')
+      const unidadeSetor = String(setor?.unidadeNome || '')
         .trim()
         .toLowerCase();
 
@@ -77,6 +86,7 @@ function SelecionarConferencia({
         tipo: 'TODOS',
         setor: null,
       });
+
       return;
     }
 
@@ -102,8 +112,8 @@ function SelecionarConferencia({
 
   const confirmarZeramento = () => {
     /*
-      Simulação no React.
-      No sistema real, essa senha será validada no backend/MySQL.
+      Validação provisória no front-end.
+      Depois será substituída pela validação no backend/MySQL.
     */
     if (senhaAdmin !== '123456') {
       setMensagemZerar('Senha de administrador incorreta.');
@@ -113,7 +123,7 @@ function SelecionarConferencia({
     onZerarConferencia(usuario);
     setMensagemZerar('Conferência zerada com sucesso.');
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       fecharModalZerar();
     }, 900);
   };
@@ -128,23 +138,24 @@ function SelecionarConferencia({
           </div>
 
           <div className="usuario-chip">
-            {usuario.postGrad?.toUpperCase()} {usuario.nome}
+            {usuario?.postGrad?.toUpperCase()} {usuario?.nome}
           </div>
         </header>
 
         <section className="usuario-card">
           <p>Seja bem-vindo,</p>
-          <h2>{usuario.nomeExibicao}</h2>
+
+          <h2>{usuario?.nomeExibicao}</h2>
 
           <div className="usuario-info-grid">
             <div>
               <span>Unidade</span>
-              <strong>{usuario.unidade}</strong>
+              <strong>{usuario?.unidade}</strong>
             </div>
 
             <div>
               <span>Setor</span>
-              <strong>{usuario.setor}</strong>
+              <strong>{usuario?.setor}</strong>
             </div>
           </div>
         </section>
@@ -153,30 +164,54 @@ function SelecionarConferencia({
           <section className="admin-card admin-card-duplo">
             <div className="admin-card-texto">
               <span>Ações administrativas</span>
-              <h3>Gerenciar materiais</h3>
+
+              <h3>Gerenciar o sistema</h3>
+
               <p>
-                Cadastre materiais, consulte filtros avançados, acesse a
-                administração ou reinicie a conferência da unidade{' '}
-                {usuario.unidade}.
+                Cadastre materiais, consulte filtros, gerencie a administração,
+                controle feno e ração ou reinicie a conferência da unidade{' '}
+                {usuario?.unidade}.
               </p>
             </div>
 
             <div className="admin-card-acoes">
-              <button type="button" onClick={onAbrirCadastroManual}>
+              <button
+                type="button"
+                onClick={onAbrirCadastroManual}
+              >
+                <FaBoxesStacked />
                 Cadastrar material
               </button>
 
-              <button type="button" onClick={onAbrirConsulta}>
+              <button
+                type="button"
+                onClick={onAbrirConsulta}
+              >
                 <FaMagnifyingGlassChart />
                 Filtros avançados
               </button>
 
-              <button type="button" onClick={onAbrirAdmin}>
+              <button
+                type="button"
+                onClick={onAbrirAdmin}
+              >
                 <FaUserGear />
                 Administração
               </button>
 
-              <button type="button" onClick={abrirModalZerar}>
+              <button
+                type="button"
+                className="admin-acao-alimentacao"
+                onClick={onAbrirCadastroAlimentacao}
+              >
+                <FaWheatAwn />
+                Feno e Ração
+              </button>
+
+              <button
+                type="button"
+                onClick={abrirModalZerar}
+              >
                 <FaRotateRight />
                 Zerar conferência
               </button>
@@ -186,10 +221,12 @@ function SelecionarConferencia({
 
         <section className="resumo-card">
           <span>Próximo passo</span>
+
           <h3>Escolha o tipo de conferência</h3>
+
           <p>
             O sistema carregará somente os materiais vinculados à unidade{' '}
-            <strong>{usuario.unidade}</strong>.
+            <strong>{usuario?.unidade}</strong>.
           </p>
         </section>
 
@@ -198,7 +235,9 @@ function SelecionarConferencia({
             <button
               type="button"
               className={`opcao-card ${
-                modoConferencia === 'TODOS' ? 'opcao-card-ativa' : ''
+                modoConferencia === 'TODOS'
+                  ? 'opcao-card-ativa'
+                  : ''
               }`}
               onClick={selecionarTodosMateriais}
             >
@@ -208,7 +247,11 @@ function SelecionarConferencia({
 
               <div className="opcao-texto">
                 <h3>Todos os materiais</h3>
-                <p>Conferir todos os materiais da unidade {usuario.unidade}.</p>
+
+                <p>
+                  Conferir todos os materiais da unidade{' '}
+                  {usuario?.unidade}.
+                </p>
               </div>
 
               {modoConferencia === 'TODOS' ? (
@@ -229,7 +272,10 @@ function SelecionarConferencia({
 
               <div className="opcao-texto">
                 <h3>Por setor</h3>
-                <p>Selecionar um setor específico para realizar a conferência.</p>
+
+                <p>
+                  Selecionar um setor específico para realizar a conferência.
+                </p>
               </div>
 
               <FaChevronRight className="opcao-seta" />
@@ -259,7 +305,8 @@ function SelecionarConferencia({
 
             {setoresDaUnidade.length === 0 ? (
               <div className="setores-vazio">
-                Nenhum setor cadastrado para a unidade {usuario.unidade}.
+                Nenhum setor cadastrado para a unidade{' '}
+                {usuario?.unidade}.
               </div>
             ) : (
               <div className="setores-lista">
@@ -268,12 +315,19 @@ function SelecionarConferencia({
                     key={setor.id}
                     type="button"
                     className={`setor-item ${
-                      setorSelecionado === setor.nome ? 'setor-item-ativo' : ''
+                      setorSelecionado === setor.nome
+                        ? 'setor-item-ativo'
+                        : ''
                     }`}
-                    onClick={() => setSetorSelecionado(setor.nome)}
+                    onClick={() =>
+                      setSetorSelecionado(setor.nome)
+                    }
                   >
                     <span>{setor.nome}</span>
-                    {setorSelecionado === setor.nome && <FaCheck />}
+
+                    {setorSelecionado === setor.nome && (
+                      <FaCheck />
+                    )}
                   </button>
                 ))}
               </div>
@@ -282,7 +336,8 @@ function SelecionarConferencia({
         )}
 
         {(modoConferencia === 'TODOS' ||
-          (modoConferencia === 'SETOR' && setorSelecionado)) && (
+          (modoConferencia === 'SETOR' &&
+            setorSelecionado)) && (
           <button
             type="button"
             className="continuar-conferencia-button"
@@ -313,12 +368,13 @@ function SelecionarConferencia({
 
               <p>
                 Esta ação marcará todos os materiais da unidade{' '}
-                <strong>{usuario.unidade}</strong> como{' '}
+                <strong>{usuario?.unidade}</strong> como{' '}
                 <strong>não conferidos</strong>.
               </p>
 
               <label>
                 Senha de administrador
+
                 <input
                   type="password"
                   value={senhaAdmin}

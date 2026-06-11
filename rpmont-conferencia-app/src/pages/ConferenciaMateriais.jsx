@@ -56,7 +56,11 @@ function ConferenciaMateriais({
         return materialAtivo && mesmaUnidade;
       }
 
-      return materialAtivo && mesmaUnidade && material.setor === configuracao.setor;
+      return (
+        materialAtivo &&
+        mesmaUnidade &&
+        material.setor === configuracao.setor
+      );
     });
   }, [todosMateriais, usuario.unidade, configuracao]);
 
@@ -207,7 +211,12 @@ function ConferenciaMateriais({
 
   useEffect(() => {
     return () => {
-      pararCamera();
+      leitorAtivoRef.current = false;
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
     };
   }, []);
 
@@ -224,9 +233,11 @@ function ConferenciaMateriais({
 
     if (materialEncontrado.unidade !== usuario.unidade) {
       setModalNaoEncontrado(false);
+
       setMensagem(
         `Material localizado em outra unidade: ${materialEncontrado.unidade}. Procure o administrador.`
       );
+
       return;
     }
 
@@ -311,17 +322,23 @@ function ConferenciaMateriais({
     <main className="conferencia-page">
       <section className="conferencia-phone">
         <header className="conferencia-header">
-          <button type="button" className="voltar-button" onClick={onVoltar}>
+          <button
+            type="button"
+            className="voltar-button"
+            onClick={onVoltar}
+          >
             <FaArrowLeft />
           </button>
 
           <div>
             <span>Conferência Patrimonial</span>
+
             <h1>
               {configuracao.tipo === 'TODOS'
                 ? 'Todos os materiais'
                 : configuracao.setor}
             </h1>
+
             <p>{usuario.unidade}</p>
           </div>
         </header>
@@ -346,6 +363,7 @@ function ConferenciaMateriais({
         <section className="scanner-card">
           <div className="scanner-titulo">
             <FaBarcode />
+
             <div>
               <h2>Leitura do código</h2>
               <p>Digite ou leia o Nº Série do material.</p>
@@ -382,7 +400,11 @@ function ConferenciaMateriais({
             Leitor de código de barras
           </button>
 
-          {mensagem && <div className="mensagem-conferencia">{mensagem}</div>}
+          {mensagem && (
+            <div className="mensagem-conferencia">
+              {mensagem}
+            </div>
+          )}
         </section>
 
         <section className="lista-materiais">
@@ -454,9 +476,10 @@ function ConferenciaMateriais({
               </div>
 
               <h2>Produto não cadastrado neste setor</h2>
+
               <p>
-                O código <strong>{codigoPendente}</strong> não foi encontrado na
-                lista atual da conferência.
+                O código <strong>{codigoPendente}</strong> não foi encontrado
+                na lista atual da conferência.
               </p>
 
               <div className="modal-actions">
@@ -499,6 +522,7 @@ function ConferenciaMateriais({
               </div>
 
               <h2>Produto localizado em outro setor</h2>
+
               <p>
                 <strong>{modalOutroSetor.descricao}</strong>
               </p>
@@ -542,8 +566,8 @@ function ConferenciaMateriais({
               <h2>Excluir material?</h2>
 
               <p>
-                O material será removido das listagens ativas, mas continuará no
-                banco como <strong>INATIVO</strong>.
+                O material será removido das listagens ativas, mas continuará
+                no banco como <strong>INATIVO</strong>.
               </p>
 
               <div className="divergencia-box">
@@ -562,6 +586,7 @@ function ConferenciaMateriais({
 
               <label className="senha-excluir-label">
                 Senha de administrador
+
                 <input
                   type="password"
                   value={senhaExcluir}
@@ -574,7 +599,9 @@ function ConferenciaMateriais({
               </label>
 
               {mensagemExcluir && (
-                <div className="mensagem-excluir-erro">{mensagemExcluir}</div>
+                <div className="mensagem-excluir-erro">
+                  {mensagemExcluir}
+                </div>
               )}
 
               <div className="modal-actions">
@@ -609,7 +636,8 @@ function ConferenciaMateriais({
               <h2>Leitor de código</h2>
 
               <p>
-                Aponte a câmera para o código de barras do material patrimonial.
+                Aponte a câmera para o código de barras do material
+                patrimonial.
               </p>
 
               <div className="camera-preview">
@@ -617,7 +645,9 @@ function ConferenciaMateriais({
               </div>
 
               {carregandoCamera && (
-                <div className="mensagem-conferencia">Abrindo câmera...</div>
+                <div className="mensagem-conferencia">
+                  Abrindo câmera...
+                </div>
               )}
 
               <div className="modal-actions">

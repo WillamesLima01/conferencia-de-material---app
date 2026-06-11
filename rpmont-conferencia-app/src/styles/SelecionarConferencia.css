@@ -841,3 +841,206 @@
   font-weight: 900;
   text-align: center;
 }
+
+/* =========================================================
+   AÇÕES ADMINISTRATIVAS
+   ========================================================= */
+
+   .admin-card-duplo {
+    padding: 16px;
+  }
+  
+  .admin-card-acoes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 14px;
+  }
+  
+  .admin-card-acoes button {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    margin: 0;
+    padding: 8px;
+    border: 2px solid #ffe600;
+    border-radius: 15px;
+    background: #ffffff;
+    color: #181818;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.2;
+    cursor: pointer;
+    box-sizing: border-box;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+  
+  .admin-card-acoes button svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+  
+  .admin-card-acoes button:active {
+    transform: scale(0.98);
+  }
+  
+  .admin-card-acoes .admin-acao-alimentacao {
+    background: #df1b24;
+    color: #ffffff;
+  }
+  
+  .admin-card-acoes button:last-child {
+    grid-column: 1 / -1;
+    background: #111111;
+    color: #ffe600;
+  }
+  
+  /* =========================================================
+     CELULAR
+     ========================================================= */
+  
+  @media (max-width: 430px) {
+    .selecao-page {
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
+      padding: 0;
+      background: #fffdf4;
+      overflow: hidden;
+      display: block;
+    }
+  
+    .selecao-phone {
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
+      max-height: 100dvh;
+      padding: 26px 18px 96px;
+      border-radius: 0;
+      box-shadow: none;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+  
+    .selecao-header {
+      margin-top: 14px;
+      margin-bottom: 12px;
+      padding-right: 4px;
+    }
+  
+    .selecao-header h1 {
+      font-size: 21px;
+      line-height: 1.08;
+    }
+  
+    .usuario-chip {
+      margin-top: 4px;
+    }
+  
+    .admin-card-duplo {
+      padding: 14px;
+    }
+  
+    .admin-card-texto p {
+      margin-bottom: 0;
+      line-height: 1.35;
+    }
+  
+    .admin-card-acoes {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+  
+    .admin-card-acoes button {
+      min-height: 46px;
+      padding: 8px 6px;
+      border-radius: 14px;
+      font-size: 10px;
+    }
+  
+    .admin-card-acoes button:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+  
+  @media (max-width: 350px) {
+    .admin-card-acoes {
+      grid-template-columns: 1fr;
+    }
+  
+    .admin-card-acoes button:last-child {
+      grid-column: auto;
+    }
+  }
+  
+  /* =========================================================
+     CELULAR
+     ========================================================= */
+  
+  @media (max-width: 430px) {
+    .selecao-page {
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
+      padding: 0;
+      background: #fffdf4;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: block;
+    }
+  
+    .selecao-phone {
+      width: 100vw;
+      height: auto;
+      min-height: 100dvh;
+      max-height: none;
+      padding: 24px 18px 28px;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: visible;
+    }
+  
+    .admin-card-duplo {
+      padding: 14px;
+    }
+  
+    .admin-card-texto p {
+      margin-bottom: 0;
+      line-height: 1.35;
+    }
+  
+    .admin-card-acoes {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+  
+    .admin-card-acoes button {
+      min-height: 44px;
+      padding: 8px 6px;
+      font-size: 10px;
+      border-radius: 14px;
+    }
+  
+    .admin-card-acoes button:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+  
+  @media (max-width: 350px) {
+    .admin-card-acoes {
+      grid-template-columns: 1fr;
+    }
+  
+    .admin-card-acoes button:last-child {
+      grid-column: auto;
+    }
+  }
