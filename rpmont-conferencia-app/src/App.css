@@ -4,3 +4,111 @@
   min-height: 100dvh;
   overflow: hidden;
 }
+
+/* =========================================================
+   MODAL FENO E RAÇÃO
+   ========================================================= */
+
+.modal-feno-racao-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 13, 26, 0.75);
+  backdrop-filter: blur(8px);
+}
+
+.modal-feno-racao {
+  width: min(92vw, 420px);
+  background: #ffffff;
+  border-radius: 26px;
+  padding: 24px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 1000000;
+}
+
+.modal-feno-racao-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.modal-feno-racao-header span {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #92400e;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.modal-feno-racao-header h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.55rem;
+  font-weight: 900;
+}
+
+.modal-feno-racao-header p {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 0.94rem;
+}
+
+.modal-feno-racao-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.modal-feno-racao-btn {
+  width: 100%;
+  min-height: 56px;
+  border: none;
+  border-radius: 18px;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.modal-feno-racao-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.24);
+  filter: brightness(1.03);
+}
+
+.modal-feno-racao-btn-cadastro {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+}
+
+.modal-feno-racao-btn-saida {
+  background: linear-gradient(135deg, #b45309, #f59e0b);
+}
+
+.modal-feno-racao-cancelar {
+  width: 100%;
+  margin-top: 14px;
+  min-height: 46px;
+  border: none;
+  border-radius: 16px;
+  background: #eef2f7;
+  color: #475569;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.modal-feno-racao-cancelar:hover {
+  background: #e2e8f0;
+}

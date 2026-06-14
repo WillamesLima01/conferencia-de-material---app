@@ -1,4 +1,4 @@
-.cadastro-alimentacao-page {
+.saida-alimentacao-page {
     width: 100%;
     height: 100dvh;
     min-height: 100dvh;
@@ -10,7 +10,7 @@
     overflow: hidden;
   }
   
-  .cadastro-alimentacao-phone {
+  .saida-alimentacao-phone {
     width: 390px;
     height: 100%;
     max-height: 844px;
@@ -31,14 +31,13 @@
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: none;
-    -ms-overflow-style: none;
   }
   
-  .cadastro-alimentacao-phone::-webkit-scrollbar {
+  .saida-alimentacao-phone::-webkit-scrollbar {
     display: none;
   }
   
-  .cadastro-alimentacao-header {
+  .saida-alimentacao-header {
     display: flex;
     align-items: flex-start;
     gap: 14px;
@@ -46,18 +45,14 @@
     margin-bottom: 16px;
   }
   
-  .cadastro-alimentacao-header > div {
+  .saida-alimentacao-header > div {
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
   }
   
-  .cadastro-alimentacao-voltar {
+  .saida-alimentacao-voltar {
     width: 42px;
     height: 42px;
     min-width: 42px;
-    padding: 0;
     border: 0;
     border-radius: 15px;
     color: #ffe600;
@@ -68,47 +63,49 @@
     cursor: pointer;
   }
   
-  .cadastro-alimentacao-header span {
-    margin-bottom: 4px;
+  .saida-alimentacao-header span {
     color: #df1b24;
     font-size: 12px;
     font-weight: 900;
-    line-height: 1.1;
   }
   
-  .cadastro-alimentacao-header h1 {
+  .saida-alimentacao-header h1 {
     width: fit-content;
-    margin: 0 0 4px;
-    padding: 5px 11px;
+    margin: 3px 0 4px;
+    padding: 5px 10px;
     border-radius: 10px;
     color: #ffe600;
     background: #111;
-    font-size: 22px;
+    font-size: 19px;
     font-weight: 900;
-    line-height: 1.1;
+    line-height: 1.15;
   }
   
-  .cadastro-alimentacao-header p {
+  .saida-alimentacao-header p {
     margin: 0;
     color: #666;
     font-size: 13px;
     font-weight: 700;
   }
   
-  .cadastro-alimentacao-apresentacao {
+  .saida-alimentacao-apresentacao,
+  .saida-alimentacao-card {
     margin-bottom: 14px;
     padding: 15px;
     border: 1px solid #eeeeee;
     border-radius: 22px;
     background: #ffffff;
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
+  }
+  
+  .saida-alimentacao-apresentacao {
     display: grid;
     grid-template-columns: 46px 1fr;
     gap: 12px;
     align-items: center;
   }
   
-  .cadastro-alimentacao-apresentacao-icon {
+  .saida-alimentacao-apresentacao-icon {
     width: 46px;
     height: 46px;
     border-radius: 16px;
@@ -120,30 +117,32 @@
     font-size: 20px;
   }
   
-  .cadastro-alimentacao-apresentacao span {
+  .saida-alimentacao-apresentacao span,
+  .saida-alimentacao-lista-header span {
     color: #df1b24;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 900;
   }
   
-  .cadastro-alimentacao-apresentacao h2 {
+  .saida-alimentacao-apresentacao h2,
+  .saida-alimentacao-lista-header h2 {
     margin: 2px 0 4px;
     color: #222;
     font-size: 16px;
     font-weight: 900;
   }
   
-  .cadastro-alimentacao-apresentacao p {
+  .saida-alimentacao-apresentacao p {
     margin: 0;
     color: #777;
     font-size: 12px;
-    font-weight: 700;
     line-height: 1.35;
+    font-weight: 700;
   }
   
-  .cadastro-alimentacao-mensagem {
+  .saida-alimentacao-mensagem {
     margin-bottom: 12px;
-    padding: 11px 12px;
+    padding: 11px;
     border: 1px solid #ffe600;
     border-radius: 13px;
     color: #333;
@@ -153,132 +152,115 @@
     text-align: center;
   }
   
-  .cadastro-alimentacao-card {
-    margin-bottom: 14px;
-    padding: 15px;
-    border: 1px solid #eeeeee;
-    border-radius: 22px;
-    background: #ffffff;
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
-  }
-  
-  .cadastro-alimentacao-card-titulo {
+  .saida-alimentacao-card-titulo {
     margin-bottom: 14px;
     display: flex;
     align-items: center;
     gap: 10px;
   }
   
-  .cadastro-alimentacao-card-titulo > svg {
+  .saida-alimentacao-card-titulo > svg {
     color: #df1b24;
-    font-size: 22px;
+    font-size: 21px;
   }
   
-  .cadastro-alimentacao-card-titulo h2 {
+  .saida-alimentacao-card-titulo h2 {
     margin: 0;
-    color: #222;
     font-size: 16px;
     font-weight: 900;
   }
   
-  .cadastro-alimentacao-card-titulo p {
+  .saida-alimentacao-card-titulo p {
     margin: 3px 0 0;
     color: #777;
     font-size: 11px;
     font-weight: 700;
   }
   
-  .cadastro-alimentacao-form {
+  .saida-alimentacao-form {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
   
-  .cadastro-alimentacao-grid {
+  .saida-alimentacao-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
   
-  .cadastro-alimentacao-form-group {
+  .saida-alimentacao-form-group {
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 7px;
   }
   
-  .cadastro-alimentacao-form-group label {
+  .saida-alimentacao-form-group label {
     color: #222;
     font-size: 12px;
     font-weight: 900;
   }
   
-  .cadastro-alimentacao-form-group input,
-  .cadastro-alimentacao-form-group select,
-  .cadastro-alimentacao-form-group textarea {
+  .saida-alimentacao-form-group input,
+  .saida-alimentacao-form-group select,
+  .saida-alimentacao-form-group textarea {
     width: 100%;
     border: 1px solid #dedede;
     border-radius: 14px;
     outline: none;
     color: #222;
-    background: #ffffff;
+    background: #fff;
     font-family: inherit;
     font-size: 13px;
     font-weight: 800;
   }
   
-  .cadastro-alimentacao-form-group input,
-  .cadastro-alimentacao-form-group select {
+  .saida-alimentacao-form-group input,
+  .saida-alimentacao-form-group select {
     height: 48px;
     padding: 0 12px;
   }
   
-  .cadastro-alimentacao-form-group textarea {
+  .saida-alimentacao-form-group textarea {
     min-height: 82px;
     padding: 12px;
     resize: vertical;
   }
   
-  .cadastro-alimentacao-form-group input:focus,
-  .cadastro-alimentacao-form-group select:focus,
-  .cadastro-alimentacao-form-group textarea:focus {
+  .saida-alimentacao-form-group input:focus,
+  .saida-alimentacao-form-group select:focus,
+  .saida-alimentacao-form-group textarea:focus {
     border-color: #ffe600;
     box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.25);
   }
   
-  .cadastro-alimentacao-form-group input:disabled,
-  .cadastro-alimentacao-form-group select:disabled {
+  .saida-alimentacao-form-group input:disabled,
+  .saida-alimentacao-form-group select:disabled {
     color: #888;
     background: #f2f2f2;
-    cursor: not-allowed;
   }
   
-  .cadastro-alimentacao-form-group input::placeholder,
-  .cadastro-alimentacao-form-group textarea::placeholder {
-    color: #999;
-    font-weight: 700;
-  }
-  
-  .cadastro-alimentacao-input-unidade {
+  .saida-alimentacao-input-unidade {
     position: relative;
   }
   
-  .cadastro-alimentacao-input-unidade input {
+  .saida-alimentacao-input-unidade input {
     padding-right: 48px;
   }
   
-  .cadastro-alimentacao-input-unidade span {
+  .saida-alimentacao-input-unidade span {
     position: absolute;
     top: 50%;
     right: 14px;
+    transform: translateY(-50%);
     color: #666;
     font-size: 12px;
     font-weight: 900;
-    transform: translateY(-50%);
-    pointer-events: none;
   }
   
-  .cadastro-alimentacao-resumo {
+  .saida-alimentacao-estoque-info,
+  .saida-alimentacao-calculo {
     padding: 12px;
     border: 1px solid #ffe600;
     border-radius: 17px;
@@ -288,11 +270,12 @@
     gap: 10px;
   }
   
-  .cadastro-alimentacao-resumo > div {
-    min-width: 0;
+  .saida-alimentacao-estoque-info div:last-child {
+    grid-column: 1 / -1;
   }
   
-  .cadastro-alimentacao-resumo span {
+  .saida-alimentacao-estoque-info span,
+  .saida-alimentacao-calculo span {
     display: block;
     margin-bottom: 3px;
     color: #777;
@@ -300,32 +283,34 @@
     font-weight: 800;
   }
   
-  .cadastro-alimentacao-resumo strong {
-    display: block;
+  .saida-alimentacao-estoque-info strong,
+  .saida-alimentacao-calculo strong {
     color: #222;
     font-size: 13px;
     font-weight: 900;
-    word-break: break-word;
   }
   
-  .cadastro-alimentacao-resumo-total {
+  .saida-alimentacao-calculo-saldo {
     grid-column: 1 / -1;
     padding-top: 10px;
     border-top: 1px solid rgba(223, 27, 36, 0.18);
   }
   
-  .cadastro-alimentacao-resumo-total strong {
-    color: #df1b24;
-    font-size: 20px;
+  .saida-alimentacao-calculo-saldo strong {
+    color: #15803d;
+    font-size: 18px;
   }
   
-  .cadastro-alimentacao-salvar {
+  .saida-alimentacao-calculo-saldo .saldo-insuficiente {
+    color: #b91c1c;
+  }
+  
+  .saida-alimentacao-salvar {
     width: 100%;
     min-height: 48px;
-    padding: 0 14px;
     border: 2px solid #ffe600;
     border-radius: 15px;
-    color: #ffffff;
+    color: #fff;
     background: #df1b24;
     font-family: inherit;
     font-size: 13px;
@@ -334,35 +319,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 9px;
+    gap: 8px;
   }
   
-  .cadastro-alimentacao-salvar:active {
-    transform: scale(0.98);
-  }
-  
-  .cadastro-alimentacao-lista-header {
+  .saida-alimentacao-lista-header {
     margin-bottom: 13px;
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    align-items: center;
   }
   
-  .cadastro-alimentacao-lista-header span {
-    color: #df1b24;
-    font-size: 11px;
-    font-weight: 900;
-  }
-  
-  .cadastro-alimentacao-lista-header h2 {
-    margin: 2px 0 0;
-    color: #222;
-    font-size: 16px;
-    font-weight: 900;
-  }
-  
-  .cadastro-alimentacao-lista-header > strong {
+  .saida-alimentacao-lista-header > strong {
     min-width: 40px;
     height: 40px;
     padding: 0 10px;
@@ -372,12 +339,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
-    font-weight: 900;
   }
   
-  .cadastro-alimentacao-vazio {
-    padding: 24px 14px;
+  .saida-alimentacao-vazio {
+    padding: 22px;
     border: 1px dashed #d8d8d8;
     border-radius: 17px;
     color: #777;
@@ -385,26 +350,26 @@
     text-align: center;
   }
   
-  .cadastro-alimentacao-vazio svg {
-    margin-bottom: 8px;
-    font-size: 24px;
+  .saida-alimentacao-vazio svg {
+    margin-bottom: 7px;
+    font-size: 23px;
   }
   
-  .cadastro-alimentacao-vazio p {
+  .saida-alimentacao-vazio p {
     margin: 0;
     font-size: 12px;
     font-weight: 800;
   }
   
-  .cadastro-alimentacao-lista {
+  .saida-alimentacao-lista {
     display: flex;
     flex-direction: column;
     gap: 9px;
   }
   
-  .cadastro-alimentacao-item {
+  .saida-alimentacao-item {
     padding: 11px;
-    border: 1px solid #eeeeee;
+    border: 1px solid #eee;
     border-radius: 17px;
     background: #fafafa;
     display: grid;
@@ -413,56 +378,63 @@
     align-items: flex-start;
   }
   
-  .cadastro-alimentacao-item-icon {
+  .saida-alimentacao-item-icon {
     width: 38px;
     height: 38px;
     border-radius: 14px;
-    color: #ffe600;
-    background: #111;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 21px;
   }
   
-  .cadastro-alimentacao-item-info {
+  .saida-icone-feno {
+    color: #ffe600;
+    background: #111;
+  }
+  
+  .saida-icone-racao-adulto {
+    color: #fff;
+    background: #df1b24;
+  }
+  
+  .saida-icone-racao-potro {
+    color: #7c6500;
+    background: #fff6bf;
+  }
+  
+  .saida-alimentacao-item-info {
     min-width: 0;
   }
   
-  .cadastro-alimentacao-item-info > span {
+  .saida-alimentacao-item-info > span {
     color: #df1b24;
     font-size: 10px;
     font-weight: 900;
     text-transform: uppercase;
   }
   
-  .cadastro-alimentacao-item-info h3 {
+  .saida-alimentacao-item-info h3 {
     margin: 3px 0;
     color: #111;
     font-size: 13px;
-    font-weight: 900;
     line-height: 1.3;
   }
   
-  .cadastro-alimentacao-item-info p {
-    margin: 0;
+  .saida-alimentacao-item-info p {
+    margin: 2px 0 0;
     color: #666;
     font-size: 11px;
-    font-weight: 700;
   }
   
-  .cadastro-alimentacao-item-info p strong {
-    color: #222;
-    font-weight: 900;
-  }
-  
-  .cadastro-alimentacao-item-detalhes {
+  .saida-alimentacao-item-detalhes {
     margin-top: 7px;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
   
-  .cadastro-alimentacao-item-detalhes span {
+  .saida-alimentacao-item-detalhes span {
     padding: 4px 7px;
     border-radius: 999px;
     color: #ffe600;
@@ -474,7 +446,7 @@
     gap: 4px;
   }
   
-  .cadastro-alimentacao-excluir {
+  .saida-alimentacao-excluir {
     width: 36px;
     height: 36px;
     padding: 0;
@@ -488,7 +460,7 @@
     cursor: pointer;
   }
   
-  .cadastro-alimentacao-modal-overlay {
+  .saida-alimentacao-modal-overlay {
     position: fixed;
     inset: 0;
     z-index: 50;
@@ -499,17 +471,17 @@
     justify-content: center;
   }
   
-  .cadastro-alimentacao-modal {
+  .saida-alimentacao-modal {
     width: 100%;
     max-width: 346px;
     padding: 22px;
     border-radius: 24px;
-    background: #ffffff;
+    background: #fff;
     box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
     text-align: center;
   }
   
-  .cadastro-alimentacao-modal-icon {
+  .saida-alimentacao-modal-icon {
     width: 58px;
     height: 58px;
     margin: 0 auto 14px;
@@ -522,26 +494,20 @@
     font-size: 24px;
   }
   
-  .cadastro-alimentacao-modal h2 {
+  .saida-alimentacao-modal h2 {
     margin: 0 0 9px;
-    color: #222;
     font-size: 20px;
     font-weight: 900;
   }
   
-  .cadastro-alimentacao-modal > p {
+  .saida-alimentacao-modal > p {
     margin: 0 0 16px;
     color: #666;
     font-size: 13px;
     line-height: 1.45;
   }
   
-  .cadastro-alimentacao-modal > p strong {
-    color: #111;
-    font-weight: 900;
-  }
-  
-  .cadastro-alimentacao-modal-resumo {
+  .saida-alimentacao-modal-resumo {
     margin-bottom: 16px;
     padding: 13px;
     border: 1px solid #ffe600;
@@ -550,7 +516,7 @@
     text-align: left;
   }
   
-  .cadastro-alimentacao-modal-resumo span {
+  .saida-alimentacao-modal-resumo span {
     display: block;
     margin-top: 7px;
     color: #777;
@@ -558,24 +524,23 @@
     font-weight: 800;
   }
   
-  .cadastro-alimentacao-modal-resumo span:first-child {
+  .saida-alimentacao-modal-resumo span:first-child {
     margin-top: 0;
   }
   
-  .cadastro-alimentacao-modal-resumo strong {
+  .saida-alimentacao-modal-resumo strong {
     display: block;
-    color: #222;
     font-size: 13px;
     font-weight: 900;
   }
   
-  .cadastro-alimentacao-modal-actions {
+  .saida-alimentacao-modal-actions {
     display: flex;
     flex-direction: column;
     gap: 9px;
   }
   
-  .cadastro-alimentacao-modal-actions button {
+  .saida-alimentacao-modal-actions button {
     width: 100%;
     min-height: 48px;
     border-radius: 15px;
@@ -589,30 +554,28 @@
     gap: 8px;
   }
   
-  .cadastro-alimentacao-confirmar-exclusao {
+  .saida-alimentacao-confirmar-exclusao {
     border: 2px solid #ffe600;
-    color: #ffffff;
+    color: #fff;
     background: #df1b24;
   }
   
-  .cadastro-alimentacao-cancelar-exclusao {
+  .saida-alimentacao-cancelar-exclusao {
     border: 0;
     color: #ffe600;
     background: #111;
   }
   
   @media (max-width: 430px) {
-    .cadastro-alimentacao-page {
+    .saida-alimentacao-page {
       width: 100vw;
       height: 100dvh;
-      min-height: 100dvh;
       padding: 0;
       background: #fffdf4;
-      overflow: hidden;
       display: block;
     }
   
-    .cadastro-alimentacao-phone {
+    .saida-alimentacao-phone {
       width: 100vw;
       height: 100dvh;
       min-height: 100dvh;
@@ -622,66 +585,17 @@
       box-shadow: none;
     }
   
-    .cadastro-alimentacao-header {
+    .saida-alimentacao-header {
       margin-top: 0;
-      margin-bottom: 12px;
     }
   
-    .cadastro-alimentacao-header h1 {
-      font-size: 20px;
+    .saida-alimentacao-grid {
+      grid-template-columns: 1fr;
     }
   
-    .cadastro-alimentacao-apresentacao,
-    .cadastro-alimentacao-card {
+    .saida-alimentacao-apresentacao,
+    .saida-alimentacao-card {
       padding: 12px;
       border-radius: 18px;
     }
-  
-    .cadastro-alimentacao-apresentacao {
-      margin-bottom: 10px;
-    }
-  
-    .cadastro-alimentacao-card {
-      margin-bottom: 10px;
-    }
-  
-    .cadastro-alimentacao-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  @media (max-height: 720px) {
-    .cadastro-alimentacao-phone {
-      padding-top: 18px;
-      padding-bottom: 14px;
-    }
-  
-    .cadastro-alimentacao-header {
-      margin-bottom: 9px;
-    }
-  
-    .cadastro-alimentacao-header h1 {
-      font-size: 18px;
-    }
-  
-    .cadastro-alimentacao-apresentacao,
-    .cadastro-alimentacao-card {
-      padding: 10px;
-      margin-bottom: 8px;
-    }
-  }
-
-  .cadastro-alimentacao-item-icon.icone-feno {
-    background: #111111;
-    color: #ffe600;
-  }
-  
-  .cadastro-alimentacao-item-icon.icone-racao-adulto {
-    background: #df1b24;
-    color: #ffffff;
-  }
-  
-  .cadastro-alimentacao-item-icon.icone-racao-potro {
-    background: #fff6bf;
-    color: #7c6500;
   }

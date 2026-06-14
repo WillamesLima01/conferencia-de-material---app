@@ -8,6 +8,7 @@ import EditarMaterial from './pages/EditarMaterial';
 import ConsultaMateriais from './pages/ConsultaMateriais';
 import AdminPainel from './pages/AdminPainel';
 import CadastroFenoRacao from './pages/CadastroFenoRacao';
+import SaidaFenoRacao from './pages/SaidaFenoRacao';
 
 import { materiaisMock } from './data/materiais';
 
@@ -20,11 +21,67 @@ function App() {
 
   const [abrirConsulta, setAbrirConsulta] = useState(false);
   const [abrirAdmin, setAbrirAdmin] = useState(false);
-  const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] =
-    useState(false);
+  const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] = useState(false);
+  const [abrirSaidaFenoRacao, setAbrirSaidaFenoRacao] = useState(false);
+  const [abrirModalFenoRacao, setAbrirModalFenoRacao] = useState(false);
 
   const [cadastroPendente, setCadastroPendente] = useState(null);
   const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
+
+  const obterValorNormalizado = (valor) => {
+    return String(valor || '')
+      .trim()
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  };
+
+  const obterNivelUsuario = (usuario) => {
+    return obterValorNormalizado(
+      usuario?.nivelAcesso ||
+        usuario?.perfil ||
+        usuario?.role ||
+        usuario?.tipo ||
+        usuario?.NIVEL_ACESSO ||
+        usuario?.PERFIL ||
+        usuario?.ROLE ||
+        usuario?.TIPO ||
+        usuario?.nivel ||
+        usuario?.NIVEL
+    );
+  };
+
+  const obterSetorUsuario = (usuario) => {
+    return obterValorNormalizado(usuario?.setor || usuario?.SETOR);
+  };
+
+  const usuarioEhAdmin = (usuario) => {
+    const nivel = obterNivelUsuario(usuario);
+
+    return (
+      nivel === 'ADMIN' ||
+      nivel === 'ADMINP4' ||
+      nivel === 'ADMIN_P4' ||
+      nivel === 'ADMINMASTER' ||
+      nivel === 'ADMIN_MASTER' ||
+      nivel === 'MASTER' ||
+      nivel === '1'
+    );
+  };
+
+  const usuarioEhBaia = (usuario) => {
+    return obterSetorUsuario(usuario) === 'BAIA';
+  };
+
+  const fecharTelasSecundarias = () => {
+    setConfiguracaoConferencia(null);
+    setAbrirConsulta(false);
+    setAbrirAdmin(false);
+    setAbrirCadastroAlimentacao(false);
+    setAbrirSaidaFenoRacao(false);
+    setCadastroPendente(null);
+    setMaterialEmEdicao(null);
+  };
 
   const zerarConferenciaDaUnidade = (usuario) => {
     setMateriais((materiaisAtuais) =>
@@ -105,17 +162,41 @@ function App() {
     });
   };
 
+  const abrirModuloFenoRacao = () => {
+    fecharTelasSecundarias();
+
+    if (usuarioEhAdmin(usuarioLogado)) {
+      setAbrirModalFenoRacao(true);
+      return;
+    }
+
+    if (usuarioEhBaia(usuarioLogado)) {
+      setAbrirSaidaFenoRacao(true);
+      return;
+    }
+
+    window.alert('Você não tem permissão para acessar Feno e Ração.');
+  };
+
   const abrirTelaCadastroAlimentacao = () => {
+    fecharTelasSecundarias();
+    setAbrirModalFenoRacao(false);
     setAbrirCadastroAlimentacao(true);
+  };
+
+  const abrirTelaSaidaFenoRacao = () => {
+    fecharTelasSecundarias();
+    setAbrirModalFenoRacao(false);
+    setAbrirSaidaFenoRacao(true);
   };
 
   const voltarDoCadastroAlimentacao = () => {
     setAbrirCadastroAlimentacao(false);
+    setConfiguracaoConferencia(null);
+  };
 
-    /*
-      Garante que o retorno seja para Selecionar Conferência,
-      e não para uma conferência patrimonial já iniciada.
-    */
+  const voltarDaSaidaFenoRacao = () => {
+    setAbrirSaidaFenoRacao(false);
     setConfiguracaoConferencia(null);
   };
 
@@ -133,6 +214,15 @@ function App() {
 
   if (!usuarioLogado) {
     return <Login onLoginSuccess={setUsuarioLogado} />;
+  }
+
+  if (abrirSaidaFenoRacao) {
+    return (
+      <SaidaFenoRacao
+        usuario={usuarioLogado}
+        onVoltar={voltarDaSaidaFenoRacao}
+      />
+    );
   }
 
   if (abrirCadastroAlimentacao) {
@@ -190,15 +280,57 @@ function App() {
 
   if (!configuracaoConferencia) {
     return (
-      <SelecionarConferencia
-        usuario={usuarioLogado}
-        onIniciarConferencia={setConfiguracaoConferencia}
-        onZerarConferencia={zerarConferenciaDaUnidade}
-        onAbrirCadastroManual={abrirTelaCadastroManual}
-        onAbrirConsulta={() => setAbrirConsulta(true)}
-        onAbrirAdmin={() => setAbrirAdmin(true)}
-        onAbrirCadastroAlimentacao={abrirTelaCadastroAlimentacao}
-      />
+      <>
+        <SelecionarConferencia
+          usuario={usuarioLogado}
+          onIniciarConferencia={setConfiguracaoConferencia}
+          onZerarConferencia={zerarConferenciaDaUnidade}
+          onAbrirCadastroManual={abrirTelaCadastroManual}
+          onAbrirConsulta={() => setAbrirConsulta(true)}
+          onAbrirAdmin={() => setAbrirAdmin(true)}
+          onAbrirFenoRacao={abrirModuloFenoRacao}
+          onAbrirCadastroAlimentacao={abrirModuloFenoRacao}
+          onAbrirSaidaFenoRacao={abrirModuloFenoRacao}
+        />
+
+        {abrirModalFenoRacao && (
+          <div className="modal-feno-racao-overlay">
+            <div className="modal-feno-racao">
+              <div className="modal-feno-racao-header">
+                <span>Alimentação equina</span>
+                <h2>Feno e Ração</h2>
+                <p>Escolha uma opção para continuar.</p>
+              </div>
+
+              <div className="modal-feno-racao-actions">
+                <button
+                  type="button"
+                  className="modal-feno-racao-btn modal-feno-racao-btn-cadastro"
+                  onClick={abrirTelaCadastroAlimentacao}
+                >
+                  Cadastrar Feno e Ração
+                </button>
+
+                <button
+                  type="button"
+                  className="modal-feno-racao-btn modal-feno-racao-btn-saida"
+                  onClick={abrirTelaSaidaFenoRacao}
+                >
+                  Saída de Feno e Ração
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="modal-feno-racao-cancelar"
+                onClick={() => setAbrirModalFenoRacao(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

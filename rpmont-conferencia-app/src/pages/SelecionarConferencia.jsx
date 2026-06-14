@@ -33,6 +33,14 @@ const carregarSetoresCadastrados = () => {
   }
 };
 
+const normalizarTexto = (valor) => {
+  return String(valor || '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
 function SelecionarConferencia({
   usuario,
   onIniciarConferencia,
@@ -40,7 +48,19 @@ function SelecionarConferencia({
   onAbrirCadastroManual,
   onAbrirConsulta,
   onAbrirAdmin,
+
+  /*
+    Nova prop correta.
+    Ela chama o controle centralizado no App.jsx.
+  */
+  onAbrirFenoRacao,
+
+  /*
+    Props antigas mantidas apenas como segurança.
+    Depois que o App.jsx estiver 100%, pode remover.
+  */
   onAbrirCadastroAlimentacao,
+  onAbrirSaidaFenoRacao,
 }) {
   const [modoConferencia, setModoConferencia] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
@@ -53,7 +73,10 @@ function SelecionarConferencia({
   const [senhaAdmin, setSenhaAdmin] = useState('');
   const [mensagemZerar, setMensagemZerar] = useState('');
 
-  const usuarioEhAdmin = Number(usuario?.nivel) === 1;
+  const usuarioEhAdmin = Number(usuario?.nivel || usuario?.NIVEL) === 1;
+
+  const usuarioEhBaia =
+    normalizarTexto(usuario?.setor || usuario?.SETOR) === 'BAIA';
 
   const unidadeUsuarioLogada = String(usuario?.unidade || '')
     .trim()
@@ -96,6 +119,30 @@ function SelecionarConferencia({
         setor: setorSelecionado,
       });
     }
+  };
+
+  const abrirFenoRacao = () => {
+    if (typeof onAbrirFenoRacao === 'function') {
+      onAbrirFenoRacao();
+      return;
+    }
+
+    /*
+      Fallback provisório:
+      se o App.jsx ainda estiver usando as props antigas,
+      o botão não fica morto.
+    */
+    if (usuarioEhAdmin && typeof onAbrirCadastroAlimentacao === 'function') {
+      onAbrirCadastroAlimentacao();
+      return;
+    }
+
+    if (!usuarioEhAdmin && usuarioEhBaia && typeof onAbrirSaidaFenoRacao === 'function') {
+      onAbrirSaidaFenoRacao();
+      return;
+    }
+
+    window.alert('A função de Feno e Ração não foi configurada no App.jsx.');
   };
 
   const abrirModalZerar = () => {
@@ -202,7 +249,7 @@ function SelecionarConferencia({
               <button
                 type="button"
                 className="admin-acao-alimentacao"
-                onClick={onAbrirCadastroAlimentacao}
+                onClick={abrirFenoRacao}
               >
                 <FaWheatAwn />
                 Feno e Ração
@@ -214,6 +261,32 @@ function SelecionarConferencia({
               >
                 <FaRotateRight />
                 Zerar conferência
+              </button>
+            </div>
+          </section>
+        )}
+
+        {!usuarioEhAdmin && usuarioEhBaia && (
+          <section className="admin-card admin-card-duplo">
+            <div className="admin-card-texto">
+              <span>Alimentação equina</span>
+
+              <h3>Feno e Ração</h3>
+
+              <p>
+                Registre a saída de feno e ração para o serviço operacional da
+                unidade {usuario?.unidade}.
+              </p>
+            </div>
+
+            <div className="admin-card-acoes">
+              <button
+                type="button"
+                className="admin-acao-alimentacao"
+                onClick={abrirFenoRacao}
+              >
+                <FaWheatAwn />
+                Saída de Feno e Ração
               </button>
             </div>
           </section>
