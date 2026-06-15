@@ -112,3 +112,7 @@
 .modal-feno-racao-cancelar:hover {
   background: #e2e8f0;
 }
+
+.modal-feno-racao-btn-relatorio {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+}

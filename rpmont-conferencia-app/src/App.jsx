@@ -9,6 +9,7 @@ import ConsultaMateriais from './pages/ConsultaMateriais';
 import AdminPainel from './pages/AdminPainel';
 import CadastroFenoRacao from './pages/CadastroFenoRacao';
 import SaidaFenoRacao from './pages/SaidaFenoRacao';
+import RelatorioFenoRacao from './pages/RelatorioFenoRacao';
 
 import { materiaisMock } from './data/materiais';
 
@@ -24,6 +25,7 @@ function App() {
   const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] = useState(false);
   const [abrirSaidaFenoRacao, setAbrirSaidaFenoRacao] = useState(false);
   const [abrirModalFenoRacao, setAbrirModalFenoRacao] = useState(false);
+  const [abrirRelatorioFenoRacao, setAbrirRelatorioFenoRacao] = useState(false);
 
   const [cadastroPendente, setCadastroPendente] = useState(null);
   const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
@@ -79,6 +81,7 @@ function App() {
     setAbrirAdmin(false);
     setAbrirCadastroAlimentacao(false);
     setAbrirSaidaFenoRacao(false);
+    setAbrirRelatorioFenoRacao(false);
     setCadastroPendente(null);
     setMaterialEmEdicao(null);
   };
@@ -190,6 +193,12 @@ function App() {
     setAbrirSaidaFenoRacao(true);
   };
 
+  const abrirTelaRelatorioFenoRacao = () => {
+    fecharTelasSecundarias();
+    setAbrirModalFenoRacao(false);
+    setAbrirRelatorioFenoRacao(true);
+  };
+
   const voltarDoCadastroAlimentacao = () => {
     setAbrirCadastroAlimentacao(false);
     setConfiguracaoConferencia(null);
@@ -197,6 +206,11 @@ function App() {
 
   const voltarDaSaidaFenoRacao = () => {
     setAbrirSaidaFenoRacao(false);
+    setConfiguracaoConferencia(null);
+  };
+
+  const voltarDoRelatorioFenoRacao = () => {
+    setAbrirRelatorioFenoRacao(false);
     setConfiguracaoConferencia(null);
   };
 
@@ -214,6 +228,15 @@ function App() {
 
   if (!usuarioLogado) {
     return <Login onLoginSuccess={setUsuarioLogado} />;
+  }
+
+  if (abrirRelatorioFenoRacao) {
+    return (
+      <RelatorioFenoRacao
+        usuario={usuarioLogado}
+        onVoltar={voltarDoRelatorioFenoRacao}
+      />
+    );
   }
 
   if (abrirSaidaFenoRacao) {
@@ -317,6 +340,14 @@ function App() {
                   onClick={abrirTelaSaidaFenoRacao}
                 >
                   Saída de Feno e Ração
+                </button>
+
+                <button
+                  type="button"
+                  className="modal-feno-racao-btn modal-feno-racao-btn-relatorio"
+                  onClick={abrirTelaRelatorioFenoRacao}
+                >
+                  Relatório de Feno e Ração
                 </button>
               </div>
 
