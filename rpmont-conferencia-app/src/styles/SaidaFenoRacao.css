@@ -599,3 +599,65 @@
       border-radius: 18px;
     }
   }
+
+  .saida-alimentacao-edicao-alerta {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  padding: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.saida-alimentacao-edicao-alerta strong {
+  color: #92400e;
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.saida-alimentacao-edicao-alerta span {
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.saida-alimentacao-edicao-alerta button {
+  width: fit-content;
+  margin-top: 5px;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 10px;
+  color: #ffffff;
+  background: #92400e;
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saida-alimentacao-item-acoes {
+  display: grid;
+  gap: 8px;
+  align-self: center;
+}
+
+.saida-alimentacao-editar {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  cursor: pointer;
+}
+
+.saida-alimentacao-form-group input:disabled {
+  color: #64748b;
+  background: #f8fafc;
+  cursor: not-allowed;
+}

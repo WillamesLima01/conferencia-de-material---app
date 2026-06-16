@@ -685,3 +685,12 @@
     background: #fff6bf;
     color: #7c6500;
   }
+
+  .cadastro-alimentacao-ajuda {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}

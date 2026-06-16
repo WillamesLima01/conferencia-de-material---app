@@ -58,9 +58,7 @@ const carregarEntradas = () => {
   try {
     const dadosConvertidos = JSON.parse(dadosSalvos);
 
-    return Array.isArray(dadosConvertidos)
-      ? dadosConvertidos
-      : [];
+    return Array.isArray(dadosConvertidos) ? dadosConvertidos : [];
   } catch {
     return [];
   }
@@ -106,24 +104,16 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
   const [entradaParaExcluir, setEntradaParaExcluir] = useState(null);
 
   const produtoSelecionado = useMemo(() => {
-    return (
-      PRODUTOS.find(
-        (produto) => produto.valor === tipoProduto
-      ) || null
-    );
+    return PRODUTOS.find((produto) => produto.valor === tipoProduto) || null;
   }, [tipoProduto]);
 
   const pesosCadastrados = useMemo(() => {
     if (!tipoProduto) return [];
 
     const pesos = entradas
-      .filter(
-        (entrada) => entrada.tipoProduto === tipoProduto
-      )
+      .filter((entrada) => entrada.tipoProduto === tipoProduto)
       .map((entrada) => Number(entrada.pesoUnidadeKg))
-      .filter(
-        (peso) => Number.isFinite(peso) && peso > 0
-      );
+      .filter((peso) => Number.isFinite(peso) && peso > 0);
 
     return [...new Set(pesos)].sort((a, b) => a - b);
   }, [entradas, tipoProduto]);
@@ -151,10 +141,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
   const salvarNovaEntrada = (novaEntrada) => {
     setEntradas((entradasAtuais) => {
-      const entradasAtualizadas = [
-        novaEntrada,
-        ...entradasAtuais,
-      ];
+      const entradasAtualizadas = [novaEntrada, ...entradasAtuais];
 
       localStorage.setItem(
         STORAGE_KEY_ENTRADAS,
@@ -209,24 +196,16 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     }
 
     if (!pesoSelecionado) {
-      mostrarMensagem(
-        'Selecione ou cadastre o peso por unidade.'
-      );
+      mostrarMensagem('Selecione ou cadastre o peso por unidade.');
       return;
     }
 
-    if (
-      !Number.isFinite(pesoUtilizado) ||
-      pesoUtilizado <= 0
-    ) {
+    if (!Number.isFinite(pesoUtilizado) || pesoUtilizado <= 0) {
       mostrarMensagem('Informe um peso válido.');
       return;
     }
 
-    if (
-      !Number.isFinite(quantidadeNumerica) ||
-      quantidadeNumerica <= 0
-    ) {
+    if (!Number.isFinite(quantidadeNumerica) || quantidadeNumerica <= 0) {
       mostrarMensagem('Informe uma quantidade válida.');
       return;
     }
@@ -243,37 +222,36 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
       return;
     }
 
+    const loteTratado = lote.trim();
+
     const novaEntrada = {
       id: gerarId(),
       tipoProduto: produtoSelecionado.valor,
       nomeProduto: produtoSelecionado.nome,
-      unidadeControle:
-        produtoSelecionado.unidade.toUpperCase(),
+      unidadeControle: produtoSelecionado.unidade.toUpperCase(),
       pesoUnidadeKg: pesoUtilizado,
+
       quantidadeEntrada: quantidadeNumerica,
+      quantidadeInicial: quantidadeNumerica,
+      quantidade: quantidadeNumerica,
       quantidadeAtual: quantidadeNumerica,
+
       pesoTotalKg,
       dataEntrada,
       fornecedor: fornecedor.trim(),
-      lote: lote.trim(),
+      lote: loteTratado,
       validade,
       responsavel: responsavel.trim(),
       observacao: observacao.trim(),
-      unidade:
-        usuario?.unidade ||
-        usuario?.UNIDADE ||
-        'RPMont',
+      unidade: usuario?.unidade || usuario?.UNIDADE || 'RPMont',
       dataCadastro: new Date().toISOString(),
-      userModificador:
-        usuario?.id || usuario?.ID || 1,
+      userModificador: usuario?.id || usuario?.ID || 1,
     };
 
     salvarNovaEntrada(novaEntrada);
     limparFormulario();
 
-    mostrarMensagem(
-      `${produtoSelecionado.nome} cadastrado com sucesso.`
-    );
+    mostrarMensagem(`${produtoSelecionado.nome} cadastrado com sucesso.`);
   };
 
   const confirmarExclusao = () => {
@@ -289,7 +267,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     if (tipo === 'FENO') {
       return <FaWheatAwn />;
     }
-  
+
     return <GiGrain />;
   };
 
@@ -321,11 +299,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
             <span>Alimentação equina</span>
             <h1>Feno e Ração</h1>
 
-            <p>
-              {usuario?.unidade ||
-                usuario?.UNIDADE ||
-                'Controle de estoque'}
-            </p>
+            <p>{usuario?.unidade || usuario?.UNIDADE || 'Controle de estoque'}</p>
           </div>
         </header>
 
@@ -339,16 +313,14 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
             <h2>Cadastrar Feno e Ração</h2>
 
             <p>
-              Registre cada entrada de acordo com o
-              produto, peso e quantidade recebida.
+              Registre cada entrada de acordo com o produto, peso, lote e
+              quantidade recebida.
             </p>
           </div>
         </section>
 
         {mensagem && (
-          <div className="cadastro-alimentacao-mensagem">
-            {mensagem}
-          </div>
+          <div className="cadastro-alimentacao-mensagem">{mensagem}</div>
         )}
 
         <section className="cadastro-alimentacao-card">
@@ -361,10 +333,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
             </div>
           </div>
 
-          <form
-            className="cadastro-alimentacao-form"
-            onSubmit={handleSalvar}
-          >
+          <form className="cadastro-alimentacao-form" onSubmit={handleSalvar}>
             <div className="cadastro-alimentacao-form-group">
               <label htmlFor="tipoProduto">Produto</label>
 
@@ -373,15 +342,10 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                 value={tipoProduto}
                 onChange={handleProdutoChange}
               >
-                <option value="">
-                  Selecione o produto
-                </option>
+                <option value="">Selecione o produto</option>
 
                 {PRODUTOS.map((produto) => (
-                  <option
-                    key={produto.valor}
-                    value={produto.valor}
-                  >
+                  <option key={produto.valor} value={produto.valor}>
                     {produto.nome}
                   </option>
                 ))}
@@ -390,9 +354,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
             <div className="cadastro-alimentacao-form-group">
               <label htmlFor="pesoUnidade">
-                Peso por{' '}
-                {produtoSelecionado?.unidade ||
-                  'unidade'}
+                Peso por {produtoSelecionado?.unidade || 'unidade'}
               </label>
 
               <select
@@ -417,17 +379,13 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                   </option>
                 ))}
 
-                <option value="NOVO">
-                  + Cadastrar novo peso
-                </option>
+                <option value="NOVO">+ Cadastrar novo peso</option>
               </select>
             </div>
 
             {usandoNovoPeso && (
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="novoPeso">
-                  Novo peso em quilogramas
-                </label>
+                <label htmlFor="novoPeso">Novo peso em quilogramas</label>
 
                 <div className="cadastro-alimentacao-input-unidade">
                   <input
@@ -451,9 +409,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
             <div className="cadastro-alimentacao-form-group">
               <label htmlFor="quantidade">
-                Quantidade de{' '}
-                {produtoSelecionado?.unidadePlural ||
-                  'unidades'}
+                Quantidade de {produtoSelecionado?.unidadePlural || 'unidades'}
               </label>
 
               <input
@@ -482,9 +438,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
                 <strong>
                   {pesoUtilizado > 0
-                    ? `${formatarNumero(
-                        pesoUtilizado
-                      )} kg`
+                    ? `${formatarNumero(pesoUtilizado)} kg`
                     : '0 kg'}
                 </strong>
               </div>
@@ -494,11 +448,8 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
                 <strong>
                   {quantidadeNumerica > 0
-                    ? `${formatarNumero(
-                        quantidadeNumerica
-                      )} ${
-                        produtoSelecionado?.unidadePlural ||
-                        'unidades'
+                    ? `${formatarNumero(quantidadeNumerica)} ${
+                        produtoSelecionado?.unidadePlural || 'unidades'
                       }`
                     : '0'}
                 </strong>
@@ -507,58 +458,44 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
               <div className="cadastro-alimentacao-resumo-total">
                 <span>Peso total recebido</span>
 
-                <strong>
-                  {formatarNumero(pesoTotalKg)} kg
-                </strong>
+                <strong>{formatarNumero(pesoTotalKg)} kg</strong>
               </div>
             </div>
 
             <div className="cadastro-alimentacao-grid">
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="dataEntrada">
-                  Data da entrada
-                </label>
+                <label htmlFor="dataEntrada">Data da entrada</label>
 
                 <input
                   id="dataEntrada"
                   type="date"
                   value={dataEntrada}
-                  onChange={(event) =>
-                    setDataEntrada(event.target.value)
-                  }
+                  onChange={(event) => setDataEntrada(event.target.value)}
                 />
               </div>
 
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="validade">
-                  Validade
-                </label>
+                <label htmlFor="validade">Validade</label>
 
                 <input
                   id="validade"
                   type="date"
                   value={validade}
-                  onChange={(event) =>
-                    setValidade(event.target.value)
-                  }
+                  onChange={(event) => setValidade(event.target.value)}
                 />
               </div>
             </div>
 
             <div className="cadastro-alimentacao-grid">
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="fornecedor">
-                  Fornecedor
-                </label>
+                <label htmlFor="fornecedor">Fornecedor</label>
 
                 <input
                   id="fornecedor"
                   type="text"
                   value={fornecedor}
                   placeholder="Nome do fornecedor"
-                  onChange={(event) =>
-                    setFornecedor(event.target.value)
-                  }
+                  onChange={(event) => setFornecedor(event.target.value)}
                 />
               </div>
 
@@ -569,49 +506,43 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                   id="lote"
                   type="text"
                   value={lote}
-                  placeholder="Número do lote"
-                  onChange={(event) =>
-                    setLote(event.target.value)
-                  }
+                  placeholder="Ex.: Lote 001, NF 1234 ou entrega 16/06"
+                  onChange={(event) => setLote(event.target.value)}
                 />
+
+                <small className="cadastro-alimentacao-ajuda">
+                  O lote identifica a entrada recebida no estoque. Ele ajuda a
+                  separar feno de 10 kg, 12 kg, 20 kg ou sacos de ração
+                  recebidos em datas diferentes, evitando mistura de saldos e
+                  facilitando saídas, extravios e conferência no relatório.
+                </small>
               </div>
             </div>
 
             <div className="cadastro-alimentacao-form-group">
-              <label htmlFor="responsavel">
-                Responsável
-              </label>
+              <label htmlFor="responsavel">Responsável</label>
 
               <input
                 id="responsavel"
                 type="text"
                 value={responsavel}
                 placeholder="Responsável pelo recebimento"
-                onChange={(event) =>
-                  setResponsavel(event.target.value)
-                }
+                onChange={(event) => setResponsavel(event.target.value)}
               />
             </div>
 
             <div className="cadastro-alimentacao-form-group">
-              <label htmlFor="observacao">
-                Observação
-              </label>
+              <label htmlFor="observacao">Observação</label>
 
               <textarea
                 id="observacao"
                 value={observacao}
                 placeholder="Informações adicionais sobre a entrada"
-                onChange={(event) =>
-                  setObservacao(event.target.value)
-                }
+                onChange={(event) => setObservacao(event.target.value)}
               />
             </div>
 
-            <button
-              type="submit"
-              className="cadastro-alimentacao-salvar"
-            >
+            <button type="submit" className="cadastro-alimentacao-salvar">
               <FaPlus />
               Cadastrar entrada
             </button>
@@ -637,9 +568,19 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
             <div className="cadastro-alimentacao-lista">
               {entradas.map((entrada) => {
                 const produto = PRODUTOS.find(
-                  (item) =>
-                    item.valor === entrada.tipoProduto
+                  (item) => item.valor === entrada.tipoProduto
                 );
+
+                const quantidadeExibida =
+                  entrada.quantidadeEntrada ||
+                  entrada.quantidadeInicial ||
+                  entrada.quantidade ||
+                  0;
+
+                const pesoTotalExibido =
+                  entrada.pesoTotalKg ||
+                  Number(quantidadeExibida || 0) *
+                    Number(entrada.pesoUnidadeKg || 0);
 
                 return (
                   <article
@@ -651,59 +592,37 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                         entrada.tipoProduto
                       )}`}
                     >
-                      {renderizarIconeProduto(
-                        entrada.tipoProduto
-                      )}
+                      {renderizarIconeProduto(entrada.tipoProduto)}
                     </div>
 
                     <div className="cadastro-alimentacao-item-info">
                       <span>{entrada.nomeProduto}</span>
 
                       <h3>
-                        {formatarNumero(
-                          entrada.quantidadeEntrada
-                        )}{' '}
-                        {produto?.unidadePlural ||
-                          'unidades'}{' '}
-                        de{' '}
-                        {formatarNumero(
-                          entrada.pesoUnidadeKg
-                        )}{' '}
-                        kg
+                        {formatarNumero(quantidadeExibida)}{' '}
+                        {produto?.unidadePlural || 'unidades'} de{' '}
+                        {formatarNumero(entrada.pesoUnidadeKg)} kg
                       </h3>
 
                       <p>
                         Peso total:{' '}
-                        <strong>
-                          {formatarNumero(
-                            entrada.pesoTotalKg
-                          )}{' '}
-                          kg
-                        </strong>
+                        <strong>{formatarNumero(pesoTotalExibido)} kg</strong>
                       </p>
 
                       <div className="cadastro-alimentacao-item-detalhes">
                         <span>
                           <FaCalendarDays />
-                          {formatarData(
-                            entrada.dataEntrada
-                          )}
+                          {formatarData(entrada.dataEntrada)}
                         </span>
 
-                        {entrada.lote && (
-                          <span>
-                            Lote: {entrada.lote}
-                          </span>
-                        )}
+                        {entrada.lote && <span>Lote: {entrada.lote}</span>}
                       </div>
                     </div>
 
                     <button
                       type="button"
                       className="cadastro-alimentacao-excluir"
-                      onClick={() =>
-                        setEntradaParaExcluir(entrada)
-                      }
+                      onClick={() => setEntradaParaExcluir(entrada)}
                       aria-label={`Excluir entrada de ${entrada.nomeProduto}`}
                     >
                       <FaTrashCan />
@@ -726,10 +645,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
               <p>
                 Deseja excluir o registro de{' '}
-                <strong>
-                  {entradaParaExcluir.nomeProduto}
-                </strong>
-                ?
+                <strong>{entradaParaExcluir.nomeProduto}</strong>?
               </p>
 
               <div className="cadastro-alimentacao-modal-resumo">
@@ -737,7 +653,10 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
                 <strong>
                   {formatarNumero(
-                    entradaParaExcluir.quantidadeEntrada
+                    entradaParaExcluir.quantidadeEntrada ||
+                      entradaParaExcluir.quantidadeInicial ||
+                      entradaParaExcluir.quantidade ||
+                      0
                   )}{' '}
                   unidades
                 </strong>
@@ -745,17 +664,20 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                 <span>Peso por unidade</span>
 
                 <strong>
-                  {formatarNumero(
-                    entradaParaExcluir.pesoUnidadeKg
-                  )}{' '}
-                  kg
+                  {formatarNumero(entradaParaExcluir.pesoUnidadeKg)} kg
                 </strong>
 
                 <span>Peso total</span>
 
                 <strong>
                   {formatarNumero(
-                    entradaParaExcluir.pesoTotalKg
+                    entradaParaExcluir.pesoTotalKg ||
+                      Number(
+                        entradaParaExcluir.quantidadeEntrada ||
+                          entradaParaExcluir.quantidadeInicial ||
+                          entradaParaExcluir.quantidade ||
+                          0
+                      ) * Number(entradaParaExcluir.pesoUnidadeKg || 0)
                   )}{' '}
                   kg
                 </strong>
@@ -774,9 +696,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                 <button
                   type="button"
                   className="cadastro-alimentacao-cancelar-exclusao"
-                  onClick={() =>
-                    setEntradaParaExcluir(null)
-                  }
+                  onClick={() => setEntradaParaExcluir(null)}
                 >
                   <FaXmark />
                   Cancelar

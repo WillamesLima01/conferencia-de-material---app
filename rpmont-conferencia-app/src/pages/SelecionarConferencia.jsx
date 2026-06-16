@@ -25,9 +25,7 @@ const carregarSetoresCadastrados = () => {
   try {
     const setoresConvertidos = JSON.parse(setoresSalvos);
 
-    return Array.isArray(setoresConvertidos)
-      ? setoresConvertidos
-      : [];
+    return Array.isArray(setoresConvertidos) ? setoresConvertidos : [];
   } catch {
     return [];
   }
@@ -38,7 +36,41 @@ const normalizarTexto = (valor) => {
     .trim()
     .toUpperCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
+
+const obterNivelUsuario = (usuario) => {
+  return normalizarTexto(
+    usuario?.nivelAcesso ||
+      usuario?.perfil ||
+      usuario?.role ||
+      usuario?.tipo ||
+      usuario?.NIVEL_ACESSO ||
+      usuario?.PERFIL ||
+      usuario?.ROLE ||
+      usuario?.TIPO ||
+      usuario?.nivel ||
+      usuario?.NIVEL
+  );
+};
+
+const obterSetorUsuario = (usuario) => {
+  return normalizarTexto(usuario?.setor || usuario?.SETOR);
+};
+
+const usuarioEhAdminSistema = (usuario) => {
+  const nivel = obterNivelUsuario(usuario);
+
+  return ['ADMIN', 'ADMINP4', 'ADMINMASTER', 'MASTER', '1'].includes(nivel);
+};
+
+const usuarioEhSetorP4 = (usuario) => {
+  return obterSetorUsuario(usuario) === 'P4';
+};
+
+const usuarioEhSetorBaia = (usuario) => {
+  return obterSetorUsuario(usuario) === 'BAIA';
 };
 
 function SelecionarConferencia({
@@ -50,7 +82,7 @@ function SelecionarConferencia({
   onAbrirAdmin,
 
   /*
-    Nova prop correta.
+    Prop correta.
     Ela chama o controle centralizado no App.jsx.
   */
   onAbrirFenoRacao,
@@ -73,12 +105,14 @@ function SelecionarConferencia({
   const [senhaAdmin, setSenhaAdmin] = useState('');
   const [mensagemZerar, setMensagemZerar] = useState('');
 
-  const usuarioEhAdmin = Number(usuario?.nivel || usuario?.NIVEL) === 1;
+  const usuarioEhAdmin = usuarioEhAdminSistema(usuario);
+  const usuarioEhP4 = usuarioEhSetorP4(usuario);
+  const usuarioEhBaia = usuarioEhSetorBaia(usuario);
 
-  const usuarioEhBaia =
-    normalizarTexto(usuario?.setor || usuario?.SETOR) === 'BAIA';
+  const usuarioPodeAcessarPatrimonio = usuarioEhP4;
+  const usuarioPodeAcessarFenoRacao = usuarioEhAdmin || usuarioEhBaia;
 
-  const unidadeUsuarioLogada = String(usuario?.unidade || '')
+  const unidadeUsuarioLogada = String(usuario?.unidade || usuario?.UNIDADE || '')
     .trim()
     .toLowerCase();
 
@@ -93,17 +127,38 @@ function SelecionarConferencia({
   }, [setoresCadastrados, unidadeUsuarioLogada]);
 
   const selecionarTodosMateriais = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      window.alert(
+        'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
+      );
+      return;
+    }
+
     setModoConferencia('TODOS');
     setSetorSelecionado('');
   };
 
   const abrirSelecaoSetor = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      window.alert(
+        'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
+      );
+      return;
+    }
+
     setSetoresCadastrados(carregarSetoresCadastrados());
     setModoConferencia('SETOR');
     setSetorSelecionado('');
   };
 
   const continuarConferencia = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      window.alert(
+        'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
+      );
+      return;
+    }
+
     if (modoConferencia === 'TODOS') {
       onIniciarConferencia({
         tipo: 'TODOS',
@@ -121,7 +176,34 @@ function SelecionarConferencia({
     }
   };
 
+  const abrirCadastroManualComPermissao = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      window.alert(
+        'Acesso negado. O cadastro de material patrimonial é permitido somente para usuários do setor P4.'
+      );
+      return;
+    }
+
+    onAbrirCadastroManual();
+  };
+
+  const abrirConsultaComPermissao = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      window.alert(
+        'Acesso negado. A consulta patrimonial é permitida somente para usuários do setor P4.'
+      );
+      return;
+    }
+
+    onAbrirConsulta();
+  };
+
   const abrirFenoRacao = () => {
+    if (!usuarioPodeAcessarFenoRacao) {
+      window.alert('Você não tem permissão para acessar Feno e Ração.');
+      return;
+    }
+
     if (typeof onAbrirFenoRacao === 'function') {
       onAbrirFenoRacao();
       return;
@@ -146,6 +228,13 @@ function SelecionarConferencia({
   };
 
   const abrirModalZerar = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      window.alert(
+        'Acesso negado. O zeramento da conferência patrimonial é permitido somente para usuários do setor P4.'
+      );
+      return;
+    }
+
     setSenhaAdmin('');
     setMensagemZerar('');
     setModalZerar(true);
@@ -158,6 +247,13 @@ function SelecionarConferencia({
   };
 
   const confirmarZeramento = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      setMensagemZerar(
+        'Acesso negado. Somente usuários do setor P4 podem zerar a conferência.'
+      );
+      return;
+    }
+
     /*
       Validação provisória no front-end.
       Depois será substituída pela validação no backend/MySQL.
@@ -180,8 +276,21 @@ function SelecionarConferencia({
       <section className="selecao-phone">
         <header className="selecao-header">
           <div>
-            <span>Conferência Patrimonial</span>
-            <h1>Selecionar Conferência</h1>
+            <span>
+              {usuarioPodeAcessarPatrimonio
+                ? 'Conferência Patrimonial'
+                : usuarioPodeAcessarFenoRacao
+                  ? 'Alimentação Equina'
+                  : 'Acesso restrito'}
+            </span>
+
+            <h1>
+              {usuarioPodeAcessarPatrimonio
+                ? 'Selecionar Conferência'
+                : usuarioPodeAcessarFenoRacao
+                  ? 'Feno e Ração'
+                  : 'Sem módulo disponível'}
+            </h1>
           </div>
 
           <div className="usuario-chip">
@@ -197,12 +306,12 @@ function SelecionarConferencia({
           <div className="usuario-info-grid">
             <div>
               <span>Unidade</span>
-              <strong>{usuario?.unidade}</strong>
+              <strong>{usuario?.unidade || usuario?.UNIDADE}</strong>
             </div>
 
             <div>
               <span>Setor</span>
-              <strong>{usuario?.setor}</strong>
+              <strong>{usuario?.setor || usuario?.SETOR}</strong>
             </div>
           </div>
         </section>
@@ -215,28 +324,32 @@ function SelecionarConferencia({
               <h3>Gerenciar o sistema</h3>
 
               <p>
-                Cadastre materiais, consulte filtros, gerencie a administração,
-                controle feno e ração ou reinicie a conferência da unidade{' '}
-                {usuario?.unidade}.
+                {usuarioEhP4
+                  ? `Gerencie materiais patrimoniais, administração, feno e ração ou reinicie a conferência da unidade ${usuario?.unidade || usuario?.UNIDADE}.`
+                  : 'Você possui acesso administrativo, mas a conferência patrimonial é exclusiva do setor P4. O acesso a Feno e Ração permanece liberado.'}
               </p>
             </div>
 
             <div className="admin-card-acoes">
-              <button
-                type="button"
-                onClick={onAbrirCadastroManual}
-              >
-                <FaBoxesStacked />
-                Cadastrar material
-              </button>
+              {usuarioPodeAcessarPatrimonio && (
+                <>
+                  <button
+                    type="button"
+                    onClick={abrirCadastroManualComPermissao}
+                  >
+                    <FaBoxesStacked />
+                    Cadastrar material
+                  </button>
 
-              <button
-                type="button"
-                onClick={onAbrirConsulta}
-              >
-                <FaMagnifyingGlassChart />
-                Filtros avançados
-              </button>
+                  <button
+                    type="button"
+                    onClick={abrirConsultaComPermissao}
+                  >
+                    <FaMagnifyingGlassChart />
+                    Filtros avançados
+                  </button>
+                </>
+              )}
 
               <button
                 type="button"
@@ -246,22 +359,26 @@ function SelecionarConferencia({
                 Administração
               </button>
 
-              <button
-                type="button"
-                className="admin-acao-alimentacao"
-                onClick={abrirFenoRacao}
-              >
-                <FaWheatAwn />
-                Feno e Ração
-              </button>
+              {usuarioPodeAcessarFenoRacao && (
+                <button
+                  type="button"
+                  className="admin-acao-alimentacao"
+                  onClick={abrirFenoRacao}
+                >
+                  <FaWheatAwn />
+                  Feno e Ração
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={abrirModalZerar}
-              >
-                <FaRotateRight />
-                Zerar conferência
-              </button>
+              {usuarioPodeAcessarPatrimonio && (
+                <button
+                  type="button"
+                  onClick={abrirModalZerar}
+                >
+                  <FaRotateRight />
+                  Zerar conferência
+                </button>
+              )}
             </div>
           </section>
         )}
@@ -274,8 +391,8 @@ function SelecionarConferencia({
               <h3>Feno e Ração</h3>
 
               <p>
-                Registre a saída de feno e ração para o serviço operacional da
-                unidade {usuario?.unidade}.
+                Registre saída e extravio de feno e ração para o serviço
+                operacional da unidade {usuario?.unidade || usuario?.UNIDADE}.
               </p>
             </div>
 
@@ -286,143 +403,155 @@ function SelecionarConferencia({
                 onClick={abrirFenoRacao}
               >
                 <FaWheatAwn />
-                Saída de Feno e Ração
+                Feno e Ração
               </button>
             </div>
           </section>
         )}
 
-        <section className="resumo-card">
-          <span>Próximo passo</span>
+        {usuarioPodeAcessarPatrimonio && (
+          <>
+            <section className="resumo-card">
+              <span>Próximo passo</span>
 
-          <h3>Escolha o tipo de conferência</h3>
+              <h3>Escolha o tipo de conferência</h3>
 
-          <p>
-            O sistema carregará somente os materiais vinculados à unidade{' '}
-            <strong>{usuario?.unidade}</strong>.
-          </p>
-        </section>
+              <p>
+                O sistema carregará somente os materiais vinculados à unidade{' '}
+                <strong>{usuario?.unidade || usuario?.UNIDADE}</strong>.
+              </p>
+            </section>
 
-        {modoConferencia !== 'SETOR' && (
-          <section className="opcoes-conferencia">
-            <button
-              type="button"
-              className={`opcao-card ${
-                modoConferencia === 'TODOS'
-                  ? 'opcao-card-ativa'
-                  : ''
-              }`}
-              onClick={selecionarTodosMateriais}
-            >
-              <div className="opcao-icon vermelho">
-                <FaBoxesStacked />
-              </div>
+            {modoConferencia !== 'SETOR' && (
+              <section className="opcoes-conferencia">
+                <button
+                  type="button"
+                  className={`opcao-card ${
+                    modoConferencia === 'TODOS' ? 'opcao-card-ativa' : ''
+                  }`}
+                  onClick={selecionarTodosMateriais}
+                >
+                  <div className="opcao-icon vermelho">
+                    <FaBoxesStacked />
+                  </div>
 
-              <div className="opcao-texto">
-                <h3>Todos os materiais</h3>
+                  <div className="opcao-texto">
+                    <h3>Todos os materiais</h3>
 
-                <p>
-                  Conferir todos os materiais da unidade{' '}
-                  {usuario?.unidade}.
-                </p>
-              </div>
+                    <p>
+                      Conferir todos os materiais da unidade{' '}
+                      {usuario?.unidade || usuario?.UNIDADE}.
+                    </p>
+                  </div>
 
-              {modoConferencia === 'TODOS' ? (
-                <FaCheck className="opcao-check" />
-              ) : (
-                <FaChevronRight className="opcao-seta" />
-              )}
-            </button>
+                  {modoConferencia === 'TODOS' ? (
+                    <FaCheck className="opcao-check" />
+                  ) : (
+                    <FaChevronRight className="opcao-seta" />
+                  )}
+                </button>
 
-            <button
-              type="button"
-              className="opcao-card"
-              onClick={abrirSelecaoSetor}
-            >
-              <div className="opcao-icon amarelo">
-                <FaBuildingUser />
-              </div>
+                <button
+                  type="button"
+                  className="opcao-card"
+                  onClick={abrirSelecaoSetor}
+                >
+                  <div className="opcao-icon amarelo">
+                    <FaBuildingUser />
+                  </div>
 
-              <div className="opcao-texto">
-                <h3>Por setor</h3>
+                  <div className="opcao-texto">
+                    <h3>Por setor</h3>
 
-                <p>
-                  Selecionar um setor específico para realizar a conferência.
-                </p>
-              </div>
+                    <p>
+                      Selecionar um setor específico para realizar a
+                      conferência.
+                    </p>
+                  </div>
 
-              <FaChevronRight className="opcao-seta" />
-            </button>
-          </section>
-        )}
+                  <FaChevronRight className="opcao-seta" />
+                </button>
+              </section>
+            )}
 
-        {modoConferencia === 'SETOR' && (
-          <section className="setores-area">
-            <div className="setores-topo">
+            {modoConferencia === 'SETOR' && (
+              <section className="setores-area">
+                <div className="setores-topo">
+                  <button
+                    type="button"
+                    className="voltar-setores"
+                    onClick={() => {
+                      setModoConferencia('');
+                      setSetorSelecionado('');
+                    }}
+                  >
+                    <FaArrowLeft />
+                  </button>
+
+                  <div>
+                    <span>Conferência por setor</span>
+                    <h3>Selecione o setor</h3>
+                  </div>
+                </div>
+
+                {setoresDaUnidade.length === 0 ? (
+                  <div className="setores-vazio">
+                    Nenhum setor cadastrado para a unidade{' '}
+                    {usuario?.unidade || usuario?.UNIDADE}.
+                  </div>
+                ) : (
+                  <div className="setores-lista">
+                    {setoresDaUnidade.map((setor) => (
+                      <button
+                        key={setor.id}
+                        type="button"
+                        className={`setor-item ${
+                          setorSelecionado === setor.nome
+                            ? 'setor-item-ativo'
+                            : ''
+                        }`}
+                        onClick={() => setSetorSelecionado(setor.nome)}
+                      >
+                        <span>{setor.nome}</span>
+
+                        {setorSelecionado === setor.nome && <FaCheck />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {(modoConferencia === 'TODOS' ||
+              (modoConferencia === 'SETOR' && setorSelecionado)) && (
               <button
                 type="button"
-                className="voltar-setores"
-                onClick={() => {
-                  setModoConferencia('');
-                  setSetorSelecionado('');
-                }}
+                className="continuar-conferencia-button"
+                onClick={continuarConferencia}
               >
-                <FaArrowLeft />
+                {modoConferencia === 'TODOS'
+                  ? 'Continuar com todos os materiais'
+                  : `Continuar com ${setorSelecionado}`}
               </button>
-
-              <div>
-                <span>Conferência por setor</span>
-                <h3>Selecione o setor</h3>
-              </div>
-            </div>
-
-            {setoresDaUnidade.length === 0 ? (
-              <div className="setores-vazio">
-                Nenhum setor cadastrado para a unidade{' '}
-                {usuario?.unidade}.
-              </div>
-            ) : (
-              <div className="setores-lista">
-                {setoresDaUnidade.map((setor) => (
-                  <button
-                    key={setor.id}
-                    type="button"
-                    className={`setor-item ${
-                      setorSelecionado === setor.nome
-                        ? 'setor-item-ativo'
-                        : ''
-                    }`}
-                    onClick={() =>
-                      setSetorSelecionado(setor.nome)
-                    }
-                  >
-                    <span>{setor.nome}</span>
-
-                    {setorSelecionado === setor.nome && (
-                      <FaCheck />
-                    )}
-                  </button>
-                ))}
-              </div>
             )}
+          </>
+        )}
+
+        {!usuarioPodeAcessarPatrimonio && !usuarioPodeAcessarFenoRacao && (
+          <section className="resumo-card">
+            <span>Acesso restrito</span>
+
+            <h3>Nenhum módulo disponível para o seu setor</h3>
+
+            <p>
+              A conferência patrimonial é exclusiva do setor P4. O módulo de
+              Feno e Ração é permitido para administradores ou usuários do setor
+              Baia.
+            </p>
           </section>
         )}
 
-        {(modoConferencia === 'TODOS' ||
-          (modoConferencia === 'SETOR' &&
-            setorSelecionado)) && (
-          <button
-            type="button"
-            className="continuar-conferencia-button"
-            onClick={continuarConferencia}
-          >
-            {modoConferencia === 'TODOS'
-              ? 'Continuar com todos os materiais'
-              : `Continuar com ${setorSelecionado}`}
-          </button>
-        )}
-
-        {modalZerar && (
+        {modalZerar && usuarioPodeAcessarPatrimonio && (
           <div className="modal-zerar-overlay">
             <div className="modal-zerar-card">
               <button
@@ -441,7 +570,7 @@ function SelecionarConferencia({
 
               <p>
                 Esta ação marcará todos os materiais da unidade{' '}
-                <strong>{usuario?.unidade}</strong> como{' '}
+                <strong>{usuario?.unidade || usuario?.UNIDADE}</strong> como{' '}
                 <strong>não conferidos</strong>.
               </p>
 

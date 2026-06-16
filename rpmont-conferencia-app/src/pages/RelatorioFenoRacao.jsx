@@ -6,6 +6,7 @@ import {
   FaChartColumn,
   FaFileLines,
   FaPrint,
+  FaTriangleExclamation,
   FaWheatAwn,
   FaFilePdf,
 } from 'react-icons/fa6';
@@ -17,6 +18,7 @@ import '../styles/RelatorioFenoRacao.css';
 
 const STORAGE_KEY_ENTRADAS = 'entradasAlimentacaoEquina';
 const STORAGE_KEY_SAIDAS = 'saidasAlimentacaoEquina';
+const STORAGE_KEY_EXTRAVIOS = 'extraviosAlimentacaoEquina';
 
 const PRODUTOS = [
   {
@@ -95,6 +97,7 @@ const obterIconeProduto = (tipo) => {
 function RelatorioFenoRacao({ usuario, onVoltar }) {
   const [entradas] = useState(() => carregarStorage(STORAGE_KEY_ENTRADAS));
   const [saidas] = useState(() => carregarStorage(STORAGE_KEY_SAIDAS));
+  const [extravios] = useState(() => carregarStorage(STORAGE_KEY_EXTRAVIOS));
 
   const [dataInicial, setDataInicial] = useState(primeiroDiaDoMes());
   const [dataFinal, setDataFinal] = useState(dataHoje());
@@ -137,6 +140,18 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       );
   }, [saidas, dataInicial, dataFinal, produtoSelecionado]);
 
+  const extraviosFiltrados = useMemo(() => {
+    return extravios
+      .filter((extravio) =>
+        filtrarPorPeriodoEProduto(extravio, 'dataExtravio')
+      )
+      .sort((a, b) =>
+        String(b.dataExtravio || '').localeCompare(
+          String(a.dataExtravio || '')
+        )
+      );
+  }, [extravios, dataInicial, dataFinal, produtoSelecionado]);
+
   const estoqueAtualFiltrado = useMemo(() => {
     return entradas.filter((entrada) => {
       return (
@@ -172,6 +187,16 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       0
     );
 
+    const totalExtravioUnidades = extraviosFiltrados.reduce(
+      (total, extravio) => total + Number(extravio.quantidadeExtraviada || 0),
+      0
+    );
+
+    const totalExtravioKg = extraviosFiltrados.reduce(
+      (total, extravio) => total + Number(extravio.pesoExtraviadoKg || 0),
+      0
+    );
+
     const saldoAtualUnidades = estoqueAtualFiltrado.reduce(
       (total, entrada) => total + Number(entrada.quantidadeAtual || 0),
       0
@@ -189,10 +214,17 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       totalEntradaKg,
       totalSaidaUnidades,
       totalSaidaKg,
+      totalExtravioUnidades,
+      totalExtravioKg,
       saldoAtualUnidades,
       saldoAtualKg,
     };
-  }, [entradasFiltradas, saidasFiltradas, estoqueAtualFiltrado]);
+  }, [
+    entradasFiltradas,
+    saidasFiltradas,
+    extraviosFiltrados,
+    estoqueAtualFiltrado,
+  ]);
 
   const resumoPorProduto = useMemo(() => {
     const tipos = ['FENO', 'RACAO_ADULTO', 'RACAO_POTRO'];
@@ -204,6 +236,10 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
 
       const saidasDoProduto = saidasFiltradas.filter(
         (saida) => saida.tipoProduto === tipo
+      );
+
+      const extraviosDoProduto = extraviosFiltrados.filter(
+        (extravio) => extravio.tipoProduto === tipo
       );
 
       const saldoUnidades = entradasDoProduto.reduce(
@@ -224,15 +260,21 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
         0
       );
 
+      const extravioKg = extraviosDoProduto.reduce(
+        (total, extravio) => total + Number(extravio.pesoExtraviadoKg || 0),
+        0
+      );
+
       return {
         tipo,
         nome: obterNomeProduto(tipo),
         saldoUnidades,
         saldoKg,
         saidaKg,
+        extravioKg,
       };
     });
-  }, [entradas, saidasFiltradas]);
+  }, [entradas, saidasFiltradas, extraviosFiltrados]);
 
   const imprimirRelatorio = () => {
     window.print();
@@ -257,6 +299,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
         estoqueAtualFiltrado,
         entradasFiltradas,
         saidasFiltradas,
+        extraviosFiltrados,
       });
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
@@ -292,7 +335,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
 
           <div>
             <span>Controle operacional</span>
-            <h2>Entradas, saídas e saldo atual</h2>
+            <h2>Entradas, saídas, extravios e saldo atual</h2>
             <p>
               Consulte o movimento de feno e ração por período e por tipo de
               produto.
@@ -386,7 +429,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
             <strong>{unidadeUsuario}</strong>
           </div>
 
-          <section className="relatorio-alimentacao-resumo-grid">
+          <section className="relatorio-alimentacao-resumo-grid relatorio-alimentacao-resumo-grid-4">
             <article>
               <span>Entradas no período</span>
               <strong>{formatarNumero(resumo.totalEntradaUnidades)}</strong>
@@ -397,6 +440,12 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
               <span>Saídas no período</span>
               <strong>{formatarNumero(resumo.totalSaidaUnidades)}</strong>
               <p>{formatarNumero(resumo.totalSaidaKg)} kg</p>
+            </article>
+
+            <article>
+              <span>Extravios no período</span>
+              <strong>{formatarNumero(resumo.totalExtravioUnidades)}</strong>
+              <p>{formatarNumero(resumo.totalExtravioKg)} kg</p>
             </article>
 
             <article>
@@ -426,7 +475,8 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
                     </strong>
                     <p>
                       Saldo: {formatarNumero(produto.saldoKg)} kg · Saída no
-                      período: {formatarNumero(produto.saidaKg)} kg
+                      período: {formatarNumero(produto.saidaKg)} kg · Extravio:{' '}
+                      {formatarNumero(produto.extravioKg)} kg
                     </p>
                   </div>
                 </article>
@@ -574,6 +624,52 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
                         <td>{formatarNumero(saida.quantidadeRetirada)}</td>
                         <td>{formatarNumero(saida.pesoLiberadoKg)} kg</td>
                         <td>{saida.responsavel || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="relatorio-alimentacao-card-interno">
+            <div className="relatorio-alimentacao-section-title relatorio-alimentacao-section-title-extravio">
+              <FaTriangleExclamation />
+              <h3>Extravios no período</h3>
+            </div>
+
+            {extraviosFiltrados.length === 0 ? (
+              <div className="relatorio-alimentacao-vazio">
+                Nenhum extravio encontrado no período.
+              </div>
+            ) : (
+              <div className="relatorio-alimentacao-tabela-wrapper">
+                <table className="relatorio-alimentacao-tabela">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Produto</th>
+                      <th>Lote</th>
+                      <th>Quantidade</th>
+                      <th>Peso</th>
+                      <th>Responsável</th>
+                      <th>Justificativa</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {extraviosFiltrados.map((extravio) => (
+                      <tr key={extravio.id}>
+                        <td>{formatarData(extravio.dataExtravio)}</td>
+                        <td>
+                          {extravio.nomeProduto ||
+                            obterNomeProduto(extravio.tipoProduto)}
+                        </td>
+                        <td>{extravio.lote || '-'}</td>
+                        <td>{formatarNumero(extravio.quantidadeExtraviada)}</td>
+                        <td>{formatarNumero(extravio.pesoExtraviadoKg)} kg</td>
+                        <td>{extravio.responsavel || '-'}</td>
+                        <td>{extravio.motivo || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

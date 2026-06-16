@@ -116,3 +116,7 @@
 .modal-feno-racao-btn-relatorio {
   background: linear-gradient(135deg, #1d4ed8, #2563eb);
 }
+
+.modal-feno-racao-btn-extravio {
+  background: linear-gradient(135deg, #991b1b, #ef4444);
+}

@@ -443,3 +443,36 @@
     min-width: 100% !important;
   }
 }
+
+.relatorio-alimentacao-resumo-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.relatorio-alimentacao-resumo-grid-4 article:nth-child(3) {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.relatorio-alimentacao-resumo-grid-4 article:nth-child(3) span {
+  color: #991b1b;
+}
+
+.relatorio-alimentacao-resumo-grid-4 article:nth-child(3) strong {
+  color: #991b1b;
+}
+
+.relatorio-alimentacao-section-title-extravio {
+  color: #991b1b;
+}
+
+@media (max-width: 900px) {
+  .relatorio-alimentacao-resumo-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .relatorio-alimentacao-resumo-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}

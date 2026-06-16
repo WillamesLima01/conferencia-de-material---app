@@ -10,6 +10,7 @@ import AdminPainel from './pages/AdminPainel';
 import CadastroFenoRacao from './pages/CadastroFenoRacao';
 import SaidaFenoRacao from './pages/SaidaFenoRacao';
 import RelatorioFenoRacao from './pages/RelatorioFenoRacao';
+import ExtravioFenoRacao from './pages/ExtravioFenoRacao';
 
 import { materiaisMock } from './data/materiais';
 
@@ -24,8 +25,9 @@ function App() {
   const [abrirAdmin, setAbrirAdmin] = useState(false);
   const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] = useState(false);
   const [abrirSaidaFenoRacao, setAbrirSaidaFenoRacao] = useState(false);
-  const [abrirModalFenoRacao, setAbrirModalFenoRacao] = useState(false);
+  const [abrirExtravioFenoRacao, setAbrirExtravioFenoRacao] = useState(false);
   const [abrirRelatorioFenoRacao, setAbrirRelatorioFenoRacao] = useState(false);
+  const [abrirModalFenoRacao, setAbrirModalFenoRacao] = useState(false);
 
   const [cadastroPendente, setCadastroPendente] = useState(null);
   const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
@@ -81,6 +83,7 @@ function App() {
     setAbrirAdmin(false);
     setAbrirCadastroAlimentacao(false);
     setAbrirSaidaFenoRacao(false);
+    setAbrirExtravioFenoRacao(false);
     setAbrirRelatorioFenoRacao(false);
     setCadastroPendente(null);
     setMaterialEmEdicao(null);
@@ -168,13 +171,8 @@ function App() {
   const abrirModuloFenoRacao = () => {
     fecharTelasSecundarias();
 
-    if (usuarioEhAdmin(usuarioLogado)) {
+    if (usuarioEhAdmin(usuarioLogado) || usuarioEhBaia(usuarioLogado)) {
       setAbrirModalFenoRacao(true);
-      return;
-    }
-
-    if (usuarioEhBaia(usuarioLogado)) {
-      setAbrirSaidaFenoRacao(true);
       return;
     }
 
@@ -193,6 +191,12 @@ function App() {
     setAbrirSaidaFenoRacao(true);
   };
 
+  const abrirTelaExtravioFenoRacao = () => {
+    fecharTelasSecundarias();
+    setAbrirModalFenoRacao(false);
+    setAbrirExtravioFenoRacao(true);
+  };
+
   const abrirTelaRelatorioFenoRacao = () => {
     fecharTelasSecundarias();
     setAbrirModalFenoRacao(false);
@@ -206,6 +210,11 @@ function App() {
 
   const voltarDaSaidaFenoRacao = () => {
     setAbrirSaidaFenoRacao(false);
+    setConfiguracaoConferencia(null);
+  };
+
+  const voltarDoExtravioFenoRacao = () => {
+    setAbrirExtravioFenoRacao(false);
     setConfiguracaoConferencia(null);
   };
 
@@ -235,6 +244,15 @@ function App() {
       <RelatorioFenoRacao
         usuario={usuarioLogado}
         onVoltar={voltarDoRelatorioFenoRacao}
+      />
+    );
+  }
+
+  if (abrirExtravioFenoRacao) {
+    return (
+      <ExtravioFenoRacao
+        usuario={usuarioLogado}
+        onVoltar={voltarDoExtravioFenoRacao}
       />
     );
   }
@@ -326,13 +344,15 @@ function App() {
               </div>
 
               <div className="modal-feno-racao-actions">
-                <button
-                  type="button"
-                  className="modal-feno-racao-btn modal-feno-racao-btn-cadastro"
-                  onClick={abrirTelaCadastroAlimentacao}
-                >
-                  Cadastrar Feno e Ração
-                </button>
+                {usuarioEhAdmin(usuarioLogado) && (
+                  <button
+                    type="button"
+                    className="modal-feno-racao-btn modal-feno-racao-btn-cadastro"
+                    onClick={abrirTelaCadastroAlimentacao}
+                  >
+                    Cadastrar Feno e Ração
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -344,11 +364,21 @@ function App() {
 
                 <button
                   type="button"
-                  className="modal-feno-racao-btn modal-feno-racao-btn-relatorio"
-                  onClick={abrirTelaRelatorioFenoRacao}
+                  className="modal-feno-racao-btn modal-feno-racao-btn-extravio"
+                  onClick={abrirTelaExtravioFenoRacao}
                 >
-                  Relatório de Feno e Ração
+                  Extravio de Feno e Ração
                 </button>
+
+                {usuarioEhAdmin(usuarioLogado) && (
+                  <button
+                    type="button"
+                    className="modal-feno-racao-btn modal-feno-racao-btn-relatorio"
+                    onClick={abrirTelaRelatorioFenoRacao}
+                  >
+                    Relatório de Feno e Ração
+                  </button>
+                )}
               </div>
 
               <button

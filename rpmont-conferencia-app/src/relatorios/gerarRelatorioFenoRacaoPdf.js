@@ -58,6 +58,7 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   estoqueAtualFiltrado,
   entradasFiltradas,
   saidasFiltradas,
+  extraviosFiltrados = [],
 }) => {
   const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -68,10 +69,52 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   });
 
   const unidade = usuario?.unidade || usuario?.UNIDADE || 'RPMont';
-  const nomeUsuario = usuario?.nomeExibicao || usuario?.nome || usuario?.NOME || '-';
+  const nomeUsuario =
+    usuario?.nomeExibicao || usuario?.nome || usuario?.NOME || '-';
 
   const larguraPagina = doc.internal.pageSize.getWidth();
   const centroPagina = larguraPagina / 2;
+
+  const adicionarRodape = () => {
+    const pageCount = doc.internal.getNumberOfPages();
+    const pageCurrent = doc.internal.getCurrentPageInfo().pageNumber;
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Página ${pageCurrent} de ${pageCount}`, larguraPagina - 20, 200, {
+      align: 'right',
+    });
+  };
+
+  const verificarEspaco = (yAtual, espacoNecessario = 34) => {
+    if (yAtual + espacoNecessario > 190) {
+      doc.addPage();
+      return 18;
+    }
+
+    return yAtual;
+  };
+
+  const adicionarTituloSecao = (titulo, descricao, y, cor = [31, 41, 55]) => {
+    const yCorrigido = verificarEspaco(y, 26);
+
+    doc.setFillColor(cor[0], cor[1], cor[2]);
+    doc.roundedRect(14, yCorrigido, larguraPagina - 28, 10, 2, 2, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text(titulo, 18, yCorrigido + 6.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(descricao, 14, yCorrigido + 16);
+
+    doc.setTextColor(0, 0, 0);
+
+    return yCorrigido + 21;
+  };
 
   try {
     const brasaoBase64 = await carregarImagemBase64(brasaoRPMont);
@@ -116,38 +159,66 @@ export const gerarRelatorioFenoRacaoPdf = async ({
 
   doc.setFont('helvetica', 'normal');
   doc.text(
-    `Entradas: ${formatarNumero(resumo.totalEntradaUnidades)} un. / ${formatarNumero(
-      resumo.totalEntradaKg
-    )} kg`,
+    `Entradas: ${formatarNumero(
+      resumo.totalEntradaUnidades
+    )} un. / ${formatarNumero(resumo.totalEntradaKg)} kg`,
     150,
     96
   );
+
   doc.text(
-    `Saídas: ${formatarNumero(resumo.totalSaidaUnidades)} un. / ${formatarNumero(
-      resumo.totalSaidaKg
-    )} kg`,
+    `Saídas: ${formatarNumero(
+      resumo.totalSaidaUnidades
+    )} un. / ${formatarNumero(resumo.totalSaidaKg)} kg`,
     150,
     102
   );
+
   doc.text(
-    `Saldo atual: ${formatarNumero(resumo.saldoAtualUnidades)} un. / ${formatarNumero(
-      resumo.saldoAtualKg
-    )} kg`,
+    `Extravios: ${formatarNumero(
+      resumo.totalExtravioUnidades
+    )} un. / ${formatarNumero(resumo.totalExtravioKg)} kg`,
     150,
     108
   );
 
+  doc.text(
+    `Saldo atual: ${formatarNumero(
+      resumo.saldoAtualUnidades
+    )} un. / ${formatarNumero(resumo.saldoAtualKg)} kg`,
+    150,
+    114
+  );
+
+  let posicaoY = 124;
+
+  posicaoY = adicionarTituloSecao(
+    '1. RESUMO POR PRODUTO',
+    'Mostra separadamente Feno, Ração Adulto e Ração Potro, com saldo atual, saídas e extravios no período filtrado.',
+    posicaoY,
+    [223, 27, 36]
+  );
+
   autoTable(doc, {
-    startY: 120,
-    head: [['Produto', 'Saldo unidades', 'Saldo kg', 'Saída no período']],
+    startY: posicaoY,
+    head: [
+      [
+        'Produto',
+        'Saldo atual em unidades',
+        'Saldo atual em kg',
+        'Saída no período',
+        'Extravio no período',
+      ],
+    ],
     body:
       resumoPorProduto.length === 0
-        ? [['-', '-', '-', '-']]
+        ? [['-', '-', '-', '-', '-']]
         : resumoPorProduto.map((produto) => [
             produto.nome,
             formatarNumero(produto.saldoUnidades),
             `${formatarNumero(produto.saldoKg)} kg`,
             `${formatarNumero(produto.saidaKg)} kg`,
+            `${formatarNumero(produto.extravioKg)} kg`,
           ]),
     styles: {
       fontSize: 8,
@@ -166,11 +237,21 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       left: 14,
       right: 14,
     },
+    didDrawPage: adicionarRodape,
   });
 
+  posicaoY = doc.lastAutoTable.finalY + 10;
+
+  posicaoY = adicionarTituloSecao(
+    '2. ESTOQUE ATUAL',
+    'Mostra o saldo existente no estoque neste momento, por produto e por lote. Este bloco não representa entrada nem saída, representa o saldo atual.',
+    posicaoY,
+    [31, 41, 55]
+  );
+
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 10,
-    head: [['Produto', 'Lote', 'Entrada', 'Peso un.', 'Saldo un.', 'Saldo kg']],
+    startY: posicaoY,
+    head: [['Produto', 'Lote', 'Data da entrada', 'Peso un.', 'Saldo un.', 'Saldo kg']],
     body:
       estoqueAtualFiltrado.length === 0
         ? [['Nenhum estoque encontrado', '-', '-', '-', '-', '-']]
@@ -202,27 +283,27 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       left: 14,
       right: 14,
     },
-    didDrawPage: () => {
-      const pageCount = doc.internal.getNumberOfPages();
-      const pageCurrent = doc.internal.getCurrentPageInfo().pageNumber;
-
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Página ${pageCurrent} de ${pageCount}`, larguraPagina - 20, 200, {
-        align: 'right',
-      });
-    },
+    didDrawPage: adicionarRodape,
   });
 
+  posicaoY = doc.lastAutoTable.finalY + 10;
+
+  posicaoY = adicionarTituloSecao(
+    '3. ENTRADAS NO PERÍODO',
+    'Mostra os cadastros de estoque realizados dentro do período filtrado. Aqui entram os lotes cadastrados de Feno, Ração Adulto e Ração Potro.',
+    posicaoY,
+    [21, 128, 61]
+  );
+
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 10,
+    startY: posicaoY,
     head: [
       [
         'Data',
         'Produto',
         'Lote',
         'Fornecedor',
-        'Quantidade',
+        'Quantidade cadastrada',
         'Peso un.',
         'Peso total',
       ],
@@ -264,27 +345,27 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       left: 14,
       right: 14,
     },
-    didDrawPage: () => {
-      const pageCount = doc.internal.getNumberOfPages();
-      const pageCurrent = doc.internal.getCurrentPageInfo().pageNumber;
-
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Página ${pageCurrent} de ${pageCount}`, larguraPagina - 20, 200, {
-        align: 'right',
-      });
-    },
+    didDrawPage: adicionarRodape,
   });
 
+  posicaoY = doc.lastAutoTable.finalY + 10;
+
+  posicaoY = adicionarTituloSecao(
+    '4. SAÍDAS NO PERÍODO',
+    'Mostra as retiradas normais para consumo/serviço registradas dentro do período filtrado. Este bloco não inclui extravios.',
+    posicaoY,
+    [180, 83, 9]
+  );
+
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 10,
+    startY: posicaoY,
     head: [
       [
         'Data',
         'Produto',
         'Serviço',
         'Lote',
-        'Retirada',
+        'Quantidade retirada',
         'Peso liberado',
         'Responsável',
       ],
@@ -318,16 +399,70 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       left: 14,
       right: 14,
     },
-    didDrawPage: () => {
-      const pageCount = doc.internal.getNumberOfPages();
-      const pageCurrent = doc.internal.getCurrentPageInfo().pageNumber;
+    didDrawPage: adicionarRodape,
+  });
 
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Página ${pageCurrent} de ${pageCount}`, larguraPagina - 20, 200, {
-        align: 'right',
-      });
+  posicaoY = doc.lastAutoTable.finalY + 10;
+
+  posicaoY = adicionarTituloSecao(
+    '5. EXTRAVIOS NO PERÍODO',
+    'Mostra perdas, danos, desvios ou baixas justificadas registradas dentro do período filtrado. Este bloco é separado das saídas normais.',
+    posicaoY,
+    [153, 27, 27]
+  );
+
+  autoTable(doc, {
+    startY: posicaoY,
+    head: [
+      [
+        'Data',
+        'Produto',
+        'Lote',
+        'Quantidade extraviada',
+        'Peso',
+        'Responsável',
+        'Justificativa',
+      ],
+    ],
+    body:
+      extraviosFiltrados.length === 0
+        ? [['Nenhum extravio encontrado', '-', '-', '-', '-', '-', '-']]
+        : extraviosFiltrados.map((extravio) => [
+            formatarData(extravio.dataExtravio),
+            extravio.nomeProduto || obterNomeProduto(extravio.tipoProduto),
+            extravio.lote || '-',
+            formatarNumero(extravio.quantidadeExtraviada),
+            `${formatarNumero(extravio.pesoExtraviadoKg)} kg`,
+            extravio.responsavel || '-',
+            extravio.motivo || '-',
+          ]),
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+      valign: 'middle',
     },
+    headStyles: {
+      fillColor: [153, 27, 27],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245],
+    },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 34 },
+      4: { cellWidth: 25 },
+      5: { cellWidth: 35 },
+      6: { cellWidth: 100 },
+    },
+    margin: {
+      left: 14,
+      right: 14,
+    },
+    didDrawPage: adicionarRodape,
   });
 
   const nomeArquivo = `relatorio-feno-racao-${unidade

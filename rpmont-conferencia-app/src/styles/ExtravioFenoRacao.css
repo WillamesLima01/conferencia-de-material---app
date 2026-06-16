@@ -1,0 +1,362 @@
+.extravio-alimentacao-page {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at top left, rgba(239, 68, 68, 0.24), transparent 32%),
+    linear-gradient(160deg, #0f172a 0%, #111827 45%, #1f2937 100%);
+  padding: 18px;
+}
+
+.extravio-alimentacao-phone {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding-bottom: 32px;
+}
+
+.extravio-alimentacao-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #ffffff;
+  margin-bottom: 18px;
+}
+
+.extravio-alimentacao-voltar {
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+}
+
+.extravio-alimentacao-header span {
+  display: block;
+  color: #fca5a5;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.extravio-alimentacao-header h1 {
+  margin: 2px 0;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-header p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.92rem;
+}
+
+.extravio-alimentacao-alerta,
+.extravio-alimentacao-card {
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+}
+
+.extravio-alimentacao-alerta {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.extravio-alimentacao-alerta-icon {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
+  font-size: 1.4rem;
+}
+
+.extravio-alimentacao-alerta span {
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.extravio-alimentacao-alerta h2 {
+  margin: 2px 0;
+  color: #111827;
+  font-size: 1.18rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-alerta p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.extravio-alimentacao-card {
+  padding: 18px;
+}
+
+.extravio-alimentacao-card-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  color: #b91c1c;
+}
+
+.extravio-alimentacao-card-titulo h2 {
+  margin: 2px 0;
+  color: #111827;
+  font-size: 1.18rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-card-titulo p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.extravio-alimentacao-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.extravio-alimentacao-form-group {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.extravio-alimentacao-form-group label {
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.extravio-alimentacao-form-group input,
+.extravio-alimentacao-form-group select,
+.extravio-alimentacao-form-group textarea {
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  padding: 0 12px;
+  color: #111827;
+  background: #ffffff;
+  outline: none;
+  font-weight: 700;
+}
+
+.extravio-alimentacao-form-group input,
+.extravio-alimentacao-form-group select {
+  height: 46px;
+}
+
+.extravio-alimentacao-form-group textarea {
+  min-height: 104px;
+  padding-top: 12px;
+  resize: vertical;
+}
+
+.extravio-alimentacao-form-group input:disabled {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.extravio-alimentacao-lote-card {
+  border-radius: 20px;
+  padding: 14px;
+  margin: 2px 0 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.extravio-alimentacao-lote-card span {
+  display: block;
+  color: #92400e;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.extravio-alimentacao-lote-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #111827;
+  font-size: 1.05rem;
+  font-weight: 950;
+}
+
+.extravio-alimentacao-lote-card div {
+  display: grid;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.extravio-alimentacao-lote-card p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.extravio-alimentacao-mensagem {
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.extravio-alimentacao-mensagem.erro {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+}
+
+.extravio-alimentacao-mensagem.sucesso {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+}
+
+.extravio-alimentacao-salvar {
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 18px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.extravio-alimentacao-salvar:hover {
+  filter: brightness(1.04);
+}
+
+@media (max-width: 680px) {
+  .extravio-alimentacao-page {
+    padding: 14px;
+  }
+
+  .extravio-alimentacao-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.extravio-alimentacao-historico {
+  margin-top: 18px;
+  border-radius: 22px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.extravio-alimentacao-historico-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.extravio-alimentacao-historico-topo div span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #991b1b;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.extravio-alimentacao-historico-topo h2 {
+  margin: 3px 0 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-historico-topo strong {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-historico-lista {
+  display: grid;
+  gap: 10px;
+}
+
+.extravio-alimentacao-historico-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 16px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.extravio-alimentacao-historico-item strong {
+  display: block;
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-historico-item p {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.extravio-alimentacao-historico-item small {
+  display: block;
+  margin-top: 5px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.extravio-alimentacao-historico-item > span {
+  min-width: 118px;
+  color: #991b1b;
+  font-size: 0.84rem;
+  font-weight: 900;
+  text-align: right;
+}
+
+@media (max-width: 620px) {
+  .extravio-alimentacao-historico-item {
+    display: block;
+  }
+
+  .extravio-alimentacao-historico-item > span {
+    display: block;
+    margin-top: 8px;
+    text-align: left;
+  }
+}
