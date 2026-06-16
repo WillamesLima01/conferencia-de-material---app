@@ -1,6 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { useMemo, useState } from 'react';
 import {
   FaArrowLeft,
   FaBoxesStacked,
@@ -12,6 +10,8 @@ import {
   FaFilePdf,
 } from 'react-icons/fa6';
 import { GiGrain } from 'react-icons/gi';
+
+import { gerarRelatorioFenoRacaoPdf } from '../relatorios/gerarRelatorioFenoRacaoPdf';
 
 import '../styles/RelatorioFenoRacao.css';
 
@@ -71,7 +71,7 @@ const formatarNumero = (valor) => {
 const formatarData = (valor) => {
   if (!valor) return '-';
 
-  const [ano, mes, dia] = valor.split('-');
+  const [ano, mes, dia] = String(valor).split('-');
 
   if (!ano || !mes || !dia) return valor;
 
@@ -93,8 +93,6 @@ const obterIconeProduto = (tipo) => {
 };
 
 function RelatorioFenoRacao({ usuario, onVoltar }) {
-  const relatorioRef = useRef(null);
-
   const [entradas] = useState(() => carregarStorage(STORAGE_KEY_ENTRADAS));
   const [saidas] = useState(() => carregarStorage(STORAGE_KEY_SAIDAS));
 
@@ -104,6 +102,10 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
   const unidadeUsuario = usuario?.unidade || usuario?.UNIDADE || 'RPMont';
+
+  const produtoAtual = PRODUTOS.find(
+    (produto) => produto.valor === produtoSelecionado
+  );
 
   const filtrarPorPeriodoEProduto = (item, campoData) => {
     const dataItem = item?.[campoData];
@@ -237,66 +239,25 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   };
 
   const gerarPdfRelatorio = async () => {
-    if (!relatorioRef.current || gerandoPdf) return;
+    if (gerandoPdf) return;
 
     try {
       setGerandoPdf(true);
 
-      const elemento = relatorioRef.current;
-
-      const canvas = await html2canvas(elemento, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: elemento.scrollWidth,
+      await gerarRelatorioFenoRacaoPdf({
+        usuario,
+        filtros: {
+          dataInicial,
+          dataFinal,
+          produtoSelecionado,
+          produtoNome: produtoAtual?.nome || 'Todos os produtos',
+        },
+        resumo,
+        resumoPorProduto,
+        estoqueAtualFiltrado,
+        entradasFiltradas,
+        saidasFiltradas,
       });
-
-      const imagem = canvas.toDataURL('image/png');
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-
-      const larguraPagina = pdf.internal.pageSize.getWidth();
-      const alturaPagina = pdf.internal.pageSize.getHeight();
-
-      const margem = 8;
-      const larguraImagem = larguraPagina - margem * 2;
-      const alturaImagem = (canvas.height * larguraImagem) / canvas.width;
-
-      let alturaRestante = alturaImagem;
-      let posicaoY = margem;
-
-      pdf.addImage(
-        imagem,
-        'PNG',
-        margem,
-        posicaoY,
-        larguraImagem,
-        alturaImagem
-      );
-
-      alturaRestante -= alturaPagina - margem * 2;
-
-      while (alturaRestante > 0) {
-        posicaoY = alturaRestante - alturaImagem + margem;
-        pdf.addPage();
-
-        pdf.addImage(
-          imagem,
-          'PNG',
-          margem,
-          posicaoY,
-          larguraImagem,
-          alturaImagem
-        );
-
-        alturaRestante -= alturaPagina - margem * 2;
-      }
-
-      const dataArquivo = new Date().toISOString().slice(0, 10);
-
-      pdf.save(`relatorio-feno-racao-${dataArquivo}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       window.alert('Não foi possível gerar o PDF. Tente novamente.');
@@ -411,10 +372,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
           </div>
         </section>
 
-        <section
-          className="relatorio-alimentacao-documento"
-          ref={relatorioRef}
-        >
+        <section className="relatorio-alimentacao-documento">
           <div className="relatorio-alimentacao-documento-topo">
             <div>
               <span>Relatório</span>
