@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   FaArrowLeft,
   FaBuilding,
+  FaCircleCheck,
   FaLayerGroup,
+  FaLock,
   FaPen,
+  FaShieldHalved,
   FaTrash,
   FaUserGear,
 } from 'react-icons/fa6';
@@ -12,6 +15,12 @@ import '../styles/AdminUsuarios.css';
 const STORAGE_KEY_UNIDADES = 'unidades';
 const STORAGE_KEY_SETORES = 'setores';
 const STORAGE_KEY_USUARIOS = 'usuarios';
+
+const STATUS_ACESSO = {
+  PENDENTE: 'PENDENTE',
+  LIBERADO: 'LIBERADO',
+  BLOQUEADO: 'BLOQUEADO',
+};
 
 const gerarId = () => {
   if (window.crypto?.randomUUID) {
@@ -35,7 +44,9 @@ const carregarStorage = (chave) => {
   if (!dadosSalvos) return [];
 
   try {
-    return JSON.parse(dadosSalvos);
+    const dadosConvertidos = JSON.parse(dadosSalvos);
+
+    return Array.isArray(dadosConvertidos) ? dadosConvertidos : [];
   } catch {
     return [];
   }
@@ -66,6 +77,36 @@ const matriculaValida = (valor) => {
   return /^\d{3}\.\d{3}-\d{1}$/.test(valor);
 };
 
+const normalizarTexto = (valor) => {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+};
+
+const obterIdUsuario = (usuario) => {
+  return usuario?.ID || usuario?.id || 1;
+};
+
+const obterUnidadeUsuario = (usuario) => {
+  return usuario?.UNIDADE || usuario?.unidade || '';
+};
+
+const obterStatusUsuario = (usuario) => {
+  return String(
+    usuario?.STATUSACESSO ||
+      usuario?.statusAcesso ||
+      STATUS_ACESSO.LIBERADO
+  )
+    .trim()
+    .toUpperCase();
+};
+
+const usuarioAtivoPorStatus = (status) => {
+  return status === STATUS_ACESSO.LIBERADO ? 1 : 0;
+};
+
 function AdminUsuarios({ usuario, onVoltar }) {
   const [unidades] = useState(() => carregarStorage(STORAGE_KEY_UNIDADES));
   const [setores] = useState(() => carregarStorage(STORAGE_KEY_SETORES));
@@ -85,18 +126,95 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [mensagem, setMensagem] = useState('');
+
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [usuarioParaExcluir, setUsuarioParaExcluir] = useState(null);
+
+  const [modalStatusAberto, setModalStatusAberto] = useState(false);
+  const [usuarioParaStatus, setUsuarioParaStatus] = useState(null);
+  const [statusSelecionado, setStatusSelecionado] = useState(
+    STATUS_ACESSO.PENDENTE
+  );
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_USUARIOS, JSON.stringify(usuarios));
   }, [usuarios]);
+
+  const unidadeAdmin = obterUnidadeUsuario(usuario);
 
   const setoresDaUnidade = useMemo(() => {
     if (!unidadeSelecionada) return [];
 
     return setores.filter((setor) => setor.unidadeNome === unidadeSelecionada);
   }, [setores, unidadeSelecionada]);
+
+  const usuariosDaUnidadeAdmin = useMemo(() => {
+    return usuarios.filter((item) => {
+      const unidadeUsuario = item.UNIDADE || item.unidade || '';
+
+      return normalizarTexto(unidadeUsuario) === normalizarTexto(unidadeAdmin);
+    });
+  }, [usuarios, unidadeAdmin]);
+
+  const totalPendentesUnidade = useMemo(() => {
+    return usuariosDaUnidadeAdmin.filter(
+      (item) => obterStatusUsuario(item) === STATUS_ACESSO.PENDENTE
+    ).length;
+  }, [usuariosDaUnidadeAdmin]);
+
+  const totalLiberadosUnidade = useMemo(() => {
+    return usuariosDaUnidadeAdmin.filter(
+      (item) =>
+        obterStatusUsuario(item) === STATUS_ACESSO.LIBERADO &&
+        Number(item.ATIVO ?? item.ativo ?? 1) === 1
+    ).length;
+  }, [usuariosDaUnidadeAdmin]);
+
+  const totalBloqueadosUnidade = useMemo(() => {
+    return usuariosDaUnidadeAdmin.filter(
+      (item) =>
+        obterStatusUsuario(item) === STATUS_ACESSO.BLOQUEADO ||
+        Number(item.ATIVO ?? item.ativo ?? 1) !== 1
+    ).length;
+  }, [usuariosDaUnidadeAdmin]);
+
+  const usuariosOrdenados = useMemo(() => {
+    return [...usuarios].sort((a, b) => {
+      const statusA = obterStatusUsuario(a);
+      const statusB = obterStatusUsuario(b);
+
+      const unidadeA = normalizarTexto(a.UNIDADE || a.unidade || '');
+      const unidadeB = normalizarTexto(b.UNIDADE || b.unidade || '');
+      const unidadeAdminNormalizada = normalizarTexto(unidadeAdmin);
+
+      const aEhDaUnidadeAdmin = unidadeA === unidadeAdminNormalizada;
+      const bEhDaUnidadeAdmin = unidadeB === unidadeAdminNormalizada;
+
+      if (aEhDaUnidadeAdmin && !bEhDaUnidadeAdmin) {
+        return -1;
+      }
+
+      if (!aEhDaUnidadeAdmin && bEhDaUnidadeAdmin) {
+        return 1;
+      }
+
+      if (
+        statusA === STATUS_ACESSO.PENDENTE &&
+        statusB !== STATUS_ACESSO.PENDENTE
+      ) {
+        return -1;
+      }
+
+      if (
+        statusA !== STATUS_ACESSO.PENDENTE &&
+        statusB === STATUS_ACESSO.PENDENTE
+      ) {
+        return 1;
+      }
+
+      return String(a.NOME || '').localeCompare(String(b.NOME || ''));
+    });
+  }, [usuarios, unidadeAdmin]);
 
   const limparFormulario = () => {
     setMatricula('');
@@ -116,7 +234,13 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
     setTimeout(() => {
       setMensagem('');
-    }, 3000);
+    }, 3500);
+  };
+
+  const adminPodeAlterarStatus = (usuarioAlvo) => {
+    const unidadeAlvo = usuarioAlvo?.UNIDADE || usuarioAlvo?.unidade || '';
+
+    return normalizarTexto(unidadeAdmin) === normalizarTexto(unidadeAlvo);
   };
 
   const handleSalvar = (event) => {
@@ -195,7 +319,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
               SETOR: setorSelecionado,
               UNIDADE: unidadeSelecionada,
               DATAMODIFICACAO: dataHoraAtual(),
-              userModificador: usuario?.ID || usuario?.id || 1,
+              userModificador: obterIdUsuario(usuario),
             }
           : item
       );
@@ -217,9 +341,16 @@ function AdminUsuarios({ usuario, onVoltar }) {
       SETOR: setorSelecionado,
       NOMECOMPLETO: nomeCompletoTratado,
       UNIDADE: unidadeSelecionada,
+
+      STATUSACESSO: STATUS_ACESSO.LIBERADO,
+      ATIVO: 1,
+      DATASOLICITACAO: dataHoraAtual(),
+      DATALIBERACAO: dataHoraAtual(),
+      LIBERADOPOR: obterIdUsuario(usuario),
+
       DATACADASTRO: dataAtual(),
       DATAMODIFICACAO: dataHoraAtual(),
-      userModificador: usuario?.ID || usuario?.id || 1,
+      userModificador: obterIdUsuario(usuario),
       DIGITAL: null,
     };
 
@@ -265,6 +396,100 @@ function AdminUsuarios({ usuario, onVoltar }) {
     setUsuarioParaExcluir(null);
   };
 
+  const handleAbrirStatus = (item) => {
+    setUsuarioParaStatus(item);
+    setStatusSelecionado(obterStatusUsuario(item));
+    setModalStatusAberto(true);
+  };
+
+  const cancelarStatus = () => {
+    setModalStatusAberto(false);
+    setUsuarioParaStatus(null);
+    setStatusSelecionado(STATUS_ACESSO.PENDENTE);
+  };
+
+  const confirmarStatus = () => {
+    if (!usuarioParaStatus) return;
+
+    if (!adminPodeAlterarStatus(usuarioParaStatus)) {
+      mostrarMensagem(
+        'Você só pode alterar o status de usuários da sua própria unidade.'
+      );
+      cancelarStatus();
+      return;
+    }
+
+    const novoStatus = String(statusSelecionado || STATUS_ACESSO.PENDENTE)
+      .trim()
+      .toUpperCase();
+
+    const usuariosAtualizados = usuarios.map((item) => {
+      if (item.ID !== usuarioParaStatus.ID) {
+        return item;
+      }
+
+      const acessoLiberado = novoStatus === STATUS_ACESSO.LIBERADO;
+
+      return {
+        ...item,
+        STATUSACESSO: novoStatus,
+        ATIVO: usuarioAtivoPorStatus(novoStatus),
+        DATALIBERACAO: acessoLiberado
+          ? dataHoraAtual()
+          : item.DATALIBERACAO || null,
+        LIBERADOPOR: acessoLiberado
+          ? obterIdUsuario(usuario)
+          : item.LIBERADOPOR || null,
+        DATAMODIFICACAO: dataHoraAtual(),
+        userModificador: obterIdUsuario(usuario),
+      };
+    });
+
+    setUsuarios(usuariosAtualizados);
+    cancelarStatus();
+
+    if (novoStatus === STATUS_ACESSO.LIBERADO) {
+      mostrarMensagem('Acesso liberado com sucesso.');
+      return;
+    }
+
+    if (novoStatus === STATUS_ACESSO.BLOQUEADO) {
+      mostrarMensagem('Acesso bloqueado com sucesso.');
+      return;
+    }
+
+    mostrarMensagem('Status atualizado para pendente.');
+  };
+
+  const obterClasseStatus = (status) => {
+    const statusTratado = String(status || STATUS_ACESSO.LIBERADO).toUpperCase();
+
+    if (statusTratado === STATUS_ACESSO.LIBERADO) {
+      return 'status-liberado';
+    }
+
+    if (statusTratado === STATUS_ACESSO.BLOQUEADO) {
+      return 'status-bloqueado';
+    }
+
+    return 'status-pendente';
+  };
+
+  const obterTextoAtivo = (item) => {
+    const status = obterStatusUsuario(item);
+    const ativo = Number(item.ATIVO ?? item.ativo ?? 1);
+
+    if (status === STATUS_ACESSO.LIBERADO && ativo === 1) {
+      return 'Acesso ativo';
+    }
+
+    if (status === STATUS_ACESSO.PENDENTE) {
+      return 'Aguardando liberação';
+    }
+
+    return 'Acesso inativo';
+  };
+
   return (
     <main className="admin-usuarios-page">
       <section className="admin-usuarios-phone">
@@ -296,11 +521,48 @@ function AdminUsuarios({ usuario, onVoltar }) {
           <div>
             <span>Cadastro administrativo</span>
             <h2>Gerenciar Usuários</h2>
-            <p>Cadastre usuários vinculados a unidade, setor e nível de acesso.</p>
+            <p>
+              Cadastre usuários, edite dados e libere ou bloqueie acesso por
+              unidade.
+            </p>
           </div>
         </section>
 
         {mensagem && <div className="admin-usuarios-mensagem">{mensagem}</div>}
+
+        <section className="admin-usuarios-resumo-status">
+          <article
+            className={
+              totalPendentesUnidade > 0
+                ? 'admin-usuarios-resumo-card destaque'
+                : 'admin-usuarios-resumo-card'
+            }
+          >
+            <strong>{totalPendentesUnidade}</strong>
+            <span>Pendente(s)</span>
+            <small>Aguardando liberação na sua unidade</small>
+          </article>
+
+          <article className="admin-usuarios-resumo-card liberado">
+            <strong>{totalLiberadosUnidade}</strong>
+            <span>Liberado(s)</span>
+            <small>Com acesso ativo ao sistema</small>
+          </article>
+
+          <article className="admin-usuarios-resumo-card bloqueado">
+            <strong>{totalBloqueadosUnidade}</strong>
+            <span>Bloqueado(s)</span>
+            <small>Sem acesso ao aplicativo</small>
+          </article>
+        </section>
+
+        {totalPendentesUnidade > 0 && (
+          <div className="admin-usuarios-alerta-pendentes">
+            Existem {totalPendentesUnidade} usuário(s) aguardando liberação na
+            unidade <strong>{unidadeAdmin}</strong>. Eles aparecem primeiro na
+            lista.
+          </div>
+        )}
 
         <section className="admin-usuarios-card">
           <h2>{usuarioEditando ? 'Editar Usuário' : 'Cadastrar Novo Usuário'}</h2>
@@ -328,6 +590,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
               <div className="admin-usuarios-form-group">
                 <label htmlFor="postGrad">Post/Grad</label>
+
                 <input
                   id="postGrad"
                   type="text"
@@ -340,6 +603,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
             <div className="admin-usuarios-form-group">
               <label htmlFor="nome">Nome de Guerra</label>
+
               <input
                 id="nome"
                 type="text"
@@ -351,6 +615,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
             <div className="admin-usuarios-form-group">
               <label htmlFor="nomeCompleto">Nome Completo</label>
+
               <input
                 id="nomeCompleto"
                 type="text"
@@ -362,6 +627,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
             <div className="admin-usuarios-form-group">
               <label htmlFor="email">E-mail</label>
+
               <input
                 id="email"
                 type="email"
@@ -373,6 +639,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
             <div className="admin-usuarios-form-group">
               <label htmlFor="unidade">Unidade</label>
+
               <select
                 id="unidade"
                 value={unidadeSelecionada}
@@ -393,6 +660,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
             <div className="admin-usuarios-form-group">
               <label htmlFor="setor">Setor</label>
+
               <select
                 id="setor"
                 value={setorSelecionado}
@@ -416,6 +684,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
             <div className="admin-usuarios-grid">
               <div className="admin-usuarios-form-group">
                 <label htmlFor="nivel">Nível</label>
+
                 <select
                   id="nivel"
                   value={nivel}
@@ -428,6 +697,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
               <div className="admin-usuarios-form-group">
                 <label htmlFor="senha">Senha</label>
+
                 <input
                   id="senha"
                   type="password"
@@ -470,58 +740,164 @@ function AdminUsuarios({ usuario, onVoltar }) {
             <div className="admin-usuarios-vazio">Nenhum usuário cadastrado.</div>
           ) : (
             <div className="admin-usuarios-lista">
-              {usuarios.map((item) => (
-                <div className="admin-usuarios-item" key={item.ID}>
-                  <div className="admin-usuarios-item-info">
-                    <div className="admin-usuarios-item-icon">
-                      <FaUserGear />
+              {usuariosOrdenados.map((item) => {
+                const status = obterStatusUsuario(item);
+                const podeAlterarStatus = adminPodeAlterarStatus(item);
+
+                return (
+                  <div className="admin-usuarios-item" key={item.ID}>
+                    <div className="admin-usuarios-item-info">
+                      <div className="admin-usuarios-item-icon">
+                        <FaUserGear />
+                      </div>
+
+                      <div>
+                        <h3>
+                          {item.POSTGRAD} {item.NOME}
+                        </h3>
+
+                        <p>Matrícula: {formatarMatricula(item.MATRICULA)}</p>
+
+                        <p>
+                          <FaBuilding /> {item.UNIDADE}
+                        </p>
+
+                        <p>
+                          <FaLayerGroup /> {item.SETOR}
+                        </p>
+
+                        <div className="admin-usuarios-badges">
+                          <span>
+                            {Number(item.NIVEL) === 1
+                              ? 'Administrador'
+                              : 'Usuário comum'}
+                          </span>
+
+                          <strong className={obterClasseStatus(status)}>
+                            {status}
+                          </strong>
+                        </div>
+
+                        <small className="admin-usuarios-status-texto">
+                          {obterTextoAtivo(item)}
+                        </small>
+                      </div>
                     </div>
 
-                    <div>
-                      <h3>
-                        {item.POSTGRAD} {item.NOME}
-                      </h3>
+                    <div className="admin-usuarios-item-acoes">
+                      <button
+                        type="button"
+                        className="btn-editar-usuario"
+                        onClick={() => handleEditar(item)}
+                        title="Editar usuário"
+                      >
+                        <FaPen />
+                      </button>
 
-                      <p>Matrícula: {formatarMatricula(item.MATRICULA)}</p>
+                      <button
+                        type="button"
+                        className={
+                          podeAlterarStatus
+                            ? 'btn-status-usuario'
+                            : 'btn-status-usuario bloqueado'
+                        }
+                        onClick={() => handleAbrirStatus(item)}
+                        title={
+                          podeAlterarStatus
+                            ? 'Alterar status'
+                            : 'Somente admin da mesma unidade pode alterar'
+                        }
+                      >
+                        <FaShieldHalved />
+                      </button>
 
-                      <p>
-                        <FaBuilding /> {item.UNIDADE}
-                      </p>
-
-                      <p>
-                        <FaLayerGroup /> {item.SETOR}
-                      </p>
-
-                      <span>
-                        {Number(item.NIVEL) === 1
-                          ? 'Administrador'
-                          : 'Usuário comum'}
-                      </span>
+                      <button
+                        type="button"
+                        className="btn-excluir-usuario"
+                        onClick={() => handleExcluir(item)}
+                        title="Excluir usuário"
+                      >
+                        <FaTrash />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="admin-usuarios-item-acoes">
-                    <button
-                      type="button"
-                      className="btn-editar-usuario"
-                      onClick={() => handleEditar(item)}
-                    >
-                      <FaPen />
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn-excluir-usuario"
-                      onClick={() => handleExcluir(item)}
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
+
+        {modalStatusAberto && (
+          <div className="admin-usuarios-modal-overlay">
+            <div className="admin-usuarios-modal-card">
+              <div className="admin-usuarios-modal-icon status">
+                <FaLock />
+              </div>
+
+              <h2>Alterar status</h2>
+
+              <p>
+                Usuário:{' '}
+                <strong>
+                  {usuarioParaStatus?.POSTGRAD} {usuarioParaStatus?.NOME}
+                </strong>
+              </p>
+
+              <p>
+                Matrícula:{' '}
+                <strong>
+                  {formatarMatricula(usuarioParaStatus?.MATRICULA || '')}
+                </strong>
+              </p>
+
+              <p>
+                Unidade: <strong>{usuarioParaStatus?.UNIDADE}</strong>
+              </p>
+
+              {!adminPodeAlterarStatus(usuarioParaStatus) && (
+                <div className="admin-usuarios-alerta-status">
+                  Você só pode alterar o status de usuários da sua própria
+                  unidade.
+                </div>
+              )}
+
+              <div className="admin-usuarios-form-group">
+                <label htmlFor="statusAcesso">Status de acesso</label>
+
+                <select
+                  id="statusAcesso"
+                  value={statusSelecionado}
+                  disabled={!adminPodeAlterarStatus(usuarioParaStatus)}
+                  onChange={(event) => setStatusSelecionado(event.target.value)}
+                >
+                  <option value={STATUS_ACESSO.PENDENTE}>Pendente</option>
+                  <option value={STATUS_ACESSO.LIBERADO}>Liberado</option>
+                  <option value={STATUS_ACESSO.BLOQUEADO}>Bloqueado</option>
+                </select>
+              </div>
+
+              <div className="admin-usuarios-modal-actions">
+                <button
+                  type="button"
+                  className="admin-usuarios-modal-primary"
+                  onClick={confirmarStatus}
+                  disabled={!adminPodeAlterarStatus(usuarioParaStatus)}
+                >
+                  <FaCircleCheck />
+                  Salvar status
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-usuarios-modal-secondary"
+                  onClick={cancelarStatus}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {modalExcluirAberto && (
           <div className="admin-usuarios-modal-overlay">

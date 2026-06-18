@@ -1044,3 +1044,41 @@
       grid-column: auto;
     }
   }
+
+  .selecao-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .selecao-sair-button {
+    border: none;
+    border-radius: 999px;
+    padding: 8px 11px;
+    color: #ffffff;
+    background: rgba(15, 23, 42, 0.72);
+    font-size: 0.78rem;
+    font-weight: 900;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  }
+  
+  .selecao-sair-button:hover {
+    background: rgba(15, 23, 42, 0.94);
+  }
+  
+  @media (max-width: 420px) {
+    .selecao-header-actions {
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+  
+    .selecao-sair-button {
+      padding: 7px 10px;
+      font-size: 0.74rem;
+    }
+  }

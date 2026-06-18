@@ -11,6 +11,7 @@ import {
   FaMagnifyingGlassChart,
   FaUserGear,
   FaWheatAwn,
+  FaRightFromBracket,
 } from 'react-icons/fa6';
 
 import '../styles/SelecionarConferencia.css';
@@ -75,6 +76,7 @@ const usuarioEhSetorBaia = (usuario) => {
 
 function SelecionarConferencia({
   usuario,
+  onSair,
   onIniciarConferencia,
   onZerarConferencia,
   onAbrirCadastroManual,
@@ -125,6 +127,15 @@ function SelecionarConferencia({
       return unidadeSetor === unidadeUsuarioLogada;
     });
   }, [setoresCadastrados, unidadeUsuarioLogada]);
+
+  const handleSair = () => {
+    if (typeof onSair === 'function') {
+      onSair();
+      return;
+    }
+
+    window.alert('A função de sair não foi configurada no App.jsx.');
+  };
 
   const selecionarTodosMateriais = () => {
     if (!usuarioPodeAcessarPatrimonio) {
@@ -219,7 +230,11 @@ function SelecionarConferencia({
       return;
     }
 
-    if (!usuarioEhAdmin && usuarioEhBaia && typeof onAbrirSaidaFenoRacao === 'function') {
+    if (
+      !usuarioEhAdmin &&
+      usuarioEhBaia &&
+      typeof onAbrirSaidaFenoRacao === 'function'
+    ) {
       onAbrirSaidaFenoRacao();
       return;
     }
@@ -293,8 +308,18 @@ function SelecionarConferencia({
             </h1>
           </div>
 
-          <div className="usuario-chip">
-            {usuario?.postGrad?.toUpperCase()} {usuario?.nome}
+          <div className="selecao-header-actions">
+            <button
+                type="button"
+                className="selecao-sair-button"
+                onClick={handleSair}
+              >
+                <FaRightFromBracket />
+                Sair
+            </button>
+            <div className="usuario-chip">
+              {usuario?.postGrad?.toUpperCase()} {usuario?.nome}
+            </div>            
           </div>
         </header>
 
@@ -325,7 +350,9 @@ function SelecionarConferencia({
 
               <p>
                 {usuarioEhP4
-                  ? `Gerencie materiais patrimoniais, administração, feno e ração ou reinicie a conferência da unidade ${usuario?.unidade || usuario?.UNIDADE}.`
+                  ? `Gerencie materiais patrimoniais, administração, feno e ração ou reinicie a conferência da unidade ${
+                      usuario?.unidade || usuario?.UNIDADE
+                    }.`
                   : 'Você possui acesso administrativo, mas a conferência patrimonial é exclusiva do setor P4. O acesso a Feno e Ração permanece liberado.'}
               </p>
             </div>
@@ -351,10 +378,7 @@ function SelecionarConferencia({
                 </>
               )}
 
-              <button
-                type="button"
-                onClick={onAbrirAdmin}
-              >
+              <button type="button" onClick={onAbrirAdmin}>
                 <FaUserGear />
                 Administração
               </button>
@@ -371,10 +395,7 @@ function SelecionarConferencia({
               )}
 
               {usuarioPodeAcessarPatrimonio && (
-                <button
-                  type="button"
-                  onClick={abrirModalZerar}
-                >
+                <button type="button" onClick={abrirModalZerar}>
                   <FaRotateRight />
                   Zerar conferência
                 </button>

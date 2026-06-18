@@ -565,3 +565,191 @@
     grid-template-columns: 1fr;
   }
 }
+
+.admin-usuarios-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.admin-usuarios-badges span,
+.admin-usuarios-badges strong {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-usuarios-badges span {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.admin-usuarios-badges .status-liberado {
+  color: #14532d;
+  background: #bbf7d0;
+}
+
+.admin-usuarios-badges .status-pendente {
+  color: #78350f;
+  background: #fde68a;
+}
+
+.admin-usuarios-badges .status-bloqueado {
+  color: #7f1d1d;
+  background: #fecaca;
+}
+
+.admin-usuarios-status-texto {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.btn-status-usuario {
+  border: none;
+  border-radius: 13px;
+  width: 38px;
+  height: 38px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+}
+
+.btn-status-usuario.bloqueado {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+
+.btn-status-usuario:hover {
+  transform: translateY(-1px);
+}
+
+.admin-usuarios-modal-icon.status {
+  color: #ffffff;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+}
+
+.admin-usuarios-alerta-status {
+  border-radius: 16px;
+  padding: 11px 12px;
+  color: #7f1d1d;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.admin-usuarios-modal-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+
+.admin-usuarios-resumo-status {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.admin-usuarios-resumo-card {
+  border-radius: 20px;
+  padding: 13px 10px;
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.09);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.admin-usuarios-resumo-card strong {
+  color: #0f172a;
+  font-size: 1.55rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.admin-usuarios-resumo-card span {
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.admin-usuarios-resumo-card small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.admin-usuarios-resumo-card.destaque {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-color: #f59e0b;
+  box-shadow: 0 14px 28px rgba(245, 158, 11, 0.2);
+}
+
+.admin-usuarios-resumo-card.destaque strong,
+.admin-usuarios-resumo-card.destaque span {
+  color: #78350f;
+}
+
+.admin-usuarios-resumo-card.liberado {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.admin-usuarios-resumo-card.liberado strong,
+.admin-usuarios-resumo-card.liberado span {
+  color: #14532d;
+}
+
+.admin-usuarios-resumo-card.bloqueado {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.admin-usuarios-resumo-card.bloqueado strong,
+.admin-usuarios-resumo-card.bloqueado span {
+  color: #7f1d1d;
+}
+
+.admin-usuarios-alerta-pendentes {
+  margin-top: 12px;
+  border-radius: 18px;
+  padding: 12px 13px;
+  color: #78350f;
+  background: #fffbeb;
+  border: 1px solid #facc15;
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.35;
+  box-shadow: 0 10px 22px rgba(245, 158, 11, 0.13);
+}
+
+.admin-usuarios-alerta-pendentes strong {
+  font-weight: 950;
+}
+
+@media (max-width: 420px) {
+  .admin-usuarios-resumo-status {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-usuarios-resumo-card {
+    text-align: left;
+  }
+}
