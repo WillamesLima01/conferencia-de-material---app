@@ -1,0 +1,630 @@
+.transferencia-alimentacao-page {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 18px;
+  background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.transferencia-alimentacao-phone {
+  width: 390px;
+  height: 100%;
+  max-height: 844px;
+  position: relative;
+  padding: 34px 22px 24px;
+  border-radius: 42px;
+  color: #222;
+  background: linear-gradient(
+    160deg,
+    #fffdf4 0%,
+    #ffffff 48%,
+    #f7f4ea 100%
+  );
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 8px #121212,
+    inset 0 0 0 10px #343434;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.transferencia-alimentacao-phone::-webkit-scrollbar {
+  display: none;
+}
+
+/* HEADER */
+
+.transferencia-alimentacao-header {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 20px;
+  margin-bottom: 16px;
+}
+
+.transferencia-alimentacao-header > div {
+  min-width: 0;
+}
+
+.transferencia-alimentacao-voltar {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border: 0;
+  border-radius: 15px;
+  color: #ffe600;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.transferencia-alimentacao-header span {
+  color: #df1b24;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.transferencia-alimentacao-header h1 {
+  width: fit-content;
+  margin: 3px 0 4px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  color: #ffe600;
+  background: #111;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.transferencia-alimentacao-header p {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.transferencia-alimentacao-sino {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 15px;
+  color: #ffe600;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.transferencia-alimentacao-sino strong {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 21px;
+  height: 21px;
+  border-radius: 999px;
+  color: #fff;
+  background: #df1b24;
+  border: 2px solid #fff;
+  font-size: 11px;
+  font-weight: 950;
+  display: grid;
+  place-items: center;
+}
+
+/* MENSAGEM */
+
+.transferencia-alimentacao-mensagem {
+  margin-bottom: 12px;
+  padding: 11px;
+  border: 1px solid #ffe600;
+  border-radius: 13px;
+  color: #333;
+  background: #fffbea;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+/* CARDS */
+
+.transferencia-alimentacao-card {
+  margin-bottom: 14px;
+  padding: 15px;
+  border: 1px solid #eeeeee;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
+}
+
+.transferencia-alimentacao-card.destaque {
+  border-color: #ffe600;
+}
+
+.transferencia-alimentacao-card-titulo {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.transferencia-alimentacao-card-titulo > svg {
+  color: #df1b24;
+  font-size: 21px;
+  min-width: 21px;
+}
+
+.transferencia-alimentacao-card-titulo h2 {
+  margin: 0;
+  color: #222;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.transferencia-alimentacao-card-titulo p {
+  margin: 3px 0 0;
+  color: #777;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* FORM */
+
+.transferencia-alimentacao-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transferencia-alimentacao-form-group {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.transferencia-alimentacao-form-group label,
+.transferencia-alimentacao-modal-label {
+  color: #222;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.transferencia-alimentacao-form-group input,
+.transferencia-alimentacao-form-group select,
+.transferencia-alimentacao-form-group textarea,
+.transferencia-alimentacao-modal-label select,
+.transferencia-alimentacao-modal-label textarea {
+  width: 100%;
+  border: 1px solid #dedede;
+  border-radius: 14px;
+  outline: none;
+  color: #222;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.transferencia-alimentacao-form-group input,
+.transferencia-alimentacao-form-group select,
+.transferencia-alimentacao-modal-label select {
+  height: 48px;
+  padding: 0 12px;
+}
+
+.transferencia-alimentacao-form-group textarea,
+.transferencia-alimentacao-modal-label textarea {
+  min-height: 82px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.transferencia-alimentacao-form-group input:focus,
+.transferencia-alimentacao-form-group select:focus,
+.transferencia-alimentacao-form-group textarea:focus,
+.transferencia-alimentacao-modal-label select:focus,
+.transferencia-alimentacao-modal-label textarea:focus {
+  border-color: #ffe600;
+  box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.25);
+}
+
+.transferencia-alimentacao-form-group input:disabled,
+.transferencia-alimentacao-form-group select:disabled {
+  color: #888;
+  background: #f2f2f2;
+  cursor: not-allowed;
+}
+
+/* QUADRO DE ESTOQUE IGUAL AO SAIDA FENO RACAO */
+
+.transferencia-alimentacao-estoque-info,
+.transferencia-alimentacao-resumo {
+  padding: 12px;
+  border: 1px solid #ffe600;
+  border-radius: 17px;
+  background: #fffbea;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.transferencia-alimentacao-estoque-info div:last-child,
+.transferencia-alimentacao-resumo-total {
+  grid-column: 1 / -1;
+}
+
+.transferencia-alimentacao-estoque-info span,
+.transferencia-alimentacao-resumo span {
+  display: block;
+  margin-bottom: 3px;
+  color: #777;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.transferencia-alimentacao-estoque-info strong,
+.transferencia-alimentacao-resumo strong {
+  color: #222;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.transferencia-alimentacao-resumo-total {
+  padding-top: 10px;
+  border-top: 1px solid rgba(223, 27, 36, 0.18);
+}
+
+.transferencia-alimentacao-resumo-total strong {
+  color: #15803d;
+  font-size: 18px;
+}
+
+.transferencia-alimentacao-resumo-total .saldo-insuficiente,
+.transferencia-alimentacao-resumo .saldo-insuficiente {
+  color: #b91c1c;
+}
+
+/* BOTAO ENVIAR */
+
+.transferencia-alimentacao-enviar {
+  width: 100%;
+  min-height: 48px;
+  border: 2px solid #ffe600;
+  border-radius: 15px;
+  color: #fff;
+  background: #df1b24;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.transferencia-alimentacao-enviar:active {
+  transform: scale(0.98);
+}
+
+/* LISTAS */
+
+.transferencia-alimentacao-lista-header {
+  margin-bottom: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.transferencia-alimentacao-lista-header span {
+  color: #df1b24;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.transferencia-alimentacao-lista-header h2 {
+  margin: 2px 0 4px;
+  color: #222;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.transferencia-alimentacao-lista-header > strong {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 14px;
+  color: #ffe600;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.transferencia-alimentacao-vazio {
+  padding: 22px;
+  border: 1px dashed #d8d8d8;
+  border-radius: 17px;
+  color: #777;
+  background: #fafafa;
+  text-align: center;
+}
+
+.transferencia-alimentacao-vazio svg {
+  margin-bottom: 7px;
+  color: #df1b24;
+  font-size: 23px;
+}
+
+.transferencia-alimentacao-vazio p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.transferencia-alimentacao-vazio h2 {
+  margin: 0 0 8px;
+  color: #222;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.transferencia-alimentacao-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.transferencia-alimentacao-item {
+  padding: 11px;
+  border: 1px solid #eee;
+  border-radius: 17px;
+  background: #fafafa;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.transferencia-alimentacao-item.status-pendente {
+  border-color: #facc15;
+  background: #fffbeb;
+}
+
+.transferencia-alimentacao-item.status-transferida,
+.transferencia-alimentacao-item.status-aprovada {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.transferencia-alimentacao-item.status-negada {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.transferencia-alimentacao-item-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  color: #ffe600;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+}
+
+.transferencia-alimentacao-item-info {
+  min-width: 0;
+}
+
+.transferencia-alimentacao-item-info > span {
+  color: #df1b24;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.transferencia-alimentacao-item-info h3 {
+  margin: 3px 0;
+  color: #111;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.transferencia-alimentacao-item-info p {
+  margin: 2px 0 0;
+  color: #666;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.transferencia-alimentacao-item-info small {
+  display: block;
+  margin-top: 6px;
+  color: #777;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.transferencia-alimentacao-analisar {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-radius: 14px;
+  color: #ffe600;
+  background: #111;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* MODAL */
+
+.transferencia-alimentacao-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.transferencia-alimentacao-modal {
+  width: 100%;
+  max-width: 346px;
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  scrollbar-width: none;
+}
+
+.transferencia-alimentacao-modal::-webkit-scrollbar {
+  display: none;
+}
+
+.transferencia-alimentacao-modal h2 {
+  margin: 0 0 9px;
+  color: #222;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.transferencia-alimentacao-modal > p {
+  margin: 0 0 16px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.transferencia-alimentacao-modal-resumo {
+  margin-bottom: 16px;
+  padding: 13px;
+  border: 1px solid #ffe600;
+  border-radius: 16px;
+  background: #fffbea;
+  text-align: left;
+}
+
+.transferencia-alimentacao-modal-resumo span {
+  display: block;
+  margin-top: 7px;
+  color: #777;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.transferencia-alimentacao-modal-resumo span:first-child {
+  margin-top: 0;
+}
+
+.transferencia-alimentacao-modal-resumo strong {
+  display: block;
+  color: #222;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.transferencia-alimentacao-modal-label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 13px;
+  text-align: left;
+}
+
+.transferencia-alimentacao-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.transferencia-alimentacao-modal-actions button {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 15px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.transferencia-alimentacao-aprovar {
+  border: 2px solid #bbf7d0;
+  color: #fff;
+  background: #16a34a;
+}
+
+.transferencia-alimentacao-negar {
+  border: 2px solid #ffe600;
+  color: #fff;
+  background: #df1b24;
+}
+
+.transferencia-alimentacao-fechar {
+  border: 0;
+  color: #ffe600;
+  background: #111;
+}
+
+/* MOBILE */
+
+@media (max-width: 430px) {
+  .transferencia-alimentacao-page {
+    width: 100vw;
+    height: 100dvh;
+    padding: 0;
+    background: #fffdf4;
+    display: block;
+  }
+
+  .transferencia-alimentacao-phone {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: none;
+    padding: 24px 18px 18px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .transferencia-alimentacao-header {
+    margin-top: 0;
+  }
+
+  .transferencia-alimentacao-card {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .transferencia-alimentacao-estoque-info,
+  .transferencia-alimentacao-resumo {
+    grid-template-columns: 1fr 1fr;
+  }
+}

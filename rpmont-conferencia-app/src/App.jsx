@@ -11,11 +11,14 @@ import CadastroFenoRacao from './pages/CadastroFenoRacao';
 import SaidaFenoRacao from './pages/SaidaFenoRacao';
 import RelatorioFenoRacao from './pages/RelatorioFenoRacao';
 import ExtravioFenoRacao from './pages/ExtravioFenoRacao';
+import TransferenciaFenoRacao from './pages/TransferenciaFenoRacao';
 import SolicitarAcesso from './pages/SolicitarAcesso';
 
 import { materiaisMock } from './data/materiais';
 
 import './App.css';
+
+const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
 
 function App() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
@@ -24,10 +27,13 @@ function App() {
 
   const [abrirConsulta, setAbrirConsulta] = useState(false);
   const [abrirAdmin, setAbrirAdmin] = useState(false);
-  const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] = useState(false);
+  const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] =
+    useState(false);
   const [abrirSaidaFenoRacao, setAbrirSaidaFenoRacao] = useState(false);
   const [abrirExtravioFenoRacao, setAbrirExtravioFenoRacao] = useState(false);
   const [abrirRelatorioFenoRacao, setAbrirRelatorioFenoRacao] = useState(false);
+  const [abrirTransferenciaFenoRacao, setAbrirTransferenciaFenoRacao] =
+    useState(false);
   const [abrirModalFenoRacao, setAbrirModalFenoRacao] = useState(false);
 
   const [cadastroPendente, setCadastroPendente] = useState(null);
@@ -62,16 +68,14 @@ function App() {
     return obterValorNormalizado(usuario?.setor || usuario?.SETOR);
   };
 
+  const obterUnidadeUsuario = (usuario) => {
+    return obterValorNormalizado(usuario?.unidade || usuario?.UNIDADE);
+  };
+
   const usuarioEhAdmin = (usuario) => {
     const nivel = obterNivelUsuario(usuario);
 
-    return [
-      'ADMIN',
-      'ADMINP4',
-      'ADMINMASTER',
-      'MASTER',
-      '1',
-    ].includes(nivel);
+    return ['ADMIN', 'ADMINP4', 'ADMINMASTER', 'MASTER', '1'].includes(nivel);
   };
 
   const usuarioEhP4 = (usuario) => {
@@ -82,12 +86,24 @@ function App() {
     return obterSetorUsuario(usuario) === 'BAIA';
   };
 
+  const usuarioEhUnidadeEquina = (usuario) => {
+    const unidade = obterUnidadeUsuario(usuario);
+
+    return UNIDADES_EQUINAS.includes(unidade);
+  };
+
   const usuarioPodeAcessarPatrimonio = (usuario) => {
     return usuarioEhP4(usuario);
   };
 
   const usuarioPodeAcessarFenoRacao = (usuario) => {
+    if (!usuarioEhUnidadeEquina(usuario)) return false;
+
     return usuarioEhAdmin(usuario) || usuarioEhBaia(usuario);
+  };
+
+  const usuarioPodeAdministrarFenoRacao = (usuario) => {
+    return usuarioEhUnidadeEquina(usuario) && usuarioEhAdmin(usuario);
   };
 
   const fecharTelasSecundarias = () => {
@@ -98,6 +114,7 @@ function App() {
     setAbrirSaidaFenoRacao(false);
     setAbrirExtravioFenoRacao(false);
     setAbrirRelatorioFenoRacao(false);
+    setAbrirTransferenciaFenoRacao(false);
     setAbrirModalFenoRacao(false);
     setCadastroPendente(null);
     setMaterialEmEdicao(null);
@@ -118,8 +135,7 @@ function App() {
 
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
-        material.unidade === usuario.unidade &&
-        material.situacao !== 'INATIVO'
+        material.unidade === usuario.unidade && material.situacao !== 'INATIVO'
           ? {
               ...material,
               Conferido: 0,
@@ -150,10 +166,7 @@ function App() {
       ...dadosNovoMaterial,
     };
 
-    setMateriais((materiaisAtuais) => [
-      ...materiaisAtuais,
-      materialCompleto,
-    ]);
+    setMateriais((materiaisAtuais) => [...materiaisAtuais, materialCompleto]);
 
     setCadastroPendente(null);
   };
@@ -168,9 +181,7 @@ function App() {
 
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
-        material.ID === materialAtualizado.ID
-          ? materialAtualizado
-          : material
+        material.ID === materialAtualizado.ID ? materialAtualizado : material
       )
     );
 
@@ -263,13 +274,15 @@ function App() {
       return;
     }
 
-    window.alert('Você não tem permissão para acessar Feno e Ração.');
+    window.alert(
+      'Você não tem permissão para acessar Feno e Ração. Este módulo é exclusivo do RPMont e 3º EPMont.'
+    );
   };
 
   const abrirTelaCadastroAlimentacao = () => {
-    if (!usuarioEhAdmin(usuarioLogado)) {
+    if (!usuarioPodeAdministrarFenoRacao(usuarioLogado)) {
       window.alert(
-        'Acesso negado. Somente administrador pode cadastrar entrada de Feno e Ração.'
+        'Acesso negado. Somente administrador do RPMont ou 3º EPMont pode cadastrar entrada de Feno e Ração.'
       );
       return;
     }
@@ -280,7 +293,9 @@ function App() {
 
   const abrirTelaSaidaFenoRacao = () => {
     if (!usuarioPodeAcessarFenoRacao(usuarioLogado)) {
-      window.alert('Você não tem permissão para acessar Saída de Feno e Ração.');
+      window.alert(
+        'Você não tem permissão para acessar Saída de Feno e Ração.'
+      );
       return;
     }
 
@@ -290,7 +305,9 @@ function App() {
 
   const abrirTelaExtravioFenoRacao = () => {
     if (!usuarioPodeAcessarFenoRacao(usuarioLogado)) {
-      window.alert('Você não tem permissão para acessar Extravio de Feno e Ração.');
+      window.alert(
+        'Você não tem permissão para acessar Extravio de Feno e Ração.'
+      );
       return;
     }
 
@@ -299,15 +316,27 @@ function App() {
   };
 
   const abrirTelaRelatorioFenoRacao = () => {
-    if (!usuarioEhAdmin(usuarioLogado)) {
+    if (!usuarioPodeAdministrarFenoRacao(usuarioLogado)) {
       window.alert(
-        'Acesso negado. Somente administrador pode acessar o relatório de Feno e Ração.'
+        'Acesso negado. Somente administrador do RPMont ou 3º EPMont pode acessar o relatório de Feno e Ração.'
       );
       return;
     }
 
     fecharTelasSecundarias();
     setAbrirRelatorioFenoRacao(true);
+  };
+
+  const abrirTelaTransferenciaFenoRacao = () => {
+    if (!usuarioPodeAdministrarFenoRacao(usuarioLogado)) {
+      window.alert(
+        'Acesso negado. Somente administrador do RPMont ou 3º EPMont pode acessar Transferência de Feno e Ração.'
+      );
+      return;
+    }
+
+    fecharTelasSecundarias();
+    setAbrirTransferenciaFenoRacao(true);
   };
 
   const voltarDoCadastroAlimentacao = () => {
@@ -330,6 +359,11 @@ function App() {
     setConfiguracaoConferencia(null);
   };
 
+  const voltarDaTransferenciaFenoRacao = () => {
+    setAbrirTransferenciaFenoRacao(false);
+    setConfiguracaoConferencia(null);
+  };
+
   const voltarDaConsulta = () => {
     setAbrirConsulta(false);
   };
@@ -344,9 +378,7 @@ function App() {
 
   if (abrirSolicitarAcesso) {
     return (
-      <SolicitarAcesso
-        onVoltar={() => setAbrirSolicitarAcesso(false)}
-      />
+      <SolicitarAcesso onVoltar={() => setAbrirSolicitarAcesso(false)} />
     );
   }
 
@@ -355,6 +387,15 @@ function App() {
       <Login
         onLoginSuccess={setUsuarioLogado}
         onSolicitarAcesso={() => setAbrirSolicitarAcesso(true)}
+      />
+    );
+  }
+
+  if (abrirTransferenciaFenoRacao) {
+    return (
+      <TransferenciaFenoRacao
+        usuario={usuarioLogado}
+        onVoltar={voltarDaTransferenciaFenoRacao}
       />
     );
   }
@@ -421,12 +462,7 @@ function App() {
   }
 
   if (abrirAdmin) {
-    return (
-      <AdminPainel
-        usuario={usuarioLogado}
-        onVoltar={voltarDoAdmin}
-      />
-    );
+    return <AdminPainel usuario={usuarioLogado} onVoltar={voltarDoAdmin} />;
   }
 
   if (abrirConsulta) {
@@ -465,7 +501,7 @@ function App() {
               </div>
 
               <div className="modal-feno-racao-actions">
-                {usuarioEhAdmin(usuarioLogado) && (
+                {usuarioPodeAdministrarFenoRacao(usuarioLogado) && (
                   <button
                     type="button"
                     className="modal-feno-racao-btn modal-feno-racao-btn-cadastro"
@@ -491,14 +527,24 @@ function App() {
                   Extravio de Feno e Ração
                 </button>
 
-                {usuarioEhAdmin(usuarioLogado) && (
-                  <button
-                    type="button"
-                    className="modal-feno-racao-btn modal-feno-racao-btn-relatorio"
-                    onClick={abrirTelaRelatorioFenoRacao}
-                  >
-                    Relatório de Feno e Ração
-                  </button>
+                {usuarioPodeAdministrarFenoRacao(usuarioLogado) && (
+                  <>
+                    <button
+                      type="button"
+                      className="modal-feno-racao-btn modal-feno-racao-btn-relatorio"
+                      onClick={abrirTelaRelatorioFenoRacao}
+                    >
+                      Relatório de Feno e Ração
+                    </button>
+
+                    <button
+                      type="button"
+                      className="modal-feno-racao-btn modal-feno-racao-btn-transferencia"
+                      onClick={abrirTelaTransferenciaFenoRacao}
+                    >
+                      Transferência de Feno e Ração
+                    </button>
+                  </>
                 )}
               </div>
 

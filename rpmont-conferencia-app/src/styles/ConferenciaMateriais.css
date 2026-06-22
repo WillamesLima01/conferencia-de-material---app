@@ -202,7 +202,7 @@
 }
 
 .materiais-scroll {
-  max-height: 405px;
+  max-height: 400px;
   overflow-y: auto;
   padding-right: 4px;
   display: flex;

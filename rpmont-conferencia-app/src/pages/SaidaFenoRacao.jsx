@@ -3,6 +3,7 @@ import {
   FaArrowLeft,
   FaBoxesStacked,
   FaCalendarDays,
+  FaCircleCheck,
   FaHorse,
   FaMinus,
   FaPenToSquare,
@@ -176,6 +177,10 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
   const [saidaParaExcluir, setSaidaParaExcluir] = useState(null);
   const [saidaEmEdicao, setSaidaEmEdicao] = useState(null);
 
+  const [modalSucessoAberto, setModalSucessoAberto] = useState(false);
+  const [saidaConfirmada, setSaidaConfirmada] = useState(null);
+  const [tipoConfirmacao, setTipoConfirmacao] = useState('REGISTRO');
+
   const usuarioAdmin = usuarioEhAdmin(usuario);
 
   const produtoSelecionado = useMemo(() => {
@@ -272,6 +277,12 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
     setSaidaEmEdicao(null);
   };
 
+  const fecharModalSucesso = () => {
+    setModalSucessoAberto(false);
+    setSaidaConfirmada(null);
+    setTipoConfirmacao('REGISTRO');
+  };
+
   const cancelarEdicao = () => {
     limparFormulario();
     mostrarMensagem('Edição cancelada.');
@@ -332,7 +343,8 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
       fornecedor: estoqueSelecionado.fornecedor || '',
       responsavel: responsavel.trim(),
       observacao: observacao.trim(),
-      unidade: usuario?.unidade || usuario?.UNIDADE || estoqueSelecionado.unidade || 'RPMont',
+      unidade:
+        usuario?.unidade || usuario?.UNIDADE || estoqueSelecionado.unidade || 'RPMont',
 
       usuarioId,
       usuarioNome: usuario?.nomeExibicao || usuario?.nome || usuario?.NOME || '',
@@ -443,6 +455,7 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
       return;
     }
 
+    const estavaEditando = Boolean(saidaEmEdicao);
     const novaSaida = montarSaida();
     const entradasAtualizadas = atualizarEstoqueAoRegistrar(novaSaida);
 
@@ -457,11 +470,10 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
 
     limparFormulario();
 
-    mostrarMensagem(
-      saidaEmEdicao
-        ? 'Saída atualizada com sucesso.'
-        : `${unidadesCalculadas} ${produtoSelecionado.unidadePlural} de ${produtoSelecionado.nome} retirado(s) com sucesso.`
-    );
+    setSaidaConfirmada(novaSaida);
+    setTipoConfirmacao(estavaEditando ? 'EDICAO' : 'REGISTRO');
+    setModalSucessoAberto(true);
+    setMensagem('');
   };
 
   const confirmarExclusaoSaida = () => {
@@ -897,6 +909,68 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
             </div>
           )}
         </section>
+
+        {modalSucessoAberto && saidaConfirmada && (
+          <div className="saida-alimentacao-modal-overlay">
+            <div className="saida-alimentacao-modal">
+              <div className="saida-alimentacao-modal-icon sucesso">
+                <FaCircleCheck />
+              </div>
+
+              <h2>
+                {tipoConfirmacao === 'EDICAO'
+                  ? 'Saída atualizada com sucesso!'
+                  : 'Saída registrada com sucesso!'}
+              </h2>
+
+              <p>
+                {tipoConfirmacao === 'EDICAO'
+                  ? 'As alterações foram salvas no sistema.'
+                  : 'A retirada foi salva no sistema. Confira o resumo abaixo.'}
+              </p>
+
+              <div className="saida-alimentacao-modal-resumo sucesso">
+                <span>Produto</span>
+                <strong>{saidaConfirmada.nomeProduto}</strong>
+
+                <span>Lote</span>
+                <strong>{saidaConfirmada.lote || '-'}</strong>
+
+                <span>Quantidade retirada</span>
+                <strong>
+                  {formatarNumero(saidaConfirmada.quantidadeRetirada)}{' '}
+                  {PRODUTOS.find(
+                    (produto) => produto.valor === saidaConfirmada.tipoProduto
+                  )?.unidadePlural || 'unidades'}
+                </strong>
+
+                <span>Peso liberado</span>
+                <strong>{formatarNumero(saidaConfirmada.pesoLiberadoKg)} kg</strong>
+
+                <span>Responsável</span>
+                <strong>
+                  {saidaConfirmada.responsavel ||
+                    saidaConfirmada.usuarioNome ||
+                    '-'}
+                </strong>
+
+                <span>Data</span>
+                <strong>{formatarData(saidaConfirmada.dataSaida)}</strong>
+              </div>
+
+              <div className="saida-alimentacao-modal-actions">
+                <button
+                  type="button"
+                  className="saida-alimentacao-confirmar-sucesso"
+                  onClick={fecharModalSucesso}
+                >
+                  <FaCircleCheck />
+                  Entendi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {saidaParaExcluir && (
           <div className="saida-alimentacao-modal-overlay">

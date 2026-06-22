@@ -18,6 +18,8 @@ import '../styles/SelecionarConferencia.css';
 
 const STORAGE_KEY_SETORES = 'setores';
 
+const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
+
 const carregarSetoresCadastrados = () => {
   const setoresSalvos = localStorage.getItem(STORAGE_KEY_SETORES);
 
@@ -60,6 +62,10 @@ const obterSetorUsuario = (usuario) => {
   return normalizarTexto(usuario?.setor || usuario?.SETOR);
 };
 
+const obterUnidadeUsuario = (usuario) => {
+  return normalizarTexto(usuario?.unidade || usuario?.UNIDADE);
+};
+
 const usuarioEhAdminSistema = (usuario) => {
   const nivel = obterNivelUsuario(usuario);
 
@@ -74,6 +80,12 @@ const usuarioEhSetorBaia = (usuario) => {
   return obterSetorUsuario(usuario) === 'BAIA';
 };
 
+const usuarioEhUnidadeEquina = (usuario) => {
+  const unidade = obterUnidadeUsuario(usuario);
+
+  return UNIDADES_EQUINAS.includes(unidade);
+};
+
 function SelecionarConferencia({
   usuario,
   onSair,
@@ -82,17 +94,7 @@ function SelecionarConferencia({
   onAbrirCadastroManual,
   onAbrirConsulta,
   onAbrirAdmin,
-
-  /*
-    Prop correta.
-    Ela chama o controle centralizado no App.jsx.
-  */
   onAbrirFenoRacao,
-
-  /*
-    Props antigas mantidas apenas como segurança.
-    Depois que o App.jsx estiver 100%, pode remover.
-  */
   onAbrirCadastroAlimentacao,
   onAbrirSaidaFenoRacao,
 }) {
@@ -110,9 +112,12 @@ function SelecionarConferencia({
   const usuarioEhAdmin = usuarioEhAdminSistema(usuario);
   const usuarioEhP4 = usuarioEhSetorP4(usuario);
   const usuarioEhBaia = usuarioEhSetorBaia(usuario);
+  const usuarioEhUnidadeComEquinos = usuarioEhUnidadeEquina(usuario);
 
   const usuarioPodeAcessarPatrimonio = usuarioEhP4;
-  const usuarioPodeAcessarFenoRacao = usuarioEhAdmin || usuarioEhBaia;
+
+  const usuarioPodeAcessarFenoRacao =
+    usuarioEhUnidadeComEquinos && (usuarioEhAdmin || usuarioEhBaia);
 
   const unidadeUsuarioLogada = String(usuario?.unidade || usuario?.UNIDADE || '')
     .trim()
@@ -211,7 +216,9 @@ function SelecionarConferencia({
 
   const abrirFenoRacao = () => {
     if (!usuarioPodeAcessarFenoRacao) {
-      window.alert('Você não tem permissão para acessar Feno e Ração.');
+      window.alert(
+        'Você não tem permissão para acessar Feno e Ração. Este módulo é exclusivo do RPMont e 3º EPMont.'
+      );
       return;
     }
 
@@ -220,11 +227,6 @@ function SelecionarConferencia({
       return;
     }
 
-    /*
-      Fallback provisório:
-      se o App.jsx ainda estiver usando as props antigas,
-      o botão não fica morto.
-    */
     if (usuarioEhAdmin && typeof onAbrirCadastroAlimentacao === 'function') {
       onAbrirCadastroAlimentacao();
       return;
@@ -269,10 +271,6 @@ function SelecionarConferencia({
       return;
     }
 
-    /*
-      Validação provisória no front-end.
-      Depois será substituída pela validação no backend/MySQL.
-    */
     if (senhaAdmin !== '123456') {
       setMensagemZerar('Senha de administrador incorreta.');
       return;
@@ -310,16 +308,17 @@ function SelecionarConferencia({
 
           <div className="selecao-header-actions">
             <button
-                type="button"
-                className="selecao-sair-button"
-                onClick={handleSair}
-              >
-                <FaRightFromBracket />
-                Sair
+              type="button"
+              className="selecao-sair-button"
+              onClick={handleSair}
+            >
+              <FaRightFromBracket />
+              Sair
             </button>
+
             <div className="usuario-chip">
               {usuario?.postGrad?.toUpperCase()} {usuario?.nome}
-            </div>            
+            </div>
           </div>
         </header>
 
@@ -350,10 +349,14 @@ function SelecionarConferencia({
 
               <p>
                 {usuarioEhP4
-                  ? `Gerencie materiais patrimoniais, administração, feno e ração ou reinicie a conferência da unidade ${
+                  ? `Gerencie materiais patrimoniais, administração${
+                      usuarioPodeAcessarFenoRacao ? ', feno e ração' : ''
+                    } ou reinicie a conferência da unidade ${
                       usuario?.unidade || usuario?.UNIDADE
                     }.`
-                  : 'Você possui acesso administrativo, mas a conferência patrimonial é exclusiva do setor P4. O acesso a Feno e Ração permanece liberado.'}
+                  : usuarioPodeAcessarFenoRacao
+                    ? 'Você possui acesso administrativo ao módulo de Feno e Ração da unidade equina. A conferência patrimonial é exclusiva do setor P4.'
+                    : 'Você possui acesso administrativo, mas a conferência patrimonial é exclusiva do setor P4 e o módulo de Feno e Ração é exclusivo do RPMont e 3º EPMont.'}
               </p>
             </div>
 
@@ -368,10 +371,7 @@ function SelecionarConferencia({
                     Cadastrar material
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={abrirConsultaComPermissao}
-                  >
+                  <button type="button" onClick={abrirConsultaComPermissao}>
                     <FaMagnifyingGlassChart />
                     Filtros avançados
                   </button>
@@ -404,7 +404,7 @@ function SelecionarConferencia({
           </section>
         )}
 
-        {!usuarioEhAdmin && usuarioEhBaia && (
+        {!usuarioEhAdmin && usuarioEhBaia && usuarioPodeAcessarFenoRacao && (
           <section className="admin-card admin-card-duplo">
             <div className="admin-card-texto">
               <span>Alimentação equina</span>
@@ -566,8 +566,9 @@ function SelecionarConferencia({
 
             <p>
               A conferência patrimonial é exclusiva do setor P4. O módulo de
-              Feno e Ração é permitido para administradores ou usuários do setor
-              Baia.
+              Feno e Ração é exclusivo do RPMont e 3º EPMont, sendo permitido
+              apenas para administradores dessas unidades ou usuários do setor
+              Baia dessas unidades.
             </p>
           </section>
         )}

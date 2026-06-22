@@ -22,6 +22,12 @@ const STATUS_ACESSO = {
   BLOQUEADO: 'BLOQUEADO',
 };
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: '0',
+  ADMIN: '1',
+  USUARIO_COMUM: '2',
+};
+
 const gerarId = () => {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -85,12 +91,52 @@ const normalizarTexto = (valor) => {
     .toLowerCase();
 };
 
+const normalizarNivel = (valor) => {
+  return String(valor || '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
+
 const obterIdUsuario = (usuario) => {
   return usuario?.ID || usuario?.id || 1;
 };
 
 const obterUnidadeUsuario = (usuario) => {
   return usuario?.UNIDADE || usuario?.unidade || '';
+};
+
+const obterNivelUsuario = (usuario) => {
+  return normalizarNivel(
+    usuario?.NIVEL ||
+      usuario?.nivel ||
+      usuario?.nivelAcesso ||
+      usuario?.NIVEL_ACESSO ||
+      usuario?.perfil ||
+      usuario?.PERFIL ||
+      usuario?.role ||
+      usuario?.ROLE ||
+      usuario?.tipo ||
+      usuario?.TIPO
+  );
+};
+
+const usuarioEhAdminMaster = (usuario) => {
+  const nivel = obterNivelUsuario(usuario);
+
+  return ['0', 'ADMINMASTER', 'MASTER'].includes(nivel);
+};
+
+const usuarioEhAdmin = (usuario) => {
+  const nivel = obterNivelUsuario(usuario);
+
+  return ['1', 'ADMIN', 'ADMINP4'].includes(nivel);
+};
+
+const usuarioEhUsuarioComum = (usuario) => {
+  return !usuarioEhAdminMaster(usuario) && !usuarioEhAdmin(usuario);
 };
 
 const obterStatusUsuario = (usuario) => {
@@ -107,6 +153,18 @@ const usuarioAtivoPorStatus = (status) => {
   return status === STATUS_ACESSO.LIBERADO ? 1 : 0;
 };
 
+const obterRotuloNivel = (usuario) => {
+  if (usuarioEhAdminMaster(usuario)) return 'Admin Master';
+  if (usuarioEhAdmin(usuario)) return 'Administrador';
+  return 'Usuário comum';
+};
+
+const converterNivelParaSalvar = (nivel) => {
+  if (String(nivel) === NIVEIS_USUARIO.ADMIN_MASTER) return 0;
+  if (String(nivel) === NIVEIS_USUARIO.ADMIN) return 1;
+  return 2;
+};
+
 function AdminUsuarios({ usuario, onVoltar }) {
   const [unidades] = useState(() => carregarStorage(STORAGE_KEY_UNIDADES));
   const [setores] = useState(() => carregarStorage(STORAGE_KEY_SETORES));
@@ -120,7 +178,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [postGrad, setPostGrad] = useState('');
-  const [nivel, setNivel] = useState('2');
+  const [nivel, setNivel] = useState(NIVEIS_USUARIO.USUARIO_COMUM);
   const [unidadeSelecionada, setUnidadeSelecionada] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
 
@@ -141,6 +199,16 @@ function AdminUsuarios({ usuario, onVoltar }) {
   }, [usuarios]);
 
   const unidadeAdmin = obterUnidadeUsuario(usuario);
+  const adminLogadoEhMaster = usuarioEhAdminMaster(usuario);
+
+  const unidadesDisponiveis = useMemo(() => {
+    if (adminLogadoEhMaster) return unidades;
+
+    return unidades.filter(
+      (unidade) =>
+        normalizarTexto(unidade.nome) === normalizarTexto(unidadeAdmin)
+    );
+  }, [unidades, unidadeAdmin, adminLogadoEhMaster]);
 
   const setoresDaUnidade = useMemo(() => {
     if (!unidadeSelecionada) return [];
@@ -148,55 +216,68 @@ function AdminUsuarios({ usuario, onVoltar }) {
     return setores.filter((setor) => setor.unidadeNome === unidadeSelecionada);
   }, [setores, unidadeSelecionada]);
 
-  const usuariosDaUnidadeAdmin = useMemo(() => {
-    return usuarios.filter((item) => {
-      const unidadeUsuario = item.UNIDADE || item.unidade || '';
+  const adminPodeVerUsuario = (usuarioAlvo) => {
+    if (adminLogadoEhMaster) return true;
 
-      return normalizarTexto(unidadeUsuario) === normalizarTexto(unidadeAdmin);
-    });
-  }, [usuarios, unidadeAdmin]);
+    const unidadeAlvo = obterUnidadeUsuario(usuarioAlvo);
 
-  const totalPendentesUnidade = useMemo(() => {
-    return usuariosDaUnidadeAdmin.filter(
+    return normalizarTexto(unidadeAdmin) === normalizarTexto(unidadeAlvo);
+  };
+
+  const adminPodeEditarUsuario = (usuarioAlvo) => {
+    if (adminLogadoEhMaster) return true;
+
+    if (!adminPodeVerUsuario(usuarioAlvo)) return false;
+
+    return usuarioEhUsuarioComum(usuarioAlvo);
+  };
+
+  const adminPodeAlterarStatus = (usuarioAlvo) => {
+    if (adminLogadoEhMaster) return true;
+
+    if (!adminPodeVerUsuario(usuarioAlvo)) return false;
+
+    return usuarioEhUsuarioComum(usuarioAlvo);
+  };
+
+  const adminPodeExcluirUsuario = (usuarioAlvo) => {
+    if (adminLogadoEhMaster) return true;
+
+    if (!adminPodeVerUsuario(usuarioAlvo)) return false;
+
+    return usuarioEhUsuarioComum(usuarioAlvo);
+  };
+
+  const usuariosVisiveis = useMemo(() => {
+    return usuarios.filter((item) => adminPodeVerUsuario(item));
+  }, [usuarios, adminLogadoEhMaster, unidadeAdmin]);
+
+  const totalPendentes = useMemo(() => {
+    return usuariosVisiveis.filter(
       (item) => obterStatusUsuario(item) === STATUS_ACESSO.PENDENTE
     ).length;
-  }, [usuariosDaUnidadeAdmin]);
+  }, [usuariosVisiveis]);
 
-  const totalLiberadosUnidade = useMemo(() => {
-    return usuariosDaUnidadeAdmin.filter(
+  const totalLiberados = useMemo(() => {
+    return usuariosVisiveis.filter(
       (item) =>
         obterStatusUsuario(item) === STATUS_ACESSO.LIBERADO &&
         Number(item.ATIVO ?? item.ativo ?? 1) === 1
     ).length;
-  }, [usuariosDaUnidadeAdmin]);
+  }, [usuariosVisiveis]);
 
-  const totalBloqueadosUnidade = useMemo(() => {
-    return usuariosDaUnidadeAdmin.filter(
+  const totalBloqueados = useMemo(() => {
+    return usuariosVisiveis.filter(
       (item) =>
         obterStatusUsuario(item) === STATUS_ACESSO.BLOQUEADO ||
         Number(item.ATIVO ?? item.ativo ?? 1) !== 1
     ).length;
-  }, [usuariosDaUnidadeAdmin]);
+  }, [usuariosVisiveis]);
 
   const usuariosOrdenados = useMemo(() => {
-    return [...usuarios].sort((a, b) => {
+    return [...usuariosVisiveis].sort((a, b) => {
       const statusA = obterStatusUsuario(a);
       const statusB = obterStatusUsuario(b);
-
-      const unidadeA = normalizarTexto(a.UNIDADE || a.unidade || '');
-      const unidadeB = normalizarTexto(b.UNIDADE || b.unidade || '');
-      const unidadeAdminNormalizada = normalizarTexto(unidadeAdmin);
-
-      const aEhDaUnidadeAdmin = unidadeA === unidadeAdminNormalizada;
-      const bEhDaUnidadeAdmin = unidadeB === unidadeAdminNormalizada;
-
-      if (aEhDaUnidadeAdmin && !bEhDaUnidadeAdmin) {
-        return -1;
-      }
-
-      if (!aEhDaUnidadeAdmin && bEhDaUnidadeAdmin) {
-        return 1;
-      }
 
       if (
         statusA === STATUS_ACESSO.PENDENTE &&
@@ -212,9 +293,15 @@ function AdminUsuarios({ usuario, onVoltar }) {
         return 1;
       }
 
+      const unidadeA = String(a.UNIDADE || '').localeCompare(
+        String(b.UNIDADE || '')
+      );
+
+      if (adminLogadoEhMaster && unidadeA !== 0) return unidadeA;
+
       return String(a.NOME || '').localeCompare(String(b.NOME || ''));
     });
-  }, [usuarios, unidadeAdmin]);
+  }, [usuariosVisiveis, adminLogadoEhMaster]);
 
   const limparFormulario = () => {
     setMatricula('');
@@ -223,8 +310,8 @@ function AdminUsuarios({ usuario, onVoltar }) {
     setEmail('');
     setSenha('');
     setPostGrad('');
-    setNivel('2');
-    setUnidadeSelecionada('');
+    setNivel(NIVEIS_USUARIO.USUARIO_COMUM);
+    setUnidadeSelecionada(adminLogadoEhMaster ? '' : unidadeAdmin);
     setSetorSelecionado('');
     setUsuarioEditando(null);
   };
@@ -237,12 +324,6 @@ function AdminUsuarios({ usuario, onVoltar }) {
     }, 3500);
   };
 
-  const adminPodeAlterarStatus = (usuarioAlvo) => {
-    const unidadeAlvo = usuarioAlvo?.UNIDADE || usuarioAlvo?.unidade || '';
-
-    return normalizarTexto(unidadeAdmin) === normalizarTexto(unidadeAlvo);
-  };
-
   const handleSalvar = (event) => {
     event.preventDefault();
 
@@ -252,6 +333,21 @@ function AdminUsuarios({ usuario, onVoltar }) {
     const emailTratado = email.trim();
     const senhaTratada = senha.trim();
     const postGradTratado = postGrad.trim();
+
+    const unidadeFinal = adminLogadoEhMaster
+      ? unidadeSelecionada
+      : unidadeAdmin;
+
+    const nivelFinal = adminLogadoEhMaster
+      ? nivel
+      : NIVEIS_USUARIO.USUARIO_COMUM;
+
+    if (usuarioEditando && !adminPodeEditarUsuario(usuarioEditando)) {
+      mostrarMensagem(
+        'Acesso negado. Administrador comum só pode editar usuário comum da própria unidade.'
+      );
+      return;
+    }
 
     if (!matriculaTratada) {
       mostrarMensagem('Informe a matrícula.');
@@ -278,7 +374,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
       return;
     }
 
-    if (!unidadeSelecionada) {
+    if (!unidadeFinal) {
       mostrarMensagem('Selecione a unidade.');
       return;
     }
@@ -290,6 +386,11 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
     if (!usuarioEditando && !senhaTratada) {
       mostrarMensagem('Informe a senha inicial.');
+      return;
+    }
+
+    if (!adminLogadoEhMaster && normalizarTexto(unidadeFinal) !== normalizarTexto(unidadeAdmin)) {
+      mostrarMensagem('Administrador comum não pode cadastrar usuário em outra unidade.');
       return;
     }
 
@@ -305,6 +406,8 @@ function AdminUsuarios({ usuario, onVoltar }) {
     }
 
     if (usuarioEditando) {
+      const unidadeAnterior = usuarioEditando.UNIDADE || '';
+
       const usuariosAtualizados = usuarios.map((item) =>
         item.ID === usuarioEditando.ID
           ? {
@@ -314,18 +417,49 @@ function AdminUsuarios({ usuario, onVoltar }) {
               NOMECOMPLETO: nomeCompletoTratado,
               EMAIL: emailTratado,
               SENHA: senhaTratada || item.SENHA,
-              NIVEL: Number(nivel),
+              NIVEL: converterNivelParaSalvar(nivelFinal),
               POSTGRAD: postGradTratado,
               SETOR: setorSelecionado,
-              UNIDADE: unidadeSelecionada,
+              UNIDADE: unidadeFinal,
               DATAMODIFICACAO: dataHoraAtual(),
               userModificador: obterIdUsuario(usuario),
+              HISTORICO_UNIDADE:
+                adminLogadoEhMaster &&
+                normalizarTexto(unidadeAnterior) !== normalizarTexto(unidadeFinal)
+                  ? [
+                      ...(Array.isArray(item.HISTORICO_UNIDADE)
+                        ? item.HISTORICO_UNIDADE
+                        : []),
+                      {
+                        unidadeAnterior,
+                        unidadeNova: unidadeFinal,
+                        alteradoPor: obterIdUsuario(usuario),
+                        alteradoPorNome:
+                          usuario?.nomeExibicao ||
+                          usuario?.NOME ||
+                          usuario?.nome ||
+                          'Admin Master',
+                        dataAlteracao: dataHoraAtual(),
+                      },
+                    ]
+                  : item.HISTORICO_UNIDADE || [],
             }
           : item
       );
 
       setUsuarios(usuariosAtualizados);
       limparFormulario();
+
+      if (
+        adminLogadoEhMaster &&
+        normalizarTexto(unidadeAnterior) !== normalizarTexto(unidadeFinal)
+      ) {
+        mostrarMensagem(
+          `Usuário atualizado e transferido para ${unidadeFinal}. Ele passará a acessar somente os dados da nova unidade.`
+        );
+        return;
+      }
+
       mostrarMensagem('Usuário atualizado com sucesso.');
       return;
     }
@@ -336,11 +470,11 @@ function AdminUsuarios({ usuario, onVoltar }) {
       NOME: nomeTratado,
       SENHA: senhaTratada,
       EMAIL: emailTratado,
-      NIVEL: Number(nivel),
+      NIVEL: converterNivelParaSalvar(nivelFinal),
       POSTGRAD: postGradTratado,
       SETOR: setorSelecionado,
       NOMECOMPLETO: nomeCompletoTratado,
-      UNIDADE: unidadeSelecionada,
+      UNIDADE: unidadeFinal,
 
       STATUSACESSO: STATUS_ACESSO.LIBERADO,
       ATIVO: 1,
@@ -352,6 +486,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
       DATAMODIFICACAO: dataHoraAtual(),
       userModificador: obterIdUsuario(usuario),
       DIGITAL: null,
+      HISTORICO_UNIDADE: [],
     };
 
     setUsuarios((listaAtual) => [...listaAtual, novoUsuario]);
@@ -360,6 +495,13 @@ function AdminUsuarios({ usuario, onVoltar }) {
   };
 
   const handleEditar = (item) => {
+    if (!adminPodeEditarUsuario(item)) {
+      mostrarMensagem(
+        'Acesso negado. Administrador comum só pode editar usuário comum da própria unidade.'
+      );
+      return;
+    }
+
     setUsuarioEditando(item);
     setMatricula(formatarMatricula(item.MATRICULA || ''));
     setNome(item.NOME || '');
@@ -367,18 +509,39 @@ function AdminUsuarios({ usuario, onVoltar }) {
     setEmail(item.EMAIL || '');
     setSenha('');
     setPostGrad(item.POSTGRAD || '');
-    setNivel(String(item.NIVEL || 2));
+
+    if (usuarioEhAdminMaster(item)) {
+      setNivel(NIVEIS_USUARIO.ADMIN_MASTER);
+    } else if (usuarioEhAdmin(item)) {
+      setNivel(NIVEIS_USUARIO.ADMIN);
+    } else {
+      setNivel(NIVEIS_USUARIO.USUARIO_COMUM);
+    }
+
     setUnidadeSelecionada(item.UNIDADE || '');
     setSetorSelecionado(item.SETOR || '');
   };
 
   const handleExcluir = (item) => {
+    if (!adminPodeExcluirUsuario(item)) {
+      mostrarMensagem(
+        'Acesso negado. Administrador comum só pode excluir usuário comum da própria unidade.'
+      );
+      return;
+    }
+
     setUsuarioParaExcluir(item);
     setModalExcluirAberto(true);
   };
 
   const confirmarExclusao = () => {
     if (!usuarioParaExcluir) return;
+
+    if (!adminPodeExcluirUsuario(usuarioParaExcluir)) {
+      mostrarMensagem('Acesso negado para excluir este usuário.');
+      cancelarExclusao();
+      return;
+    }
 
     const usuariosAtualizados = usuarios.filter(
       (item) => item.ID !== usuarioParaExcluir.ID
@@ -397,6 +560,13 @@ function AdminUsuarios({ usuario, onVoltar }) {
   };
 
   const handleAbrirStatus = (item) => {
+    if (!adminPodeAlterarStatus(item)) {
+      mostrarMensagem(
+        'Acesso negado. Administrador comum só pode alterar status de usuário comum da própria unidade.'
+      );
+      return;
+    }
+
     setUsuarioParaStatus(item);
     setStatusSelecionado(obterStatusUsuario(item));
     setModalStatusAberto(true);
@@ -412,9 +582,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
     if (!usuarioParaStatus) return;
 
     if (!adminPodeAlterarStatus(usuarioParaStatus)) {
-      mostrarMensagem(
-        'Você só pode alterar o status de usuários da sua própria unidade.'
-      );
+      mostrarMensagem('Você não tem permissão para alterar o status deste usuário.');
       cancelarStatus();
       return;
     }
@@ -506,9 +674,9 @@ function AdminUsuarios({ usuario, onVoltar }) {
             <span>Área administrativa</span>
             <h1>Usuários</h1>
             <p>
-              {usuario?.unidade ||
-                usuario?.UNIDADE ||
-                'Gerenciamento de usuários'}
+              {adminLogadoEhMaster
+                ? 'Admin Master - Todas as unidades'
+                : usuario?.unidade || usuario?.UNIDADE || 'Gerenciamento de usuários'}
             </p>
           </div>
         </header>
@@ -522,8 +690,9 @@ function AdminUsuarios({ usuario, onVoltar }) {
             <span>Cadastro administrativo</span>
             <h2>Gerenciar Usuários</h2>
             <p>
-              Cadastre usuários, edite dados e libere ou bloqueie acesso por
-              unidade.
+              {adminLogadoEhMaster
+                ? 'Você pode gerenciar usuários de todas as unidades, inclusive transferir militar de unidade.'
+                : 'Você gerencia somente usuários comuns da sua própria unidade.'}
             </p>
           </div>
         </section>
@@ -533,34 +702,44 @@ function AdminUsuarios({ usuario, onVoltar }) {
         <section className="admin-usuarios-resumo-status">
           <article
             className={
-              totalPendentesUnidade > 0
+              totalPendentes > 0
                 ? 'admin-usuarios-resumo-card destaque'
                 : 'admin-usuarios-resumo-card'
             }
           >
-            <strong>{totalPendentesUnidade}</strong>
+            <strong>{totalPendentes}</strong>
             <span>Pendente(s)</span>
-            <small>Aguardando liberação na sua unidade</small>
+            <small>
+              {adminLogadoEhMaster
+                ? 'Aguardando liberação em todas as unidades'
+                : 'Aguardando liberação na sua unidade'}
+            </small>
           </article>
 
           <article className="admin-usuarios-resumo-card liberado">
-            <strong>{totalLiberadosUnidade}</strong>
+            <strong>{totalLiberados}</strong>
             <span>Liberado(s)</span>
             <small>Com acesso ativo ao sistema</small>
           </article>
 
           <article className="admin-usuarios-resumo-card bloqueado">
-            <strong>{totalBloqueadosUnidade}</strong>
+            <strong>{totalBloqueados}</strong>
             <span>Bloqueado(s)</span>
             <small>Sem acesso ao aplicativo</small>
           </article>
         </section>
 
-        {totalPendentesUnidade > 0 && (
+        {totalPendentes > 0 && (
           <div className="admin-usuarios-alerta-pendentes">
-            Existem {totalPendentesUnidade} usuário(s) aguardando liberação na
-            unidade <strong>{unidadeAdmin}</strong>. Eles aparecem primeiro na
-            lista.
+            Existem {totalPendentes} usuário(s) aguardando liberação{' '}
+            {adminLogadoEhMaster ? (
+              <strong>em todas as unidades</strong>
+            ) : (
+              <>
+                na unidade <strong>{unidadeAdmin}</strong>
+              </>
+            )}
+            . Eles aparecem primeiro na lista.
           </div>
         )}
 
@@ -643,20 +822,38 @@ function AdminUsuarios({ usuario, onVoltar }) {
               <select
                 id="unidade"
                 value={unidadeSelecionada}
+                disabled={!adminLogadoEhMaster}
                 onChange={(event) => {
                   setUnidadeSelecionada(event.target.value);
                   setSetorSelecionado('');
                 }}
               >
-                <option value="">Selecione uma unidade</option>
+                <option value="">
+                  {adminLogadoEhMaster
+                    ? 'Selecione uma unidade'
+                    : unidadeAdmin || 'Unidade do administrador'}
+                </option>
 
-                {unidades.map((unidade) => (
+                {unidadesDisponiveis.map((unidade) => (
                   <option key={unidade.id} value={unidade.nome}>
                     {unidade.nome}
                   </option>
                 ))}
               </select>
+
+              {!adminLogadoEhMaster && (
+                <small className="admin-usuarios-status-texto">
+                  Administrador comum não pode trocar unidade de usuário.
+                </small>
+              )}
             </div>
+
+            {adminLogadoEhMaster && usuarioEditando && (
+              <div className="admin-usuarios-alerta-pendentes">
+                Atenção: ao trocar a unidade deste usuário, ele passará a
+                acessar somente os dados da nova unidade.
+              </div>
+            )}
 
             <div className="admin-usuarios-form-group">
               <label htmlFor="setor">Setor</label>
@@ -688,11 +885,29 @@ function AdminUsuarios({ usuario, onVoltar }) {
                 <select
                   id="nivel"
                   value={nivel}
+                  disabled={!adminLogadoEhMaster}
                   onChange={(event) => setNivel(event.target.value)}
                 >
-                  <option value="1">Administrador</option>
-                  <option value="2">Usuário comum</option>
+                  {adminLogadoEhMaster && (
+                    <option value={NIVEIS_USUARIO.ADMIN_MASTER}>
+                      Admin Master
+                    </option>
+                  )}
+
+                  {adminLogadoEhMaster && (
+                    <option value={NIVEIS_USUARIO.ADMIN}>Administrador</option>
+                  )}
+
+                  <option value={NIVEIS_USUARIO.USUARIO_COMUM}>
+                    Usuário comum
+                  </option>
                 </select>
+
+                {!adminLogadoEhMaster && (
+                  <small className="admin-usuarios-status-texto">
+                    Administrador comum só cadastra ou edita usuário comum.
+                  </small>
+                )}
               </div>
 
               <div className="admin-usuarios-form-group">
@@ -732,17 +947,24 @@ function AdminUsuarios({ usuario, onVoltar }) {
           <div className="admin-usuarios-lista-header">
             <div>
               <h2>Usuários Cadastrados</h2>
-              <p>Total de {usuarios.length} usuário(s)</p>
+              <p>
+                Total de {usuariosVisiveis.length} usuário(s){' '}
+                {adminLogadoEhMaster
+                  ? 'em todas as unidades'
+                  : `na unidade ${unidadeAdmin}`}
+              </p>
             </div>
           </div>
 
-          {usuarios.length === 0 ? (
+          {usuariosVisiveis.length === 0 ? (
             <div className="admin-usuarios-vazio">Nenhum usuário cadastrado.</div>
           ) : (
             <div className="admin-usuarios-lista">
               {usuariosOrdenados.map((item) => {
                 const status = obterStatusUsuario(item);
+                const podeEditar = adminPodeEditarUsuario(item);
                 const podeAlterarStatus = adminPodeAlterarStatus(item);
+                const podeExcluir = adminPodeExcluirUsuario(item);
 
                 return (
                   <div className="admin-usuarios-item" key={item.ID}>
@@ -767,11 +989,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
                         </p>
 
                         <div className="admin-usuarios-badges">
-                          <span>
-                            {Number(item.NIVEL) === 1
-                              ? 'Administrador'
-                              : 'Usuário comum'}
-                          </span>
+                          <span>{obterRotuloNivel(item)}</span>
 
                           <strong className={obterClasseStatus(status)}>
                             {status}
@@ -785,40 +1003,47 @@ function AdminUsuarios({ usuario, onVoltar }) {
                     </div>
 
                     <div className="admin-usuarios-item-acoes">
-                      <button
-                        type="button"
-                        className="btn-editar-usuario"
-                        onClick={() => handleEditar(item)}
-                        title="Editar usuário"
-                      >
-                        <FaPen />
-                      </button>
+                      {podeEditar && (
+                        <button
+                          type="button"
+                          className="btn-editar-usuario"
+                          onClick={() => handleEditar(item)}
+                          title="Editar usuário"
+                        >
+                          <FaPen />
+                        </button>
+                      )}
 
-                      <button
-                        type="button"
-                        className={
-                          podeAlterarStatus
-                            ? 'btn-status-usuario'
-                            : 'btn-status-usuario bloqueado'
-                        }
-                        onClick={() => handleAbrirStatus(item)}
-                        title={
-                          podeAlterarStatus
-                            ? 'Alterar status'
-                            : 'Somente admin da mesma unidade pode alterar'
-                        }
-                      >
-                        <FaShieldHalved />
-                      </button>
+                      {podeAlterarStatus && (
+                        <button
+                          type="button"
+                          className="btn-status-usuario"
+                          onClick={() => handleAbrirStatus(item)}
+                          title="Alterar status"
+                        >
+                          <FaShieldHalved />
+                        </button>
+                      )}
 
-                      <button
-                        type="button"
-                        className="btn-excluir-usuario"
-                        onClick={() => handleExcluir(item)}
-                        title="Excluir usuário"
-                      >
-                        <FaTrash />
-                      </button>
+                      {podeExcluir && (
+                        <button
+                          type="button"
+                          className="btn-excluir-usuario"
+                          onClick={() => handleExcluir(item)}
+                          title="Excluir usuário"
+                        >
+                          <FaTrash />
+                        </button>
+                      )}
+
+                      {!podeEditar && !podeAlterarStatus && !podeExcluir && (
+                        <span
+                          className="admin-usuarios-status-texto"
+                          title="Ação restrita ao Admin Master"
+                        >
+                          Restrito
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -856,8 +1081,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
               {!adminPodeAlterarStatus(usuarioParaStatus) && (
                 <div className="admin-usuarios-alerta-status">
-                  Você só pode alterar o status de usuários da sua própria
-                  unidade.
+                  Você não tem permissão para alterar o status deste usuário.
                 </div>
               )}
 

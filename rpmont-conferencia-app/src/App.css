@@ -120,3 +120,8 @@
 .modal-feno-racao-btn-extravio {
   background: linear-gradient(135deg, #991b1b, #ef4444);
 }
+
+.modal-feno-racao-btn-transferencia {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #ffffff;
+}
