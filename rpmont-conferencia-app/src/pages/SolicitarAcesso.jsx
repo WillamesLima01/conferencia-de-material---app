@@ -18,6 +18,18 @@ const STORAGE_KEY_USUARIOS = 'usuarios';
 const STORAGE_KEY_UNIDADES = 'unidades';
 const STORAGE_KEY_SETORES = 'setores';
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: 1,
+  ADMIN: 2,
+  USUARIO_COMUM: 3,
+};
+
+const STATUS_ACESSO = {
+  PENDENTE: 'PENDENTE',
+  LIBERADO: 'LIBERADO',
+  BLOQUEADO: 'BLOQUEADO',
+};
+
 const POSTOS_GRADUACOES = [
   'Cel',
   'Ten Cel',
@@ -44,6 +56,10 @@ const gerarId = () => {
 
 const dataHoje = () => {
   return new Date().toISOString().slice(0, 10);
+};
+
+const dataHoraAtual = () => {
+  return new Date().toISOString();
 };
 
 const carregarStorage = (chave) => {
@@ -85,6 +101,18 @@ const formatarMatricula = (valor) => {
 
 const normalizarMatricula = (valor) => {
   return String(valor || '').replace(/\D/g, '');
+};
+
+const normalizarTexto = (valor) => {
+  return String(valor ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/º/g, '')
+    .replace(/°/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z0-9]/g, '');
 };
 
 const obterNomeUnidade = (unidade) => {
@@ -150,17 +178,17 @@ function SolicitarAcesso({ onVoltar }) {
     if (!unidadeSelecionada) return [];
 
     const setoresFiltrados = setoresCadastrados.filter((setor) => {
-      const unidadeDoSetor = String(
+      const unidadeDoSetor =
         setor?.unidadeNome ||
-          setor?.unidade ||
-          setor?.UNIDADE ||
-          setor?.nomeUnidade ||
-          ''
-      )
-        .trim()
-        .toLowerCase();
+        setor?.unidade ||
+        setor?.UNIDADE ||
+        setor?.nomeUnidade ||
+        '';
 
-      return unidadeDoSetor === unidadeSelecionada.trim().toLowerCase();
+      return (
+        normalizarTexto(unidadeDoSetor) ===
+        normalizarTexto(unidadeSelecionada)
+      );
     });
 
     if (setoresFiltrados.length > 0) {
@@ -358,32 +386,71 @@ function SolicitarAcesso({ onVoltar }) {
     if (!dadosValidados) return;
 
     const usuariosCadastrados = carregarStorage(STORAGE_KEY_USUARIOS);
-    const agora = new Date().toISOString();
+    const agora = dataHoraAtual();
+    const novoId = gerarId();
 
     const novoUsuarioSolicitado = {
-      ID: gerarId(),
+      ID: novoId,
+      id: novoId,
 
       MATRICULA: dadosValidados.matriculaTratada,
-      NOME: dadosValidados.nomeTratado,
-      NOMECOMPLETO: dadosValidados.nomeCompletoTratado,
-      EMAIL: dadosValidados.emailTratado,
-      POSTGRAD: dadosValidados.postGradTratado,
-      UNIDADE: unidadeSelecionada,
-      SETOR: setorSelecionado,
-      SENHA: dadosValidados.senhaTratada,
+      matricula: dadosValidados.matriculaTratada,
 
-      NIVEL: 2,
-      STATUSACESSO: 'PENDENTE',
+      NOME: dadosValidados.nomeTratado,
+      nome: dadosValidados.nomeTratado,
+
+      NOMECOMPLETO: dadosValidados.nomeCompletoTratado,
+      nomeCompleto: dadosValidados.nomeCompletoTratado,
+
+      EMAIL: dadosValidados.emailTratado,
+      email: dadosValidados.emailTratado,
+
+      POSTGRAD: dadosValidados.postGradTratado,
+      postGrad: dadosValidados.postGradTratado,
+
+      UNIDADE: unidadeSelecionada,
+      unidade: unidadeSelecionada,
+
+      SETOR: setorSelecionado,
+      setor: setorSelecionado,
+
+      SENHA: dadosValidados.senhaTratada,
+      senha: dadosValidados.senhaTratada,
+
+      // Novo padrão de nível:
+      // 1 = AdminMaster
+      // 2 = Administrador
+      // 3 = Usuário comum
+      NIVEL: NIVEIS_USUARIO.USUARIO_COMUM,
+      nivel: NIVEIS_USUARIO.USUARIO_COMUM,
+
+      STATUSACESSO: STATUS_ACESSO.PENDENTE,
+      statusAcesso: STATUS_ACESSO.PENDENTE,
+
       ATIVO: 0,
+      ativo: 0,
 
       DATASOLICITACAO: agora,
+      dataSolicitacao: agora,
+
       DATALIBERACAO: null,
+      dataLiberacao: null,
+
       LIBERADOPOR: null,
+      liberadoPor: null,
 
       DATACADASTRO: dataHoje(),
+      dataCadastro: dataHoje(),
+
       DATAMODIFICACAO: agora,
+      dataModificacao: agora,
+
       userModificador: 0,
+
       DIGITAL: null,
+      digital: null,
+
+      HISTORICO_UNIDADE: [],
     };
 
     const usuariosAtualizados = [
@@ -465,10 +532,7 @@ function SolicitarAcesso({ onVoltar }) {
               <div className="solicitar-acesso-mensagem">{mensagem}</div>
             )}
 
-            <form
-              className="solicitar-acesso-card"
-              onSubmit={handleSalvar}
-            >
+            <form className="solicitar-acesso-card" onSubmit={handleSalvar}>
               <div className="solicitar-acesso-form-group">
                 <label htmlFor="matricula">Matrícula</label>
 
@@ -684,9 +748,11 @@ function SolicitarAcesso({ onVoltar }) {
 
               <div className="solicitar-acesso-aviso">
                 <strong>Importante</strong>
+
                 <span>
-                  O cadastro não libera o acesso automaticamente. O
-                  administrador deverá conferir os dados e aprovar a solicitação.
+                  O cadastro será enviado como usuário comum e ficará pendente.
+                  O administrador da sua unidade deverá conferir os dados e
+                  liberar o acesso.
                 </span>
               </div>
 

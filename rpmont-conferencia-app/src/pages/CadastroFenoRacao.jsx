@@ -17,6 +17,12 @@ import '../styles/CadastroFenoRacao.css';
 
 const STORAGE_KEY_ENTRADAS = 'entradasAlimentacaoEquina';
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: 1,
+  ADMIN: 2,
+  USUARIO_COMUM: 3,
+};
+
 const PRODUTOS = [
   {
     valor: 'FENO',
@@ -64,6 +70,36 @@ const carregarEntradas = () => {
   }
 };
 
+const normalizarTexto = (valor) => {
+  return String(valor ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/º/g, '')
+    .replace(/°/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
+
+const obterUnidadeUsuario = (usuario) => {
+  return usuario?.unidade ?? usuario?.UNIDADE ?? 'RPMont';
+};
+
+const obterNivelUsuario = (usuario) => {
+  return Number(
+    usuario?.nivel ??
+      usuario?.NIVEL ??
+      usuario?.nivelAcesso ??
+      usuario?.NIVEL_ACESSO ??
+      NIVEIS_USUARIO.USUARIO_COMUM
+  );
+};
+
+const usuarioEhAdminMaster = (usuario) => {
+  return obterNivelUsuario(usuario) === NIVEIS_USUARIO.ADMIN_MASTER;
+};
+
 const formatarNumero = (valor) => {
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 0,
@@ -95,7 +131,9 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
   const [responsavel, setResponsavel] = useState(
     usuario?.nomeExibicao ||
-      `${usuario?.postGrad || ''} ${usuario?.nome || ''}`.trim()
+      `${usuario?.postGrad || usuario?.POSTGRAD || ''} ${
+        usuario?.nome || usuario?.NOME || ''
+      }`.trim()
   );
 
   const [observacao, setObservacao] = useState('');
@@ -104,6 +142,18 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
   const [entradaParaExcluir, setEntradaParaExcluir] = useState(null);
   const [entradaCadastrada, setEntradaCadastrada] = useState(null);
 
+  const unidadeUsuario = obterUnidadeUsuario(usuario);
+  const adminMaster = usuarioEhAdminMaster(usuario);
+
+  const entradasVisiveis = useMemo(() => {
+    if (adminMaster) return entradas;
+
+    return entradas.filter(
+      (entrada) =>
+        normalizarTexto(entrada.unidade) === normalizarTexto(unidadeUsuario)
+    );
+  }, [entradas, adminMaster, unidadeUsuario]);
+
   const produtoSelecionado = useMemo(() => {
     return PRODUTOS.find((produto) => produto.valor === tipoProduto) || null;
   }, [tipoProduto]);
@@ -111,13 +161,13 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
   const pesosCadastrados = useMemo(() => {
     if (!tipoProduto) return [];
 
-    const pesos = entradas
+    const pesos = entradasVisiveis
       .filter((entrada) => entrada.tipoProduto === tipoProduto)
       .map((entrada) => Number(entrada.pesoUnidadeKg))
       .filter((peso) => Number.isFinite(peso) && peso > 0);
 
     return [...new Set(pesos)].sort((a, b) => a - b);
-  }, [entradas, tipoProduto]);
+  }, [entradasVisiveis, tipoProduto]);
 
   const usandoNovoPeso = pesoSelecionado === 'NOVO';
 
@@ -154,6 +204,24 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
   };
 
   const excluirEntrada = (idEntrada) => {
+    const entradaEncontrada = entradas.find(
+      (entrada) => entrada.id === idEntrada
+    );
+
+    if (!entradaEncontrada) return;
+
+    if (
+      !adminMaster &&
+      normalizarTexto(entradaEncontrada.unidade) !==
+        normalizarTexto(unidadeUsuario)
+    ) {
+      mostrarMensagem(
+        'Acesso negado. Você só pode excluir entradas da sua unidade.'
+      );
+      setEntradaParaExcluir(null);
+      return;
+    }
+
     setEntradas((entradasAtuais) => {
       const entradasAtualizadas = entradasAtuais.filter(
         (entrada) => entrada.id !== idEntrada
@@ -224,7 +292,6 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     }
 
     const loteTratado = lote.trim();
-    const unidadeUsuario = usuario?.unidade || usuario?.UNIDADE || 'RPMont';
 
     const novaEntrada = {
       id: gerarId(),
@@ -306,7 +373,11 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
             <span>Alimentação equina</span>
             <h1>Feno e Ração</h1>
 
-            <p>{usuario?.unidade || usuario?.UNIDADE || 'Controle de estoque'}</p>
+            <p>
+              {adminMaster
+                ? 'Admin Master - Todas as unidades'
+                : unidadeUsuario || 'Controle de estoque'}
+            </p>
           </div>
         </header>
 
@@ -320,8 +391,9 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
             <h2>Cadastrar Feno e Ração</h2>
 
             <p>
-              Registre cada entrada de acordo com o produto, peso, lote e
-              quantidade recebida.
+              {adminMaster
+                ? 'Registre entradas e visualize os estoques de todas as unidades.'
+                : `Registre e acompanhe somente as entradas da unidade ${unidadeUsuario}.`}
             </p>
           </div>
         </section>
@@ -336,7 +408,10 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
             <div>
               <h2>Nova entrada</h2>
-              <p>Informe os dados recebidos no estoque.</p>
+              <p>
+                Informe os dados recebidos no estoque da unidade{' '}
+                <strong>{unidadeUsuario}</strong>.
+              </p>
             </div>
           </div>
 
@@ -560,20 +635,25 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
           <div className="cadastro-alimentacao-lista-header">
             <div>
               <span>Estoque registrado</span>
-              <h2>Entradas cadastradas</h2>
+
+              <h2>
+                {adminMaster
+                  ? 'Entradas cadastradas em todas as unidades'
+                  : `Entradas cadastradas - ${unidadeUsuario}`}
+              </h2>
             </div>
 
-            <strong>{entradas.length}</strong>
+            <strong>{entradasVisiveis.length}</strong>
           </div>
 
-          {entradas.length === 0 ? (
+          {entradasVisiveis.length === 0 ? (
             <div className="cadastro-alimentacao-vazio">
               <FaBoxesStacked />
-              <p>Nenhuma entrada cadastrada.</p>
+              <p>Nenhuma entrada cadastrada para esta unidade.</p>
             </div>
           ) : (
             <div className="cadastro-alimentacao-lista">
-              {entradas.map((entrada) => {
+              {entradasVisiveis.map((entrada) => {
                 const produto = PRODUTOS.find(
                   (item) => item.valor === entrada.tipoProduto
                 );
@@ -680,7 +760,9 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                 </strong>
 
                 <span>Peso por unidade</span>
-                <strong>{formatarNumero(entradaCadastrada.pesoUnidadeKg)} kg</strong>
+                <strong>
+                  {formatarNumero(entradaCadastrada.pesoUnidadeKg)} kg
+                </strong>
 
                 <span>Peso total recebido</span>
                 <strong>{formatarNumero(entradaCadastrada.pesoTotalKg)} kg</strong>
@@ -736,6 +818,10 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
               </p>
 
               <div className="cadastro-alimentacao-modal-resumo">
+                <span>Unidade</span>
+
+                <strong>{entradaParaExcluir.unidade || '-'}</strong>
+
                 <span>Quantidade</span>
 
                 <strong>

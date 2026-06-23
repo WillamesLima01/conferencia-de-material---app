@@ -20,6 +20,12 @@ import './App.css';
 
 const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: 1,
+  ADMIN: 2,
+  USUARIO_COMUM: 3,
+};
+
 function App() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
   const [configuracaoConferencia, setConfiguracaoConferencia] = useState(null);
@@ -56,18 +62,12 @@ function App() {
   };
 
   const obterNivelUsuario = (usuario) => {
-    return obterValorNormalizado(
+    return Number(
       usuario?.nivel ??
         usuario?.NIVEL ??
         usuario?.nivelAcesso ??
         usuario?.NIVEL_ACESSO ??
-        usuario?.perfil ??
-        usuario?.PERFIL ??
-        usuario?.role ??
-        usuario?.ROLE ??
-        usuario?.tipo ??
-        usuario?.TIPO ??
-        ''
+        NIVEIS_USUARIO.USUARIO_COMUM
     );
   };
 
@@ -79,25 +79,17 @@ function App() {
     return obterValorNormalizado(usuario?.unidade ?? usuario?.UNIDADE ?? '');
   };
 
+  const usuarioEhAdminMaster = (usuario) => {
+    return obterNivelUsuario(usuario) === NIVEIS_USUARIO.ADMIN_MASTER;
+  };
+
   const usuarioEhAdmin = (usuario) => {
     const nivel = obterNivelUsuario(usuario);
 
-    return [
-      '0',
-      '1',
-      'ADMIN',
-      'ADMINISTRADOR',
-      'ADMINP4',
-      'ADMINMASTER',
-      'ADMINISTRADORMASTER',
-      'MASTER',
-    ].includes(nivel);
-  };
-
-  const usuarioEhAdminMaster = (usuario) => {
-    const nivel = obterNivelUsuario(usuario);
-
-    return ['0', 'ADMINMASTER', 'ADMINISTRADORMASTER', 'MASTER'].includes(nivel);
+    return (
+      nivel === NIVEIS_USUARIO.ADMIN_MASTER ||
+      nivel === NIVEIS_USUARIO.ADMIN
+    );
   };
 
   const usuarioEhP4 = (usuario) => {
@@ -129,19 +121,29 @@ function App() {
   };
 
   const normalizarUsuarioLogado = (usuario) => {
-    const matriculaLimpa = limparNumeros(usuario?.matricula ?? usuario?.MATRICULA);
+    const matriculaLimpa = limparNumeros(
+      usuario?.matricula ?? usuario?.MATRICULA
+    );
 
     const usuarioWillamesTeste = matriculaLimpa === '5257093';
 
-    const nivelRecebido = Number(usuario?.nivel ?? usuario?.NIVEL ?? 2);
+    const nivelRecebido = Number(
+      usuario?.nivel ?? usuario?.NIVEL ?? NIVEIS_USUARIO.USUARIO_COMUM
+    );
 
-    const nivelFinal = usuarioWillamesTeste ? 0 : nivelRecebido;
+    const nivelFinal = usuarioWillamesTeste
+      ? NIVEIS_USUARIO.ADMIN_MASTER
+      : nivelRecebido;
 
     const unidadeFinal =
-      usuario?.unidade ?? usuario?.UNIDADE ?? (usuarioWillamesTeste ? 'RPMont' : '');
+      usuario?.unidade ??
+      usuario?.UNIDADE ??
+      (usuarioWillamesTeste ? 'RPMont' : '');
 
     const setorFinal =
-      usuario?.setor ?? usuario?.SETOR ?? (usuarioWillamesTeste ? 'P4' : '');
+      usuario?.setor ??
+      usuario?.SETOR ??
+      (usuarioWillamesTeste ? 'P4' : '');
 
     const usuarioNormalizado = {
       ...usuario,
@@ -192,6 +194,12 @@ function App() {
     };
 
     console.log('USUÁRIO LOGADO NORMALIZADO:', usuarioNormalizado);
+    console.log('É ADMIN MASTER?', usuarioEhAdminMaster(usuarioNormalizado));
+    console.log('É ADMIN?', usuarioEhAdmin(usuarioNormalizado));
+    console.log('É P4?', usuarioEhP4(usuarioNormalizado));
+    console.log('UNIDADE:', usuarioNormalizado.unidade);
+    console.log('SETOR:', usuarioNormalizado.setor);
+    console.log('NÍVEL:', usuarioNormalizado.nivel);
 
     return usuarioNormalizado;
   };

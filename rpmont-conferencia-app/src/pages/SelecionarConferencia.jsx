@@ -20,6 +20,12 @@ const STORAGE_KEY_SETORES = 'setores';
 
 const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: 1,
+  ADMIN: 2,
+  USUARIO_COMUM: 3,
+};
+
 const carregarSetoresCadastrados = () => {
   const setoresSalvos = localStorage.getItem(STORAGE_KEY_SETORES);
 
@@ -35,7 +41,7 @@ const carregarSetoresCadastrados = () => {
 };
 
 const normalizarTexto = (valor) => {
-  return String(valor || '')
+  return String(valor ?? '')
     .trim()
     .toUpperCase()
     .normalize('NFD')
@@ -46,18 +52,12 @@ const normalizarTexto = (valor) => {
 };
 
 const obterNivelUsuario = (usuario) => {
-  return normalizarTexto(
+  return Number(
     usuario?.nivel ??
       usuario?.NIVEL ??
       usuario?.nivelAcesso ??
       usuario?.NIVEL_ACESSO ??
-      usuario?.perfil ??
-      usuario?.PERFIL ??
-      usuario?.role ??
-      usuario?.ROLE ??
-      usuario?.tipo ??
-      usuario?.TIPO ??
-      ''
+      NIVEIS_USUARIO.USUARIO_COMUM
   );
 };
 
@@ -69,25 +69,17 @@ const obterUnidadeUsuario = (usuario) => {
   return normalizarTexto(usuario?.unidade ?? usuario?.UNIDADE ?? '');
 };
 
+const usuarioEhAdminMaster = (usuario) => {
+  return obterNivelUsuario(usuario) === NIVEIS_USUARIO.ADMIN_MASTER;
+};
+
 const usuarioEhAdminSistema = (usuario) => {
   const nivel = obterNivelUsuario(usuario);
 
-  return [
-    '0',
-    '1',
-    'ADMIN',
-    'ADMINISTRADOR',
-    'ADMINP4',
-    'ADMINMASTER',
-    'ADMINISTRADORMASTER',
-    'MASTER',
-  ].includes(nivel);
-};
-
-const usuarioEhAdminMaster = (usuario) => {
-  const nivel = obterNivelUsuario(usuario);
-
-  return ['0', 'ADMINMASTER', 'ADMINISTRADORMASTER', 'MASTER'].includes(nivel);
+  return (
+    nivel === NIVEIS_USUARIO.ADMIN_MASTER ||
+    nivel === NIVEIS_USUARIO.ADMIN
+  );
 };
 
 const usuarioEhSetorP4 = (usuario) => {

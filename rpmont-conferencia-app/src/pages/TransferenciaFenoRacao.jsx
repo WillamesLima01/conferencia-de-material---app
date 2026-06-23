@@ -41,6 +41,12 @@ const PRODUTOS = [
 
 const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: 1,
+  ADMIN: 2,
+  USUARIO_COMUM: 3,
+};
+
 const gerarId = () => {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -70,11 +76,14 @@ const salvarStorage = (chave, valor) => {
 };
 
 const normalizarTexto = (valor) => {
-  return String(valor || '')
+  return String(valor ?? '')
     .trim()
     .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/º/g, '')
+    .replace(/°/g, '')
+    .replace(/\s+/g, '')
     .replace(/[^A-Z0-9]/g, '');
 };
 
@@ -87,28 +96,26 @@ const obterUnidadeOficial = (unidade) => {
 };
 
 const obterUnidadeUsuario = (usuario) => {
-  return usuario?.unidade || usuario?.UNIDADE || '';
+  return usuario?.unidade ?? usuario?.UNIDADE ?? '';
 };
 
 const obterNivelUsuario = (usuario) => {
-  return normalizarTexto(
-    usuario?.nivelAcesso ||
-      usuario?.perfil ||
-      usuario?.role ||
-      usuario?.tipo ||
-      usuario?.NIVEL_ACESSO ||
-      usuario?.PERFIL ||
-      usuario?.ROLE ||
-      usuario?.TIPO ||
-      usuario?.nivel ||
-      usuario?.NIVEL
+  return Number(
+    usuario?.nivel ??
+      usuario?.NIVEL ??
+      usuario?.nivelAcesso ??
+      usuario?.NIVEL_ACESSO ??
+      NIVEIS_USUARIO.USUARIO_COMUM
   );
 };
 
 const usuarioEhAdmin = (usuario) => {
   const nivel = obterNivelUsuario(usuario);
 
-  return ['ADMIN', 'ADMINP4', 'ADMINMASTER', 'MASTER', '1'].includes(nivel);
+  return (
+    nivel === NIVEIS_USUARIO.ADMIN_MASTER ||
+    nivel === NIVEIS_USUARIO.ADMIN
+  );
 };
 
 const usuarioEhUnidadeEquina = (usuario) => {
@@ -659,7 +666,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
           <section className="transferencia-alimentacao-card">
             <div className="transferencia-alimentacao-vazio">
               <FaTriangleExclamation />
+
               <h2>Acesso negado</h2>
+
               <p>
                 Transferência de Feno e Ração é permitida somente para
                 administradores do RPMont e 3º EPMont.

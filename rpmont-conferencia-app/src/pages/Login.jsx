@@ -12,6 +12,12 @@ import '../styles/Login.css';
 
 const STORAGE_KEY_USUARIOS = 'usuarios';
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: 1,
+  ADMIN: 2,
+  USUARIO_COMUM: 3,
+};
+
 const criarUsuariosIniciais = () => {
   const agora = new Date();
 
@@ -22,7 +28,7 @@ const criarUsuariosIniciais = () => {
       NOME: 'willames',
       SENHA: '123456',
       EMAIL: '',
-      NIVEL: 0,
+      NIVEL: NIVEIS_USUARIO.ADMIN_MASTER,
       POSTGRAD: 'CB',
       SETOR: 'P4',
       NOMECOMPLETO: 'Willames Pereira',
@@ -43,7 +49,7 @@ const criarUsuariosIniciais = () => {
       NOME: 'Nascimento',
       SENHA: '123456',
       EMAIL: '',
-      NIVEL: 1,
+      NIVEL: NIVEIS_USUARIO.ADMIN,
       POSTGRAD: '1Ten',
       SETOR: 'P4',
       NOMECOMPLETO: 'Nome completo do militar',
@@ -97,107 +103,128 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
       .toUpperCase();
   };
 
-const carregarUsuariosCadastrados = () => {
-  const usuariosIniciais = criarUsuariosIniciais();
-  const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
+  const carregarUsuariosCadastrados = () => {
 
-  let usuariosAtuais = [];
+    const usuariosIniciais = criarUsuariosIniciais();
+    const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
 
-  if (usuariosSalvos) {
-    try {
-      const dadosConvertidos = JSON.parse(usuariosSalvos);
+    let usuariosAtuais = [];
 
-      if (Array.isArray(dadosConvertidos)) {
-        usuariosAtuais = dadosConvertidos;
+    if (usuariosSalvos) {
+      try {
+        const dadosConvertidos = JSON.parse(usuariosSalvos);
+
+        if (Array.isArray(dadosConvertidos)) {
+          usuariosAtuais = dadosConvertidos;
+        }
+      } catch {
+        usuariosAtuais = [];
       }
-    } catch {
-      usuariosAtuais = [];
     }
-  }
 
-  const usuariosAtualizados = [...usuariosAtuais];
+    const usuariosAtualizados = [...usuariosAtuais];
 
-  usuariosIniciais.forEach((usuarioInicial) => {
-    const matriculaInicial = normalizarMatricula(usuarioInicial.MATRICULA);
+    usuariosIniciais.forEach((usuarioInicial) => {
+      const matriculaInicial = normalizarMatricula(usuarioInicial.MATRICULA);
 
-    const indiceUsuarioExistente = usuariosAtualizados.findIndex(
-      (usuarioAtual) =>
-        normalizarMatricula(
-          usuarioAtual.MATRICULA || usuarioAtual.matricula
-        ) === matriculaInicial
-    );
+      const indiceUsuarioExistente = usuariosAtualizados.findIndex(
+        (usuarioAtual) =>
+          normalizarMatricula(
+            usuarioAtual.MATRICULA || usuarioAtual.matricula
+          ) === matriculaInicial
+      );
 
-    if (indiceUsuarioExistente >= 0) {
-      const usuarioExistente = usuariosAtualizados[indiceUsuarioExistente];
+      if (indiceUsuarioExistente >= 0) {
+        const usuarioExistente = usuariosAtualizados[indiceUsuarioExistente];
 
-      usuariosAtualizados[indiceUsuarioExistente] = {
-        ...usuarioExistente,
+        const matriculaExistente = normalizarMatricula(
+          usuarioExistente.MATRICULA || usuarioExistente.matricula
+        );
 
-        ID: usuarioExistente.ID ?? usuarioInicial.ID,
-        MATRICULA: usuarioExistente.MATRICULA ?? usuarioInicial.MATRICULA,
-        NOME: usuarioExistente.NOME ?? usuarioInicial.NOME,
-        SENHA: usuarioExistente.SENHA ?? usuarioInicial.SENHA,
-        EMAIL: usuarioExistente.EMAIL ?? usuarioInicial.EMAIL,
-        POSTGRAD: usuarioExistente.POSTGRAD ?? usuarioInicial.POSTGRAD,
-        SETOR: usuarioExistente.SETOR ?? usuarioInicial.SETOR,
-        NOMECOMPLETO:
-          usuarioExistente.NOMECOMPLETO ?? usuarioInicial.NOMECOMPLETO,
-        UNIDADE: usuarioExistente.UNIDADE ?? usuarioInicial.UNIDADE,
+        const usuarioWillamesTeste = matriculaExistente === '5257093';
 
-        // Durante os testes com localStorage, garante que o usuário ID 1 seja AdminMaster.
-        NIVEL:
-          Number(usuarioInicial.ID) === 1
-            ? 0
+        usuariosAtualizados[indiceUsuarioExistente] = {
+          ...usuarioExistente,
+
+          ID: usuarioExistente.ID ?? usuarioInicial.ID,
+          MATRICULA: usuarioExistente.MATRICULA ?? usuarioInicial.MATRICULA,
+          NOME: usuarioExistente.NOME ?? usuarioInicial.NOME,
+          SENHA: usuarioExistente.SENHA ?? usuarioInicial.SENHA,
+          EMAIL: usuarioExistente.EMAIL ?? usuarioInicial.EMAIL,
+          POSTGRAD: usuarioExistente.POSTGRAD ?? usuarioInicial.POSTGRAD,
+          SETOR: usuarioWillamesTeste
+            ? 'P4'
+            : usuarioExistente.SETOR ?? usuarioInicial.SETOR,
+          NOMECOMPLETO:
+            usuarioExistente.NOMECOMPLETO ?? usuarioInicial.NOMECOMPLETO,
+          UNIDADE: usuarioWillamesTeste
+            ? 'RPMont'
+            : usuarioExistente.UNIDADE ?? usuarioInicial.UNIDADE,
+
+          // Novo padrão:
+          // 1 = AdminMaster
+          // 2 = Administrador
+          // 3 = Usuário comum
+          NIVEL: usuarioWillamesTeste
+            ? NIVEIS_USUARIO.ADMIN_MASTER
             : usuarioExistente.NIVEL ?? usuarioInicial.NIVEL,
 
-        STATUSACESSO:
-          usuarioExistente.STATUSACESSO ||
-          usuarioExistente.statusAcesso ||
-          usuarioInicial.STATUSACESSO,
+          STATUSACESSO:
+            usuarioExistente.STATUSACESSO ||
+            usuarioExistente.statusAcesso ||
+            usuarioInicial.STATUSACESSO,
 
-        ATIVO:
-          usuarioExistente.ATIVO ??
-          usuarioExistente.ativo ??
-          usuarioInicial.ATIVO,
+          ATIVO:
+            usuarioExistente.ATIVO ??
+            usuarioExistente.ativo ??
+            usuarioInicial.ATIVO,
 
-        DATASOLICITACAO:
-          usuarioExistente.DATASOLICITACAO ?? usuarioInicial.DATASOLICITACAO,
-        DATALIBERACAO:
-          usuarioExistente.DATALIBERACAO ?? usuarioInicial.DATALIBERACAO,
-        LIBERADOPOR:
-          usuarioExistente.LIBERADOPOR ?? usuarioInicial.LIBERADOPOR,
-        DATACADASTRO:
-          usuarioExistente.DATACADASTRO ?? usuarioInicial.DATACADASTRO,
-        DATAMODIFICACAO:
-          usuarioExistente.DATAMODIFICACAO ??
-          usuarioInicial.DATAMODIFICACAO,
-        userModificador:
-          usuarioExistente.userModificador ?? usuarioInicial.userModificador,
-        DIGITAL: usuarioExistente.DIGITAL ?? usuarioInicial.DIGITAL,
-      };
-    } else {
-      usuariosAtualizados.push(usuarioInicial);
-    }
-  });
+          DATASOLICITACAO:
+            usuarioExistente.DATASOLICITACAO ?? usuarioInicial.DATASOLICITACAO,
+          DATALIBERACAO:
+            usuarioExistente.DATALIBERACAO ?? usuarioInicial.DATALIBERACAO,
+          LIBERADOPOR:
+            usuarioExistente.LIBERADOPOR ?? usuarioInicial.LIBERADOPOR,
+          DATACADASTRO:
+            usuarioExistente.DATACADASTRO ?? usuarioInicial.DATACADASTRO,
+          DATAMODIFICACAO:
+            usuarioExistente.DATAMODIFICACAO ??
+            usuarioInicial.DATAMODIFICACAO,
+          userModificador:
+            usuarioExistente.userModificador ?? usuarioInicial.userModificador,
+          DIGITAL: usuarioExistente.DIGITAL ?? usuarioInicial.DIGITAL,
+        };
+      } else {
+        usuariosAtualizados.push(usuarioInicial);
+      }
+    });
 
-  localStorage.setItem(
-    STORAGE_KEY_USUARIOS,
-    JSON.stringify(usuariosAtualizados)
-  );
+    localStorage.setItem(
+      STORAGE_KEY_USUARIOS,
+      JSON.stringify(usuariosAtualizados)
+    );
 
-  return usuariosAtualizados;
-};
+    return usuariosAtualizados;
+  };
 
   const normalizarUsuario = (usuario) => {
+    const matriculaUsuario = usuario.MATRICULA ?? usuario.matricula ?? '';
+    const matriculaLimpa = normalizarMatricula(matriculaUsuario);
+    const usuarioWillamesTeste = matriculaLimpa === '5257093';
+
     return {
       id: usuario.ID ?? usuario.id,
-      matricula: usuario.MATRICULA ?? usuario.matricula ?? '',
+      matricula: matriculaUsuario,
       nome: usuario.NOME ?? usuario.nome ?? '',
       nomeCompleto: usuario.NOMECOMPLETO ?? usuario.nomeCompleto ?? '',
       postGrad: usuario.POSTGRAD ?? usuario.postGrad ?? '',
-      unidade: usuario.UNIDADE ?? usuario.unidade ?? '',
-      setor: usuario.SETOR ?? usuario.setor ?? '',
-      nivel: usuario.NIVEL ?? usuario.nivel ?? 2,
+      unidade: usuarioWillamesTeste
+        ? 'RPMont'
+        : usuario.UNIDADE ?? usuario.unidade ?? '',
+      setor: usuarioWillamesTeste ? 'P4' : usuario.SETOR ?? usuario.setor ?? '',
+      nivel: usuarioWillamesTeste
+        ? NIVEIS_USUARIO.ADMIN_MASTER
+        : Number(usuario.NIVEL ?? usuario.nivel ?? NIVEIS_USUARIO.USUARIO_COMUM),
       senha: usuario.SENHA ?? usuario.senha ?? '',
       email: usuario.EMAIL ?? usuario.email ?? '',
       digital: usuario.DIGITAL ?? usuario.digital ?? null,
@@ -284,6 +311,8 @@ const carregarUsuariosCadastrados = () => {
       return;
     }
 
+    console.log('USUÁRIO LOCALIZADO NO LOGIN:', usuarioLocalizado);
+
     setUsuarioEncontrado(usuarioLocalizado);
     setMensagem('');
   };
@@ -316,21 +345,49 @@ const carregarUsuariosCadastrados = () => {
     setMensagem('Acesso liberado.');
 
     setTimeout(() => {
-      onLoginSuccess({
+      const usuarioParaLogin = {
         id: usuarioEncontrado.id,
+        ID: usuarioEncontrado.id,
+
         matricula: formatarMatricula(usuarioEncontrado.matricula),
+        MATRICULA: formatarMatricula(usuarioEncontrado.matricula),
+
         nome: usuarioEncontrado.nome,
+        NOME: usuarioEncontrado.nome,
+
         nomeCompleto: usuarioEncontrado.nomeCompleto,
+        NOMECOMPLETO: usuarioEncontrado.nomeCompleto,
+
         postGrad: usuarioEncontrado.postGrad,
+        POSTGRAD: usuarioEncontrado.postGrad,
+
         nomeExibicao,
+
         unidade: usuarioEncontrado.unidade,
+        UNIDADE: usuarioEncontrado.unidade,
+
         setor: usuarioEncontrado.setor,
+        SETOR: usuarioEncontrado.setor,
+
         nivel: Number(usuarioEncontrado.nivel),
+        NIVEL: Number(usuarioEncontrado.nivel),
+
         email: usuarioEncontrado.email,
+        EMAIL: usuarioEncontrado.email,
+
         digital: usuarioEncontrado.digital,
+        DIGITAL: usuarioEncontrado.digital,
+
         statusAcesso: usuarioEncontrado.statusAcesso,
+        STATUSACESSO: usuarioEncontrado.statusAcesso,
+
         ativo: Number(usuarioEncontrado.ativo),
-      });
+        ATIVO: Number(usuarioEncontrado.ativo),
+      };
+
+      console.log('USUÁRIO ENVIADO PARA O APP:', usuarioParaLogin);
+
+      onLoginSuccess(usuarioParaLogin);
     }, 700);
   };
 
