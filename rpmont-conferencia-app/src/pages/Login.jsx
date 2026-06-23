@@ -22,7 +22,7 @@ const criarUsuariosIniciais = () => {
       NOME: 'willames',
       SENHA: '123456',
       EMAIL: '',
-      NIVEL: 1,
+      NIVEL: 0,
       POSTGRAD: 'CB',
       SETOR: 'P4',
       NOMECOMPLETO: 'Willames Pereira',
@@ -97,61 +97,96 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
       .toUpperCase();
   };
 
-  const carregarUsuariosCadastrados = () => {
-    const usuariosIniciais = criarUsuariosIniciais();
-    const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
+const carregarUsuariosCadastrados = () => {
+  const usuariosIniciais = criarUsuariosIniciais();
+  const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
 
-    let usuariosAtuais = [];
+  let usuariosAtuais = [];
 
-    if (usuariosSalvos) {
-      try {
-        const dadosConvertidos = JSON.parse(usuariosSalvos);
+  if (usuariosSalvos) {
+    try {
+      const dadosConvertidos = JSON.parse(usuariosSalvos);
 
-        if (Array.isArray(dadosConvertidos)) {
-          usuariosAtuais = dadosConvertidos;
-        }
-      } catch {
-        usuariosAtuais = [];
+      if (Array.isArray(dadosConvertidos)) {
+        usuariosAtuais = dadosConvertidos;
       }
+    } catch {
+      usuariosAtuais = [];
     }
+  }
 
-    const usuariosAtualizados = [...usuariosAtuais];
+  const usuariosAtualizados = [...usuariosAtuais];
 
-    usuariosIniciais.forEach((usuarioInicial) => {
-      const matriculaInicial = normalizarMatricula(usuarioInicial.MATRICULA);
+  usuariosIniciais.forEach((usuarioInicial) => {
+    const matriculaInicial = normalizarMatricula(usuarioInicial.MATRICULA);
 
-      const indiceUsuarioExistente = usuariosAtualizados.findIndex(
-        (usuarioAtual) =>
-          normalizarMatricula(
-            usuarioAtual.MATRICULA || usuarioAtual.matricula
-          ) === matriculaInicial
-      );
-
-      if (indiceUsuarioExistente >= 0) {
-        usuariosAtualizados[indiceUsuarioExistente] = {
-          ...usuarioInicial,
-          ...usuariosAtualizados[indiceUsuarioExistente],
-          STATUSACESSO:
-            usuariosAtualizados[indiceUsuarioExistente].STATUSACESSO ||
-            usuariosAtualizados[indiceUsuarioExistente].statusAcesso ||
-            usuarioInicial.STATUSACESSO,
-          ATIVO:
-            usuariosAtualizados[indiceUsuarioExistente].ATIVO ??
-            usuariosAtualizados[indiceUsuarioExistente].ativo ??
-            usuarioInicial.ATIVO,
-        };
-      } else {
-        usuariosAtualizados.push(usuarioInicial);
-      }
-    });
-
-    localStorage.setItem(
-      STORAGE_KEY_USUARIOS,
-      JSON.stringify(usuariosAtualizados)
+    const indiceUsuarioExistente = usuariosAtualizados.findIndex(
+      (usuarioAtual) =>
+        normalizarMatricula(
+          usuarioAtual.MATRICULA || usuarioAtual.matricula
+        ) === matriculaInicial
     );
 
-    return usuariosAtualizados;
-  };
+    if (indiceUsuarioExistente >= 0) {
+      const usuarioExistente = usuariosAtualizados[indiceUsuarioExistente];
+
+      usuariosAtualizados[indiceUsuarioExistente] = {
+        ...usuarioExistente,
+
+        ID: usuarioExistente.ID ?? usuarioInicial.ID,
+        MATRICULA: usuarioExistente.MATRICULA ?? usuarioInicial.MATRICULA,
+        NOME: usuarioExistente.NOME ?? usuarioInicial.NOME,
+        SENHA: usuarioExistente.SENHA ?? usuarioInicial.SENHA,
+        EMAIL: usuarioExistente.EMAIL ?? usuarioInicial.EMAIL,
+        POSTGRAD: usuarioExistente.POSTGRAD ?? usuarioInicial.POSTGRAD,
+        SETOR: usuarioExistente.SETOR ?? usuarioInicial.SETOR,
+        NOMECOMPLETO:
+          usuarioExistente.NOMECOMPLETO ?? usuarioInicial.NOMECOMPLETO,
+        UNIDADE: usuarioExistente.UNIDADE ?? usuarioInicial.UNIDADE,
+
+        // Durante os testes com localStorage, garante que o usuário ID 1 seja AdminMaster.
+        NIVEL:
+          Number(usuarioInicial.ID) === 1
+            ? 0
+            : usuarioExistente.NIVEL ?? usuarioInicial.NIVEL,
+
+        STATUSACESSO:
+          usuarioExistente.STATUSACESSO ||
+          usuarioExistente.statusAcesso ||
+          usuarioInicial.STATUSACESSO,
+
+        ATIVO:
+          usuarioExistente.ATIVO ??
+          usuarioExistente.ativo ??
+          usuarioInicial.ATIVO,
+
+        DATASOLICITACAO:
+          usuarioExistente.DATASOLICITACAO ?? usuarioInicial.DATASOLICITACAO,
+        DATALIBERACAO:
+          usuarioExistente.DATALIBERACAO ?? usuarioInicial.DATALIBERACAO,
+        LIBERADOPOR:
+          usuarioExistente.LIBERADOPOR ?? usuarioInicial.LIBERADOPOR,
+        DATACADASTRO:
+          usuarioExistente.DATACADASTRO ?? usuarioInicial.DATACADASTRO,
+        DATAMODIFICACAO:
+          usuarioExistente.DATAMODIFICACAO ??
+          usuarioInicial.DATAMODIFICACAO,
+        userModificador:
+          usuarioExistente.userModificador ?? usuarioInicial.userModificador,
+        DIGITAL: usuarioExistente.DIGITAL ?? usuarioInicial.DIGITAL,
+      };
+    } else {
+      usuariosAtualizados.push(usuarioInicial);
+    }
+  });
+
+  localStorage.setItem(
+    STORAGE_KEY_USUARIOS,
+    JSON.stringify(usuariosAtualizados)
+  );
+
+  return usuariosAtualizados;
+};
 
   const normalizarUsuario = (usuario) => {
     return {

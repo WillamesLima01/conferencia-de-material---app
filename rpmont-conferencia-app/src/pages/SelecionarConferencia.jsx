@@ -40,36 +40,54 @@ const normalizarTexto = (valor) => {
     .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/º/g, '')
+    .replace(/\s+/g, '')
     .replace(/[^A-Z0-9]/g, '');
 };
 
 const obterNivelUsuario = (usuario) => {
   return normalizarTexto(
-    usuario?.nivelAcesso ||
-      usuario?.perfil ||
-      usuario?.role ||
-      usuario?.tipo ||
-      usuario?.NIVEL_ACESSO ||
-      usuario?.PERFIL ||
-      usuario?.ROLE ||
-      usuario?.TIPO ||
-      usuario?.nivel ||
-      usuario?.NIVEL
+    usuario?.nivel ??
+      usuario?.NIVEL ??
+      usuario?.nivelAcesso ??
+      usuario?.NIVEL_ACESSO ??
+      usuario?.perfil ??
+      usuario?.PERFIL ??
+      usuario?.role ??
+      usuario?.ROLE ??
+      usuario?.tipo ??
+      usuario?.TIPO ??
+      ''
   );
 };
 
 const obterSetorUsuario = (usuario) => {
-  return normalizarTexto(usuario?.setor || usuario?.SETOR);
+  return normalizarTexto(usuario?.setor ?? usuario?.SETOR ?? '');
 };
 
 const obterUnidadeUsuario = (usuario) => {
-  return normalizarTexto(usuario?.unidade || usuario?.UNIDADE);
+  return normalizarTexto(usuario?.unidade ?? usuario?.UNIDADE ?? '');
 };
 
 const usuarioEhAdminSistema = (usuario) => {
   const nivel = obterNivelUsuario(usuario);
 
-  return ['ADMIN', 'ADMINP4', 'ADMINMASTER', 'MASTER', '1'].includes(nivel);
+  return [
+    '0',
+    '1',
+    'ADMIN',
+    'ADMINISTRADOR',
+    'ADMINP4',
+    'ADMINMASTER',
+    'ADMINISTRADORMASTER',
+    'MASTER',
+  ].includes(nivel);
+};
+
+const usuarioEhAdminMaster = (usuario) => {
+  const nivel = obterNivelUsuario(usuario);
+
+  return ['0', 'ADMINMASTER', 'ADMINISTRADORMASTER', 'MASTER'].includes(nivel);
 };
 
 const usuarioEhSetorP4 = (usuario) => {
@@ -110,6 +128,7 @@ function SelecionarConferencia({
   const [mensagemZerar, setMensagemZerar] = useState('');
 
   const usuarioEhAdmin = usuarioEhAdminSistema(usuario);
+  const usuarioMaster = usuarioEhAdminMaster(usuario);
   const usuarioEhP4 = usuarioEhSetorP4(usuario);
   const usuarioEhBaia = usuarioEhSetorBaia(usuario);
   const usuarioEhUnidadeComEquinos = usuarioEhUnidadeEquina(usuario);
@@ -200,7 +219,12 @@ function SelecionarConferencia({
       return;
     }
 
-    onAbrirCadastroManual();
+    if (typeof onAbrirCadastroManual === 'function') {
+      onAbrirCadastroManual();
+      return;
+    }
+
+    window.alert('A função de cadastro manual não foi configurada no App.jsx.');
   };
 
   const abrirConsultaComPermissao = () => {
@@ -211,7 +235,26 @@ function SelecionarConferencia({
       return;
     }
 
-    onAbrirConsulta();
+    if (typeof onAbrirConsulta === 'function') {
+      onAbrirConsulta();
+      return;
+    }
+
+    window.alert('A função de consulta não foi configurada no App.jsx.');
+  };
+
+  const abrirAdministracao = () => {
+    if (!usuarioEhAdmin) {
+      window.alert('Acesso negado. Apenas administradores podem acessar esta área.');
+      return;
+    }
+
+    if (typeof onAbrirAdmin === 'function') {
+      onAbrirAdmin();
+      return;
+    }
+
+    window.alert('A função de administração não foi configurada no App.jsx.');
   };
 
   const abrirFenoRacao = () => {
@@ -276,7 +319,10 @@ function SelecionarConferencia({
       return;
     }
 
-    onZerarConferencia(usuario);
+    if (typeof onZerarConferencia === 'function') {
+      onZerarConferencia(usuario);
+    }
+
     setMensagemZerar('Conferência zerada com sucesso.');
 
     window.setTimeout(() => {
@@ -337,6 +383,17 @@ function SelecionarConferencia({
               <span>Setor</span>
               <strong>{usuario?.setor || usuario?.SETOR}</strong>
             </div>
+
+            <div>
+              <span>Nível</span>
+              <strong>
+                {usuarioMaster
+                  ? 'Admin Master'
+                  : usuarioEhAdmin
+                    ? 'Administrador'
+                    : 'Usuário comum'}
+              </strong>
+            </div>
           </div>
         </section>
 
@@ -378,7 +435,7 @@ function SelecionarConferencia({
                 </>
               )}
 
-              <button type="button" onClick={onAbrirAdmin}>
+              <button type="button" onClick={abrirAdministracao}>
                 <FaUserGear />
                 Administração
               </button>

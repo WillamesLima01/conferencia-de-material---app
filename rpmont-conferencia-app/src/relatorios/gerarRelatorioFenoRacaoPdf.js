@@ -28,6 +28,76 @@ const obterNomeProduto = (tipo) => {
   return tipo || '-';
 };
 
+const obterUnidadeRegistro = (registro) => {
+  return registro?.unidade || registro?.UNIDADE || registro?.Unidade || '-';
+};
+
+const obterUnidadeOrigemTransferencia = (transferencia) => {
+  return (
+    transferencia?.unidadeOrigem ||
+    transferencia?.UNIDADE_ORIGEM ||
+    transferencia?.origem ||
+    transferencia?.unidadeSaida ||
+    transferencia?.unidadeSolicitada ||
+    '-'
+  );
+};
+
+const obterUnidadeDestinoTransferencia = (transferencia) => {
+  return (
+    transferencia?.unidadeDestino ||
+    transferencia?.UNIDADE_DESTINO ||
+    transferencia?.destino ||
+    transferencia?.unidadeEntrada ||
+    transferencia?.unidadeSolicitante ||
+    '-'
+  );
+};
+
+const obterDataTransferencia = (transferencia) => {
+  return (
+    transferencia?.dataAprovacao ||
+    transferencia?.dataTransferencia ||
+    transferencia?.dataSolicitacao ||
+    transferencia?.data ||
+    ''
+  );
+};
+
+const obterQuantidadeTransferencia = (transferencia) => {
+  return Number(
+    transferencia?.quantidadeAprovada ??
+      transferencia?.quantidadeSolicitada ??
+      transferencia?.quantidade ??
+      0
+  );
+};
+
+const obterPesoUnidadeTransferencia = (transferencia) => {
+  return Number(
+    transferencia?.pesoUnidadeKg ??
+      transferencia?.pesoPorUnidade ??
+      transferencia?.pesoUnitarioKg ??
+      0
+  );
+};
+
+const obterPesoTotalTransferencia = (transferencia) => {
+  const pesoTotalSalvo = Number(
+    transferencia?.pesoTotalKg ??
+      transferencia?.pesoTransferidoKg ??
+      transferencia?.pesoSolicitadoKg ??
+      0
+  );
+
+  if (pesoTotalSalvo > 0) return pesoTotalSalvo;
+
+  return (
+    obterQuantidadeTransferencia(transferencia) *
+    obterPesoUnidadeTransferencia(transferencia)
+  );
+};
+
 const carregarImagemBase64 = (src) => {
   return new Promise((resolve, reject) => {
     const imagem = new Image();
@@ -59,6 +129,9 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   entradasFiltradas,
   saidasFiltradas,
   extraviosFiltrados = [],
+  transferenciasFiltradas = [],
+  transferenciasRecebidas = [],
+  transferenciasEnviadas = [],
 }) => {
   const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -68,7 +141,13 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     minute: '2-digit',
   });
 
-  const unidade = usuario?.unidade || usuario?.UNIDADE || 'RPMont';
+  const unidadeUsuario = usuario?.unidade || usuario?.UNIDADE || 'RPMont';
+  const unidadeRelatorio =
+    filtros?.unidadeNome || filtros?.unidadeSelecionada || unidadeUsuario;
+
+  const relatorioGeral =
+    filtros?.relatorioGeral || filtros?.unidadeSelecionada === 'GERAL';
+
   const nomeUsuario =
     usuario?.nomeExibicao || usuario?.nome || usuario?.NOME || '-';
 
@@ -137,7 +216,7 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
 
-  doc.text(`Unidade: ${unidade}`, 14, 65);
+  doc.text(`Unidade do relatório: ${unidadeRelatorio}`, 14, 65);
   doc.text(`Emitido por: ${nomeUsuario}`, 14, 71);
   doc.text(`Data: ${dataAtual} às ${horaAtual}`, 14, 77);
 
@@ -153,6 +232,8 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     96
   );
   doc.text(`Produto: ${filtros.produtoNome || 'Todos os produtos'}`, 14, 102);
+
+  doc.text(`Peso por unidade: ${filtros.pesoNome || 'Todos os pesos'}`, 14, 108);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Resumo geral:', 150, 89);
@@ -182,44 +263,108 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     108
   );
 
-  doc.text(
-    `Saldo atual: ${formatarNumero(
-      resumo.saldoAtualUnidades
-    )} un. / ${formatarNumero(resumo.saldoAtualKg)} kg`,
-    150,
-    114
-  );
+  if (relatorioGeral) {
+    doc.text(
+      `Transferências aprovadas: ${formatarNumero(
+        resumo.totalTransferenciaGeralUnidades
+      )} un. / ${formatarNumero(resumo.totalTransferenciaGeralKg)} kg`,
+      150,
+      114
+    );
 
-  let posicaoY = 124;
+    doc.text(
+      `Saldo atual: ${formatarNumero(
+        resumo.saldoAtualUnidades
+      )} un. / ${formatarNumero(resumo.saldoAtualKg)} kg`,
+      150,
+      120
+    );
+  } else {
+    doc.text(
+      `Transferências recebidas: ${formatarNumero(
+        resumo.totalTransferenciaRecebidaUnidades
+      )} un. / ${formatarNumero(resumo.totalTransferenciaRecebidaKg)} kg`,
+      150,
+      114
+    );
+
+    doc.text(
+      `Transferências enviadas: ${formatarNumero(
+        resumo.totalTransferenciaEnviadaUnidades
+      )} un. / ${formatarNumero(resumo.totalTransferenciaEnviadaKg)} kg`,
+      150,
+      120
+    );
+
+    doc.text(
+      `Saldo atual: ${formatarNumero(
+        resumo.saldoAtualUnidades
+      )} un. / ${formatarNumero(resumo.saldoAtualKg)} kg`,
+      150,
+      126
+    );
+  }
+
+  let posicaoY = relatorioGeral ? 130 : 136;
 
   posicaoY = adicionarTituloSecao(
     '1. RESUMO POR PRODUTO',
-    'Mostra separadamente Feno, Ração Adulto e Ração Potro, com saldo atual, saídas e extravios no período filtrado.',
+    'Mostra separadamente Feno, Ração Adulto e Ração Potro, com saldo atual, saídas, extravios e transferências no período filtrado.',
     posicaoY,
     [223, 27, 36]
   );
 
   autoTable(doc, {
     startY: posicaoY,
-    head: [
-      [
-        'Produto',
-        'Saldo atual em unidades',
-        'Saldo atual em kg',
-        'Saída no período',
-        'Extravio no período',
-      ],
-    ],
+    head: relatorioGeral
+      ? [
+          [
+            'Produto',
+            'Saldo atual em unidades',
+            'Saldo atual em kg',
+            'Saída no período',
+            'Extravio no período',
+            'Transferido',
+          ],
+        ]
+      : [
+          [
+            'Produto',
+            'Saldo atual em unidades',
+            'Saldo atual em kg',
+            'Saída no período',
+            'Extravio no período',
+            'Recebido',
+            'Enviado',
+          ],
+        ],
     body:
       resumoPorProduto.length === 0
-        ? [['-', '-', '-', '-', '-']]
-        : resumoPorProduto.map((produto) => [
-            produto.nome,
-            formatarNumero(produto.saldoUnidades),
-            `${formatarNumero(produto.saldoKg)} kg`,
-            `${formatarNumero(produto.saidaKg)} kg`,
-            `${formatarNumero(produto.extravioKg)} kg`,
-          ]),
+        ? relatorioGeral
+          ? [['-', '-', '-', '-', '-', '-']]
+          : [['-', '-', '-', '-', '-', '-', '-']]
+        : resumoPorProduto.map((produto) => {
+            if (relatorioGeral) {
+              return [
+                produto.nome,
+                formatarNumero(produto.saldoUnidades),
+                `${formatarNumero(produto.saldoKg)} kg`,
+                `${formatarNumero(produto.saidaKg)} kg`,
+                `${formatarNumero(produto.extravioKg)} kg`,
+                `${formatarNumero(produto.transferenciaGeralKg)} kg`,
+              ];
+            }
+
+            return [
+              produto.nome,
+              formatarNumero(produto.saldoUnidades),
+              `${formatarNumero(produto.saldoKg)} kg`,
+              `${formatarNumero(produto.saidaKg)} kg`,
+              `${formatarNumero(produto.extravioKg)} kg`,
+              `${formatarNumero(produto.transferenciaRecebidaKg)} kg`,
+              `${formatarNumero(produto.transferenciaEnviadaKg)} kg`,
+            ];
+          }),
     styles: {
       fontSize: 8,
       cellPadding: 2,
@@ -251,21 +396,52 @@ export const gerarRelatorioFenoRacaoPdf = async ({
 
   autoTable(doc, {
     startY: posicaoY,
-    head: [['Produto', 'Lote', 'Data da entrada', 'Peso un.', 'Saldo un.', 'Saldo kg']],
+    head: relatorioGeral
+      ? [
+          [
+            'Unidade',
+            'Produto',
+            'Lote',
+            'Data da entrada',
+            'Peso un.',
+            'Saldo un.',
+            'Saldo kg',
+          ],
+        ]
+      : [
+          [
+            'Produto',
+            'Lote',
+            'Data da entrada',
+            'Peso un.',
+            'Saldo un.',
+            'Saldo kg',
+          ],
+        ],
     body:
       estoqueAtualFiltrado.length === 0
-        ? [['Nenhum estoque encontrado', '-', '-', '-', '-', '-']]
-        : estoqueAtualFiltrado.map((entrada) => [
-            obterNomeProduto(entrada.tipoProduto),
-            entrada.lote || '-',
-            formatarData(entrada.dataEntrada),
-            `${formatarNumero(entrada.pesoUnidadeKg)} kg`,
-            formatarNumero(entrada.quantidadeAtual),
-            `${formatarNumero(
-              Number(entrada.quantidadeAtual || 0) *
-                Number(entrada.pesoUnidadeKg || 0)
-            )} kg`,
-          ]),
+        ? relatorioGeral
+          ? [['Nenhum estoque encontrado', '-', '-', '-', '-', '-', '-']]
+          : [['Nenhum estoque encontrado', '-', '-', '-', '-', '-']]
+        : estoqueAtualFiltrado.map((entrada) => {
+            const linha = [
+              obterNomeProduto(entrada.tipoProduto),
+              entrada.lote || '-',
+              formatarData(entrada.dataEntrada),
+              `${formatarNumero(entrada.pesoUnidadeKg)} kg`,
+              formatarNumero(entrada.quantidadeAtual),
+              `${formatarNumero(
+                Number(entrada.quantidadeAtual || 0) *
+                  Number(entrada.pesoUnidadeKg || 0)
+              )} kg`,
+            ];
+
+            if (relatorioGeral) {
+              return [obterUnidadeRegistro(entrada), ...linha];
+            }
+
+            return linha;
+          }),
     styles: {
       fontSize: 8,
       cellPadding: 2,
@@ -297,26 +473,41 @@ export const gerarRelatorioFenoRacaoPdf = async ({
 
   autoTable(doc, {
     startY: posicaoY,
-    head: [
-      [
-        'Data',
-        'Produto',
-        'Lote',
-        'Fornecedor',
-        'Quantidade cadastrada',
-        'Peso un.',
-        'Peso total',
-      ],
-    ],
+    head: relatorioGeral
+      ? [
+          [
+            'Unidade',
+            'Data',
+            'Produto',
+            'Lote',
+            'Fornecedor',
+            'Quantidade cadastrada',
+            'Peso un.',
+            'Peso total',
+          ],
+        ]
+      : [
+          [
+            'Data',
+            'Produto',
+            'Lote',
+            'Fornecedor',
+            'Quantidade cadastrada',
+            'Peso un.',
+            'Peso total',
+          ],
+        ],
     body:
       entradasFiltradas.length === 0
-        ? [['Nenhuma entrada encontrada', '-', '-', '-', '-', '-', '-']]
+        ? relatorioGeral
+          ? [['Nenhuma entrada encontrada', '-', '-', '-', '-', '-', '-', '-']]
+          : [['Nenhuma entrada encontrada', '-', '-', '-', '-', '-', '-']]
         : entradasFiltradas.map((entrada) => {
             const quantidade = Number(
               entrada.quantidadeInicial || entrada.quantidade || 0
             );
 
-            return [
+            const linha = [
               formatarData(entrada.dataEntrada),
               obterNomeProduto(entrada.tipoProduto),
               entrada.lote || '-',
@@ -327,6 +518,12 @@ export const gerarRelatorioFenoRacaoPdf = async ({
                 quantidade * Number(entrada.pesoUnidadeKg || 0)
               )} kg`,
             ];
+
+            if (relatorioGeral) {
+              return [obterUnidadeRegistro(entrada), ...linha];
+            }
+
+            return linha;
           }),
     styles: {
       fontSize: 8,
@@ -352,36 +549,59 @@ export const gerarRelatorioFenoRacaoPdf = async ({
 
   posicaoY = adicionarTituloSecao(
     '4. SAÍDAS NO PERÍODO',
-    'Mostra as retiradas normais para consumo/serviço registradas dentro do período filtrado. Este bloco não inclui extravios.',
+    'Mostra as retiradas normais para consumo/serviço registradas dentro do período filtrado. Este bloco não inclui extravios nem transferências.',
     posicaoY,
     [180, 83, 9]
   );
 
   autoTable(doc, {
     startY: posicaoY,
-    head: [
-      [
-        'Data',
-        'Produto',
-        'Serviço',
-        'Lote',
-        'Quantidade retirada',
-        'Peso liberado',
-        'Responsável',
-      ],
-    ],
+    head: relatorioGeral
+      ? [
+          [
+            'Unidade',
+            'Data',
+            'Produto',
+            'Serviço',
+            'Lote',
+            'Quantidade retirada',
+            'Peso liberado',
+            'Responsável',
+          ],
+        ]
+      : [
+          [
+            'Data',
+            'Produto',
+            'Serviço',
+            'Lote',
+            'Quantidade retirada',
+            'Peso liberado',
+            'Responsável',
+          ],
+        ],
     body:
       saidasFiltradas.length === 0
-        ? [['Nenhuma saída encontrada', '-', '-', '-', '-', '-', '-']]
-        : saidasFiltradas.map((saida) => [
-            formatarData(saida.dataSaida),
-            saida.nomeProduto || obterNomeProduto(saida.tipoProduto),
-            saida.servico || '-',
-            saida.lote || '-',
-            formatarNumero(saida.quantidadeRetirada),
-            `${formatarNumero(saida.pesoLiberadoKg)} kg`,
-            saida.responsavel || '-',
-          ]),
+        ? relatorioGeral
+          ? [['Nenhuma saída encontrada', '-', '-', '-', '-', '-', '-', '-']]
+          : [['Nenhuma saída encontrada', '-', '-', '-', '-', '-', '-']]
+        : saidasFiltradas.map((saida) => {
+            const linha = [
+              formatarData(saida.dataSaida),
+              saida.nomeProduto || obterNomeProduto(saida.tipoProduto),
+              saida.servico || '-',
+              saida.lote || '-',
+              formatarNumero(saida.quantidadeRetirada),
+              `${formatarNumero(saida.pesoLiberadoKg)} kg`,
+              saida.responsavel || '-',
+            ];
+
+            if (relatorioGeral) {
+              return [obterUnidadeRegistro(saida), ...linha];
+            }
+
+            return linha;
+          }),
     styles: {
       fontSize: 8,
       cellPadding: 2,
@@ -405,10 +625,10 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   posicaoY = doc.lastAutoTable.finalY + 10;
 
   posicaoY = adicionarTituloSecao(
-    '5. EXTRAVIOS NO PERÍODO',
-    'Mostra perdas, danos, desvios ou baixas justificadas registradas dentro do período filtrado. Este bloco é separado das saídas normais.',
+    '5. TRANSFERÊNCIAS NO PERÍODO',
+    'Mostra as transferências aprovadas entre unidades. Para relatório por unidade, identifica o que foi recebido e o que foi enviado.',
     posicaoY,
-    [153, 27, 27]
+    [37, 99, 235]
   );
 
   autoTable(doc, {
@@ -417,25 +637,167 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       [
         'Data',
         'Produto',
+        'Origem',
+        'Destino',
         'Lote',
-        'Quantidade extraviada',
-        'Peso',
-        'Responsável',
-        'Justificativa',
+        'Quantidade',
+        'Peso un.',
+        'Peso total',
+        'Situação',
       ],
     ],
     body:
-      extraviosFiltrados.length === 0
-        ? [['Nenhum extravio encontrado', '-', '-', '-', '-', '-', '-']]
-        : extraviosFiltrados.map((extravio) => [
-            formatarData(extravio.dataExtravio),
-            extravio.nomeProduto || obterNomeProduto(extravio.tipoProduto),
-            extravio.lote || '-',
-            formatarNumero(extravio.quantidadeExtraviada),
-            `${formatarNumero(extravio.pesoExtraviadoKg)} kg`,
-            extravio.responsavel || '-',
-            extravio.motivo || '-',
+      transferenciasFiltradas.length === 0
+        ? [
+            [
+              'Nenhuma transferência aprovada encontrada',
+              '-',
+              '-',
+              '-',
+              '-',
+              '-',
+              '-',
+              '-',
+              '-',
+            ],
+          ]
+        : transferenciasFiltradas.map((transferencia) => [
+            formatarData(obterDataTransferencia(transferencia)),
+            transferencia.nomeProduto ||
+              obterNomeProduto(transferencia.tipoProduto),
+            obterUnidadeOrigemTransferencia(transferencia),
+            obterUnidadeDestinoTransferencia(transferencia),
+            transferencia.lote || '-',
+            formatarNumero(obterQuantidadeTransferencia(transferencia)),
+            `${formatarNumero(
+              obterPesoUnidadeTransferencia(transferencia)
+            )} kg`,
+            `${formatarNumero(obterPesoTotalTransferencia(transferencia))} kg`,
+            transferencia.status || transferencia.situacao || '-',
           ]),
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+      valign: 'middle',
+    },
+    headStyles: {
+      fillColor: [37, 99, 235],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245],
+    },
+    margin: {
+      left: 14,
+      right: 14,
+    },
+    didDrawPage: adicionarRodape,
+  });
+
+  posicaoY = doc.lastAutoTable.finalY + 10;
+
+  if (!relatorioGeral) {
+    posicaoY = adicionarTituloSecao(
+      '6. RESUMO DAS TRANSFERÊNCIAS DA UNIDADE',
+      'Separa as transferências recebidas e enviadas pela unidade selecionada no período filtrado.',
+      posicaoY,
+      [30, 64, 175]
+    );
+
+    autoTable(doc, {
+      startY: posicaoY,
+      head: [['Tipo', 'Quantidade total', 'Peso total']],
+      body: [
+        [
+          'Recebidas',
+          formatarNumero(resumo.totalTransferenciaRecebidaUnidades),
+          `${formatarNumero(resumo.totalTransferenciaRecebidaKg)} kg`,
+        ],
+        [
+          'Enviadas',
+          formatarNumero(resumo.totalTransferenciaEnviadaUnidades),
+          `${formatarNumero(resumo.totalTransferenciaEnviadaKg)} kg`,
+        ],
+      ],
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        valign: 'middle',
+      },
+      headStyles: {
+        fillColor: [30, 64, 175],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      margin: {
+        left: 14,
+        right: 14,
+      },
+      didDrawPage: adicionarRodape,
+    });
+
+    posicaoY = doc.lastAutoTable.finalY + 10;
+  }
+
+  posicaoY = adicionarTituloSecao(
+    relatorioGeral ? '6. EXTRAVIOS NO PERÍODO' : '7. EXTRAVIOS NO PERÍODO',
+    'Mostra perdas, danos, desvios ou baixas justificadas registradas dentro do período filtrado. Este bloco é separado das saídas normais.',
+    posicaoY,
+    [153, 27, 27]
+  );
+
+  autoTable(doc, {
+    startY: posicaoY,
+    head: relatorioGeral
+      ? [
+          [
+            'Unidade',
+            'Data',
+            'Produto',
+            'Lote',
+            'Quantidade extraviada',
+            'Peso',
+            'Responsável',
+            'Justificativa',
+          ],
+        ]
+      : [
+          [
+            'Data',
+            'Produto',
+            'Lote',
+            'Quantidade extraviada',
+            'Peso',
+            'Responsável',
+            'Justificativa',
+          ],
+        ],
+    body:
+      extraviosFiltrados.length === 0
+        ? relatorioGeral
+          ? [['Nenhum extravio encontrado', '-', '-', '-', '-', '-', '-', '-']]
+          : [['Nenhum extravio encontrado', '-', '-', '-', '-', '-', '-']]
+        : extraviosFiltrados.map((extravio) => {
+            const linha = [
+              formatarData(extravio.dataExtravio),
+              extravio.nomeProduto || obterNomeProduto(extravio.tipoProduto),
+              extravio.lote || '-',
+              formatarNumero(extravio.quantidadeExtraviada),
+              `${formatarNumero(extravio.pesoExtraviadoKg)} kg`,
+              extravio.responsavel || '-',
+              extravio.motivo || '-',
+            ];
+
+            if (relatorioGeral) {
+              return [obterUnidadeRegistro(extravio), ...linha];
+            }
+
+            return linha;
+          }),
     styles: {
       fontSize: 8,
       cellPadding: 2,
@@ -449,15 +811,6 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     alternateRowStyles: {
       fillColor: [245, 245, 245],
     },
-    columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 30 },
-      2: { cellWidth: 28 },
-      3: { cellWidth: 34 },
-      4: { cellWidth: 25 },
-      5: { cellWidth: 35 },
-      6: { cellWidth: 100 },
-    },
     margin: {
       left: 14,
       right: 14,
@@ -465,9 +818,17 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     didDrawPage: adicionarRodape,
   });
 
-  const nomeArquivo = `relatorio-feno-racao-${unidade
+  adicionarRodape();
+
+  const unidadeArquivo = String(unidadeRelatorio || unidadeUsuario)
+    .replace(/[^\wÀ-ÿ\s-]/g, '')
     .replace(/\s+/g, '-')
-    .toLowerCase()}-${dataAtual.replace(/\//g, '-')}.pdf`;
+    .toLowerCase();
+
+  const nomeArquivo = `relatorio-feno-racao-${unidadeArquivo}-${dataAtual.replace(
+    /\//g,
+    '-'
+  )}.pdf`;
 
   doc.save(nomeArquivo);
 };

@@ -102,6 +102,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
   const [mensagem, setMensagem] = useState('');
   const [entradaParaExcluir, setEntradaParaExcluir] = useState(null);
+  const [entradaCadastrada, setEntradaCadastrada] = useState(null);
 
   const produtoSelecionado = useMemo(() => {
     return PRODUTOS.find((produto) => produto.valor === tipoProduto) || null;
@@ -223,6 +224,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     }
 
     const loteTratado = lote.trim();
+    const unidadeUsuario = usuario?.unidade || usuario?.UNIDADE || 'RPMont';
 
     const novaEntrada = {
       id: gerarId(),
@@ -243,15 +245,14 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
       validade,
       responsavel: responsavel.trim(),
       observacao: observacao.trim(),
-      unidade: usuario?.unidade || usuario?.UNIDADE || 'RPMont',
+      unidade: unidadeUsuario,
       dataCadastro: new Date().toISOString(),
       userModificador: usuario?.id || usuario?.ID || 1,
     };
 
     salvarNovaEntrada(novaEntrada);
     limparFormulario();
-
-    mostrarMensagem(`${produtoSelecionado.nome} cadastrado com sucesso.`);
+    setEntradaCadastrada(novaEntrada);
   };
 
   const confirmarExclusao = () => {
@@ -281,6 +282,12 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     }
 
     return 'icone-racao-adulto';
+  };
+
+  const obterUnidadeProduto = (entrada) => {
+    const produto = PRODUTOS.find((item) => item.valor === entrada.tipoProduto);
+
+    return produto?.unidadePlural || 'unidades';
   };
 
   return (
@@ -616,6 +623,8 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                         </span>
 
                         {entrada.lote && <span>Lote: {entrada.lote}</span>}
+
+                        {entrada.unidade && <span>{entrada.unidade}</span>}
                       </div>
                     </div>
 
@@ -633,6 +642,84 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
             </div>
           )}
         </section>
+
+        {entradaCadastrada && (
+          <div className="cadastro-alimentacao-modal-overlay">
+            <div className="cadastro-alimentacao-modal">
+              <div className="cadastro-alimentacao-modal-icon">
+                <FaBoxesStacked />
+              </div>
+
+              <h2>Entrada cadastrada com sucesso!</h2>
+
+              <p>
+                O registro de <strong>{entradaCadastrada.nomeProduto}</strong>{' '}
+                foi lançado no estoque da unidade{' '}
+                <strong>{entradaCadastrada.unidade}</strong>.
+              </p>
+
+              <div className="cadastro-alimentacao-modal-resumo">
+                <span>Produto</span>
+                <strong>{entradaCadastrada.nomeProduto}</strong>
+
+                <span>Unidade</span>
+                <strong>{entradaCadastrada.unidade || '-'}</strong>
+
+                <span>Data da entrada</span>
+                <strong>{formatarData(entradaCadastrada.dataEntrada)}</strong>
+
+                <span>Quantidade cadastrada</span>
+                <strong>
+                  {formatarNumero(
+                    entradaCadastrada.quantidadeEntrada ||
+                      entradaCadastrada.quantidadeInicial ||
+                      entradaCadastrada.quantidade ||
+                      0
+                  )}{' '}
+                  {obterUnidadeProduto(entradaCadastrada)}
+                </strong>
+
+                <span>Peso por unidade</span>
+                <strong>{formatarNumero(entradaCadastrada.pesoUnidadeKg)} kg</strong>
+
+                <span>Peso total recebido</span>
+                <strong>{formatarNumero(entradaCadastrada.pesoTotalKg)} kg</strong>
+
+                <span>Lote</span>
+                <strong>{entradaCadastrada.lote || '-'}</strong>
+
+                <span>Fornecedor</span>
+                <strong>{entradaCadastrada.fornecedor || '-'}</strong>
+
+                <span>Validade</span>
+                <strong>{formatarData(entradaCadastrada.validade)}</strong>
+
+                <span>Responsável</span>
+                <strong>{entradaCadastrada.responsavel || '-'}</strong>
+              </div>
+
+              <div className="cadastro-alimentacao-modal-actions">
+                <button
+                  type="button"
+                  className="cadastro-alimentacao-confirmar-exclusao"
+                  onClick={() => setEntradaCadastrada(null)}
+                >
+                  <FaPlus />
+                  Cadastrar nova entrada
+                </button>
+
+                <button
+                  type="button"
+                  className="cadastro-alimentacao-cancelar-exclusao"
+                  onClick={() => setEntradaCadastrada(null)}
+                >
+                  <FaXmark />
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {entradaParaExcluir && (
           <div className="cadastro-alimentacao-modal-overlay">
@@ -658,7 +745,7 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                       entradaParaExcluir.quantidade ||
                       0
                   )}{' '}
-                  unidades
+                  {obterUnidadeProduto(entradaParaExcluir)}
                 </strong>
 
                 <span>Peso por unidade</span>

@@ -110,16 +110,17 @@ const obterUnidadeUsuario = (usuario) => {
 
 const obterNivelUsuario = (usuario) => {
   return normalizarNivel(
-    usuario?.NIVEL ||
-      usuario?.nivel ||
-      usuario?.nivelAcesso ||
-      usuario?.NIVEL_ACESSO ||
-      usuario?.perfil ||
-      usuario?.PERFIL ||
-      usuario?.role ||
-      usuario?.ROLE ||
-      usuario?.tipo ||
-      usuario?.TIPO
+    usuario?.NIVEL ??
+      usuario?.nivel ??
+      usuario?.nivelAcesso ??
+      usuario?.NIVEL_ACESSO ??
+      usuario?.perfil ??
+      usuario?.PERFIL ??
+      usuario?.role ??
+      usuario?.ROLE ??
+      usuario?.tipo ??
+      usuario?.TIPO ??
+      ''
   );
 };
 
@@ -761,7 +762,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
                     );
                     setMatricula(matriculaFormatada);
                   }}
-                  placeholder="Ex: 525.709-3"
+                  placeholder="Ex: 000.000-0"
                   maxLength={9}
                   inputMode="numeric"
                 />
@@ -788,7 +789,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
                 type="text"
                 value={nome}
                 onChange={(event) => setNome(event.target.value)}
-                placeholder="Ex: Lima"
+                placeholder="Ex: José"
               />
             </div>
 
@@ -800,7 +801,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
                 type="text"
                 value={nomeCompleto}
                 onChange={(event) => setNomeCompleto(event.target.value)}
-                placeholder="Ex: Willames Pereira Lima"
+                placeholder="Ex: José da Silva"
               />
             </div>
 
