@@ -103,6 +103,10 @@ const normalizarMatricula = (valor) => {
   return String(valor || '').replace(/\D/g, '');
 };
 
+const emailValido = (valor) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(valor || '').trim());
+};
+
 const normalizarTexto = (valor) => {
   return String(valor ?? '')
     .trim()
@@ -324,11 +328,11 @@ function SolicitarAcesso({ onVoltar }) {
     }
 
     if (!emailTratado) {
-      mostrarMensagem('Informe o e-mail.');
+      mostrarMensagem('Informe o e-mail cadastrado do usuário.');
       return null;
     }
 
-    if (!emailTratado.includes('@') || !emailTratado.includes('.')) {
+    if (!emailValido(emailTratado)) {
       mostrarMensagem('Informe um e-mail válido.');
       return null;
     }
@@ -593,7 +597,7 @@ function SolicitarAcesso({ onVoltar }) {
               </div>
 
               <div className="solicitar-acesso-form-group">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="email">E-mail obrigatório</label>
 
                 <div className="solicitar-acesso-input-icon">
                   <FaEnvelope />
@@ -605,6 +609,7 @@ function SolicitarAcesso({ onVoltar }) {
                     placeholder="email@exemplo.com"
                     disabled={matriculaBloqueada}
                     onChange={(event) => setEmail(event.target.value)}
+                    required
                   />
                 </div>
               </div>

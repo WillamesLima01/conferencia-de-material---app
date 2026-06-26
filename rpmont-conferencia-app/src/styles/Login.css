@@ -258,6 +258,48 @@
   padding: 4px;
 }
 
+.senha-login-area {
+  width: 100%;
+  display: grid;
+  margin-bottom: 12px;
+}
+
+.input-box-senha {
+  margin-bottom: 2px;
+}
+
+.esqueci-senha-button {
+  width: fit-content;
+  justify-self: end;
+  border: 0;
+  background: transparent;
+  color: #7c2d12;
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 4px 2px 2px;
+  margin: 0 2px 0 0;
+  line-height: 1.1;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.esqueci-senha-button svg {
+  font-size: 0.78rem;
+}
+
+.esqueci-senha-button:hover {
+  color: #b91c1c;
+  text-decoration: underline;
+}
+
+.esqueci-senha-button:active {
+  transform: scale(0.98);
+}
+
 .entrar-button {
   width: 100%;
   height: 56px;
@@ -308,6 +350,191 @@
   color: #777;
   font-size: 12px;
   flex-shrink: 0;
+}
+
+.solicitar-acesso-button {
+  width: 100%;
+  border: 2px solid #facc15;
+  border-radius: 18px;
+  padding: 13px 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #dc0000, #b91c1c);
+  font-size: 0.92rem;
+  font-weight: 950;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-shadow: 0 14px 28px rgba(220, 0, 0, 0.28);
+}
+
+.solicitar-acesso-button:hover {
+  background: linear-gradient(135deg, #ef0000, #991b1b);
+  transform: translateY(-1px);
+}
+
+.cadastro-login-area {
+  width: 100%;
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.cadastro-login-divisor {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cadastro-login-divisor span {
+  height: 1px;
+  background: rgba(100, 116, 139, 0.28);
+}
+
+.recuperar-senha-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+
+.recuperar-senha-modal {
+  width: 100%;
+  max-width: 330px;
+  position: relative;
+  background: linear-gradient(145deg, #ffffff 0%, #fffdf4 100%);
+  border: 2px solid #facc15;
+  border-radius: 26px;
+  padding: 28px 20px 20px;
+  box-shadow: 0 28px 58px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  animation: recuperarSenhaEntrar 0.18s ease-out;
+}
+
+@keyframes recuperarSenhaEntrar {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.recuperar-senha-fechar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #b91c1c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.recuperar-senha-icon {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 12px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #dc0000, #b91c1c);
+  color: #ffffff;
+  border: 2px solid #facc15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 12px 26px rgba(220, 0, 0, 0.25);
+}
+
+.recuperar-senha-modal h2 {
+  margin: 0 0 8px;
+  color: #222;
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+.recuperar-senha-modal p {
+  margin: 0 0 16px;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.recuperar-senha-input {
+  margin-bottom: 12px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+}
+
+.recuperar-senha-enviar {
+  width: 100%;
+  height: 50px;
+  border: 2px solid #facc15;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f0000b 0%, #c80009 100%);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 950;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(220, 0, 12, 0.28);
+}
+
+.recuperar-senha-enviar:active {
+  transform: scale(0.98);
+}
+
+.recuperar-senha-mensagem {
+  display: block;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.recuperar-senha-mensagem.sucesso {
+  color: #0b6b2e;
+  background: #e2ffe9;
+  border: 1px solid #b7efc3;
+}
+
+.recuperar-senha-mensagem.erro {
+  color: #9c0000;
+  background: #ffe5e5;
+  border: 1px solid #ffc2c2;
+}
+
+.recuperar-senha-modal small {
+  display: block;
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  font-weight: 700;
 }
 
 @media (max-width: 430px) {
@@ -372,6 +599,10 @@
     margin-bottom: 11px;
   }
 
+  .input-box-senha {
+    margin-bottom: 2px;
+  }
+
   .entrar-button {
     height: 54px;
     font-size: 16px;
@@ -379,6 +610,15 @@
 
   .texto-apoio {
     margin-top: 12px;
+  }
+
+  .recuperar-senha-overlay {
+    padding: 18px;
+  }
+
+  .recuperar-senha-modal {
+    max-width: 100%;
+    padding: 26px 18px 18px;
   }
 }
 
@@ -426,71 +666,4 @@
   .texto-apoio {
     margin-top: 10px;
   }
-}
-
-.solicitar-acesso-button {
-  width: 100%;
-  border: none;
-  border-radius: 18px;
-  padding: 13px 14px;
-  color: #7c2d12;
-  background: #ffedd5;
-  font-size: 0.92rem;
-  font-weight: 950;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  box-shadow: 0 10px 22px rgba(124, 45, 18, 0.16);
-}
-
-.solicitar-acesso-button:hover {
-  background: #fed7aa;
-}
-
-.cadastro-login-area {
-  width: 100%;
-  margin-top: 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.cadastro-login-divisor {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 10px;
-  color: #64748b;
-  font-size: 0.74rem;
-  font-weight: 950;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.cadastro-login-divisor span {
-  height: 1px;
-  background: rgba(100, 116, 139, 0.28);
-}
-
-.solicitar-acesso-button {
-  width: 100%;
-  border: 2px solid #facc15;
-  border-radius: 18px;
-  padding: 13px 14px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #dc0000, #b91c1c);
-  font-size: 0.92rem;
-  font-weight: 950;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  box-shadow: 0 14px 28px rgba(220, 0, 0, 0.28);
-}
-
-.solicitar-acesso-button:hover {
-  background: linear-gradient(135deg, #ef0000, #991b1b);
-  transform: translateY(-1px);
 }

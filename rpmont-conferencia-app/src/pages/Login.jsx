@@ -6,6 +6,9 @@ import {
   FaEyeSlash,
   FaSignInAlt,
   FaUserPlus,
+  FaEnvelope,
+  FaKey,
+  FaTimes,
 } from 'react-icons/fa';
 import rpmontBrasao from '../assets/RPMONT.png';
 import '../styles/Login.css';
@@ -27,11 +30,11 @@ const criarUsuariosIniciais = () => {
       MATRICULA: '525.709-3',
       NOME: 'willames',
       SENHA: '123456',
-      EMAIL: '',
+      EMAIL: 'illaap@hotmail.com',
       NIVEL: NIVEIS_USUARIO.ADMIN_MASTER,
       POSTGRAD: 'CB',
       SETOR: 'P4',
-      NOMECOMPLETO: 'Willames Pereira',
+      NOMECOMPLETO: 'Willames Pereira de Lima',
       UNIDADE: 'RPMont',
       STATUSACESSO: 'LIBERADO',
       ATIVO: 1,
@@ -74,6 +77,11 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
   const [usuarioEncontrado, setUsuarioEncontrado] = useState(null);
   const [mensagem, setMensagem] = useState('');
 
+  const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
+  const [emailRecuperacao, setEmailRecuperacao] = useState('');
+  const [mensagemRecuperacao, setMensagemRecuperacao] = useState('');
+  const [recuperacaoSucesso, setRecuperacaoSucesso] = useState(false);
+
   const formatarMatricula = (valor) => {
     const apenasNumeros = String(valor || '')
       .replace(/\D/g, '')
@@ -97,14 +105,19 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
     return String(valor || '').replace(/\D/g, '');
   };
 
+  const normalizarEmail = (valor) => {
+    return String(valor || '').trim().toLowerCase();
+  };
+
   const normalizarStatusAcesso = (valor) => {
-    return String(valor || 'LIBERADO')
-      .trim()
-      .toUpperCase();
+    return String(valor || 'LIBERADO').trim().toUpperCase();
+  };
+
+  const gerarSenhaSeisDigitos = () => {
+    return String(Math.floor(100000 + Math.random() * 900000));
   };
 
   const carregarUsuariosCadastrados = () => {
-
     const usuariosIniciais = criarUsuariosIniciais();
     const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
 
@@ -161,10 +174,6 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
             ? 'RPMont'
             : usuarioExistente.UNIDADE ?? usuarioInicial.UNIDADE,
 
-          // Novo padrão:
-          // 1 = AdminMaster
-          // 2 = Administrador
-          // 3 = Usuário comum
           NIVEL: usuarioWillamesTeste
             ? NIVEIS_USUARIO.ADMIN_MASTER
             : usuarioExistente.NIVEL ?? usuarioInicial.NIVEL,
@@ -400,6 +409,82 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
     setMensagem('A tela de cadastro ainda não foi configurada.');
   };
 
+  const abrirModalRecuperacaoSenha = () => {
+    setModalSenhaAberto(true);
+    setEmailRecuperacao('');
+    setMensagemRecuperacao('');
+    setRecuperacaoSucesso(false);
+    setMensagem('');
+  };
+
+  const fecharModalRecuperacaoSenha = () => {
+    setModalSenhaAberto(false);
+    setEmailRecuperacao('');
+    setMensagemRecuperacao('');
+    setRecuperacaoSucesso(false);
+  };
+
+  const enviarNovaSenha = () => {
+    const emailTratado = normalizarEmail(emailRecuperacao);
+
+    if (!emailTratado) {
+      setRecuperacaoSucesso(false);
+      setMensagemRecuperacao('Informe o e-mail cadastrado no sistema.');
+      return;
+    }
+
+    const usuariosCadastrados = carregarUsuariosCadastrados();
+
+    const indiceUsuario = usuariosCadastrados.findIndex(
+      (item) => normalizarEmail(item.EMAIL || item.email) === emailTratado
+    );
+
+    if (indiceUsuario < 0) {
+      setRecuperacaoSucesso(false);
+      setMensagemRecuperacao(
+        'E-mail não encontrado no sistema. Verifique o e-mail informado ou procure o administrador.'
+      );
+      return;
+    }
+
+    const novaSenha = gerarSenhaSeisDigitos();
+    const agora = new Date().toISOString();
+
+    const usuariosAtualizados = usuariosCadastrados.map((item, index) => {
+      if (index !== indiceUsuario) return item;
+
+      return {
+        ...item,
+        SENHA: novaSenha,
+        senha: novaSenha,
+        DATAMODIFICACAO: agora,
+        dataModificacao: agora,
+      };
+    });
+
+    localStorage.setItem(
+      STORAGE_KEY_USUARIOS,
+      JSON.stringify(usuariosAtualizados)
+    );
+
+    const usuarioAtualizado = normalizarUsuario(usuariosAtualizados[indiceUsuario]);
+
+    if (
+      usuarioEncontrado &&
+      normalizarEmail(usuarioEncontrado.email) === emailTratado
+    ) {
+      setUsuarioEncontrado(usuarioAtualizado);
+      setSenha('');
+    }
+
+    console.log('NOVA SENHA GERADA PARA TESTE:', novaSenha);
+
+    setRecuperacaoSucesso(true);
+    setMensagemRecuperacao(
+      `Senha redefinida com sucesso. Senha temporária para teste: ${novaSenha}`
+    );
+  };
+
   const nomeExibicao = usuarioEncontrado
     ? formatarNomeExibicao(
         usuarioEncontrado.postGrad,
@@ -468,33 +553,44 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
             </label>
 
             {usuarioEncontrado && (
-              <label className="input-box">
-                <FaLock className="input-icon" />
+              <div className="senha-login-area">
+                <label className="input-box input-box-senha">
+                  <FaLock className="input-icon" />
 
-                <input
-                  type={mostrarSenha ? 'text' : 'password'}
-                  placeholder="Senha"
-                  value={senha}
-                  onChange={(event) => {
-                    setSenha(event.target.value);
-                    setMensagem('');
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      entrar();
-                    }
-                  }}
-                />
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    placeholder="Senha"
+                    value={senha}
+                    onChange={(event) => {
+                      setSenha(event.target.value);
+                      setMensagem('');
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        entrar();
+                      }
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="eye-button"
+                    onClick={() => setMostrarSenha((valorAtual) => !valorAtual)}
+                    aria-label="Mostrar ou ocultar senha"
+                  >
+                    {mostrarSenha ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </label>
 
                 <button
                   type="button"
-                  className="eye-button"
-                  onClick={() => setMostrarSenha((valorAtual) => !valorAtual)}
-                  aria-label="Mostrar ou ocultar senha"
+                  className="esqueci-senha-button"
+                  onClick={abrirModalRecuperacaoSenha}
                 >
-                  {mostrarSenha ? <FaEyeSlash /> : <FaEye />}
+                  <FaKey />
+                  <span>Esqueci minha senha?</span>
                 </button>
-              </label>
+              </div>
             )}
 
             <button
@@ -545,6 +641,78 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
         </div>
 
         <div className="decor-bottom"></div>
+
+        {modalSenhaAberto && (
+          <div className="recuperar-senha-overlay">
+            <div className="recuperar-senha-modal">
+              <button
+                type="button"
+                className="recuperar-senha-fechar"
+                onClick={fecharModalRecuperacaoSenha}
+                aria-label="Fechar recuperação de senha"
+              >
+                <FaTimes />
+              </button>
+
+              <div className="recuperar-senha-icon">
+                <FaKey />
+              </div>
+
+              <h2>Esqueci minha senha</h2>
+
+              <p>
+                Informe o e-mail cadastrado no sistema para receber uma nova
+                senha de acesso.
+              </p>
+
+              <label className="input-box recuperar-senha-input">
+                <FaEnvelope className="input-icon" />
+
+                <input
+                  type="email"
+                  placeholder="E-mail cadastrado"
+                  value={emailRecuperacao}
+                  onChange={(event) => {
+                    setEmailRecuperacao(event.target.value);
+                    setMensagemRecuperacao('');
+                    setRecuperacaoSucesso(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      enviarNovaSenha();
+                    }
+                  }}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="recuperar-senha-enviar"
+                onClick={enviarNovaSenha}
+              >
+                <FaEnvelope />
+                <span>Enviar nova senha</span>
+              </button>
+
+              {mensagemRecuperacao && (
+                <span
+                  className={
+                    recuperacaoSucesso
+                      ? 'recuperar-senha-mensagem sucesso'
+                      : 'recuperar-senha-mensagem erro'
+                  }
+                >
+                  {mensagemRecuperacao}
+                </span>
+              )}
+
+              <small>
+                Ambiente de teste: a senha temporária será exibida na tela. No backend,
+                ela será enviada automaticamente para o e-mail cadastrado.
+              </small>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );

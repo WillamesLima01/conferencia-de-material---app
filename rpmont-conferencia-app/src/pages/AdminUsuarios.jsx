@@ -3,6 +3,7 @@ import {
   FaArrowLeft,
   FaBuilding,
   FaCircleCheck,
+  FaEnvelope,
   FaLayerGroup,
   FaLock,
   FaPen,
@@ -83,6 +84,10 @@ const matriculaValida = (valor) => {
   return /^\d{3}\.\d{3}-\d{1}$/.test(valor);
 };
 
+const emailValido = (valor) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(valor || '').trim());
+};
+
 const normalizarTexto = (valor) => {
   return String(valor ?? '')
     .trim()
@@ -101,6 +106,12 @@ const obterIdUsuario = (usuario) => {
 
 const obterUnidadeUsuario = (usuario) => {
   return usuario?.UNIDADE || usuario?.unidade || '';
+};
+
+const obterEmailUsuario = (usuario) => {
+  const emailUsuario = usuario?.EMAIL || usuario?.email || '';
+
+  return emailUsuario.trim() || 'Não informado';
 };
 
 const obterNivelUsuario = (usuario) => {
@@ -393,7 +404,17 @@ function AdminUsuarios({ usuario, onVoltar }) {
       mostrarMensagem('Informe o nome completo.');
       return;
     }
-
+    
+    if (!emailTratado) {
+      mostrarMensagem('Informe o e-mail cadastrado do usuário.');
+      return;
+    }
+    
+    if (!emailValido(emailTratado)) {
+      mostrarMensagem('Informe um e-mail válido.');
+      return;
+    }
+    
     if (!postGradTratado) {
       mostrarMensagem('Informe o posto/graduação.');
       return;
@@ -910,7 +931,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
             </div>
 
             <div className="admin-usuarios-form-group">
-              <label htmlFor="email">E-mail</label>
+              <label htmlFor="email">E-mail obrigatório</label>
 
               <input
                 id="email"
@@ -918,6 +939,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Ex: usuario@email.com"
+                required
               />
             </div>
 
@@ -1095,7 +1117,9 @@ function AdminUsuarios({ usuario, onVoltar }) {
                           Matrícula:{' '}
                           {formatarMatricula(item.MATRICULA || item.matricula)}
                         </p>
-
+                        <p>
+                          <FaEnvelope /> {obterEmailUsuario(item)}
+                        </p>
                         <p>
                           <FaBuilding /> {item.UNIDADE || item.unidade}
                         </p>
