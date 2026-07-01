@@ -26,13 +26,13 @@ public class UsuarioServiceImpl implements UsuarioService {
         String matricula = limparTexto(usuarioRequestDTO.matricula());
         String email = limparTexto(usuarioRequestDTO.email());
 
-        if (usuarioRepository.existByMatricula(matricula)) {
+        if (usuarioRepository.existsByMatricula(matricula)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Já existe um usuário cadastrado com essa matrícula."
             );
         }
 
-        if (email != null && usuarioRepository.existByEmail(email)) {
+        if (email != null && usuarioRepository.existsByEmail(email)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Já existe um usuário cadastrado com esse e-mail."
             );
@@ -152,7 +152,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 usuario.getAtivo(),
                 usuario.getDataSolicitacao(),
                 usuario.getDataLiberacao(),
-                usuario.getDataCadastro().atStartOfDay(),
+                usuario.getDataCadastro(),
                 usuario.getDataModificacao()
         );
     }

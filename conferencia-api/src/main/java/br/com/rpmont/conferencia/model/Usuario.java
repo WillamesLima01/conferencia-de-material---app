@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TB_Usuario_P4")
+@Table(name = "`TB_Usuario_P4`")
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
@@ -73,7 +73,7 @@ public class Usuario implements Serializable {
     @Column(name = "DATAMODIFICACAO", nullable = false)
     private LocalDateTime dataModificacao;
 
-    @Column(name = "userModificador")
+    @Column(name = "`userModificador`")
     private Integer userModificador;
 
     @Lob

@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.dtos;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record UsuarioResponseDTO(
@@ -8,7 +9,7 @@ public record UsuarioResponseDTO(
         String nome,
         String email,
         Integer nivel,
-        String postgrad,
+        String postGrad,
         String setor,
         String nomeCompleto,
         String unidade,
@@ -16,7 +17,7 @@ public record UsuarioResponseDTO(
         Integer ativo,
         LocalDateTime dataSolicitacao,
         LocalDateTime dataLiberacao,
-        LocalDateTime dataCadastro,
+        LocalDate dataCadastro,
         LocalDateTime dataModificacao
 ) {
 }
