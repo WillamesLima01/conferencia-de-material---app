@@ -130,7 +130,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuario.setNome(limparTexto(usuarioRequestDTO.nome()));
         usuario.setSenha(limparTexto(usuarioRequestDTO.senha()));
         usuario.setEmail(limparTexto(usuarioRequestDTO.email()));
-        usuario.setPostGrad(limparTexto(usuarioRequestDTO.postgrad()));
+        usuario.setPostGrad(limparTexto(usuarioRequestDTO.postGrad()));
         usuario.setSetor(limparTexto(usuarioRequestDTO.setor()));
         usuario.setNomeCompleto(limparTexto(usuarioRequestDTO.nomeCompleto()));
         usuario.setUnidade(limparTexto(usuarioRequestDTO.unidade()));

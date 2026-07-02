@@ -19,7 +19,7 @@ public record UsuarioRequestDTO(
         @Email(message = "E-mail inválido.")
         String email,
 
-        String postgrad,
+        String postGrad,
 
         String setor,
 
