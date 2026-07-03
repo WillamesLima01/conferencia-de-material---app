@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.service;
 
+import br.com.rpmont.conferencia.dtos.UsuarioNivelRequestDTO;
 import br.com.rpmont.conferencia.dtos.UsuarioRequestDTO;
 import br.com.rpmont.conferencia.dtos.UsuarioResponseDTO;
 
@@ -12,5 +13,6 @@ public interface UsuarioService {
     UsuarioResponseDTO buscarUsuarioPorId(Long id);
     UsuarioResponseDTO buscarUsuarioPorMatricula(String matricula);
     UsuarioResponseDTO atualizarUsuarioPorId(Long id, UsuarioRequestDTO usuarioRequestDTO);
+    UsuarioResponseDTO alterarNivelUsuario(Long id, UsuarioNivelRequestDTO usuarioNivelRequestDTO);
     void deletarUsuarioId(Long id);
 }

@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "`TB_Usuario_P4`")
+@Table(name = "usuarios_sistema")
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
@@ -75,10 +75,6 @@ public class Usuario implements Serializable {
 
     @Column(name = "`userModificador`")
     private Integer userModificador;
-
-    @Lob
-    @Column(name = "DIGITAL", columnDefinition = "LONGTEXT")
-    private String digital;
 
     @PrePersist
     public void prePersist() {

@@ -1,11 +1,13 @@
 package br.com.rpmont.conferencia.controller;
 
+import br.com.rpmont.conferencia.dtos.UsuarioNivelRequestDTO;
 import br.com.rpmont.conferencia.dtos.UsuarioRequestDTO;
 import br.com.rpmont.conferencia.dtos.UsuarioResponseDTO;
 import br.com.rpmont.conferencia.service.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,6 +50,15 @@ public class UsuarioController {
                                                     @Valid @RequestBody UsuarioRequestDTO usuarioRequestDTO) {
         return usuarioService.atualizarUsuarioPorId(id, usuarioRequestDTO);
 
+    }
+
+    @PatchMapping("/{id}/nivel")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<UsuarioResponseDTO> alterarNivelUsuario(@PathVariable Long id,
+                                                    @RequestBody UsuarioNivelRequestDTO usuarioNivelRequestDTO
+    ) {
+        UsuarioResponseDTO usuarioAtualizado = usuarioService.alterarNivelUsuario(id, usuarioNivelRequestDTO);
+        return ResponseEntity.ok(usuarioAtualizado);
     }
 
     @DeleteMapping("/{id}")
