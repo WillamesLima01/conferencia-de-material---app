@@ -1,24 +1,28 @@
 package br.com.rpmont.conferencia.controller;
 
-import br.com.rpmont.conferencia.dtos.UsuarioNivelRequestDTO;
 import br.com.rpmont.conferencia.dtos.UsuarioRequestDTO;
 import br.com.rpmont.conferencia.dtos.UsuarioResponseDTO;
+import br.com.rpmont.conferencia.dtos.UsuarioStatusRequestDTO;
 import br.com.rpmont.conferencia.service.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("usuario")
+@RequestMapping("/usuario")
 @RequiredArgsConstructor
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+
+    @PostMapping("/solicitar-acesso")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UsuarioResponseDTO solicitarAcesso(@RequestBody @Valid UsuarioRequestDTO usuarioRequestDTO) {
+        return usuarioService.solicitarAcesso(usuarioRequestDTO);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -46,19 +50,20 @@ public class UsuarioController {
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public UsuarioResponseDTO atualizarUsuarioPorId(@PathVariable Long id,
-                                                    @Valid @RequestBody UsuarioRequestDTO usuarioRequestDTO) {
+    public UsuarioResponseDTO atualizarUsuarioPorId(
+            @PathVariable Long id,
+            @Valid @RequestBody UsuarioRequestDTO usuarioRequestDTO
+    ) {
         return usuarioService.atualizarUsuarioPorId(id, usuarioRequestDTO);
-
     }
 
-    @PatchMapping("/{id}/nivel")
+    @PatchMapping("/{id}/status")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<UsuarioResponseDTO> alterarNivelUsuario(@PathVariable Long id,
-                                                    @RequestBody UsuarioNivelRequestDTO usuarioNivelRequestDTO
+    public UsuarioResponseDTO alterarStatusUsuario(
+            @PathVariable Long id,
+            @RequestBody UsuarioStatusRequestDTO usuarioStatusRequestDTO
     ) {
-        UsuarioResponseDTO usuarioAtualizado = usuarioService.alterarNivelUsuario(id, usuarioNivelRequestDTO);
-        return ResponseEntity.ok(usuarioAtualizado);
+        return usuarioService.alterarStatusUsuario(id, usuarioStatusRequestDTO);
     }
 
     @DeleteMapping("/{id}")
@@ -66,5 +71,4 @@ public class UsuarioController {
     public void deletarUsuarioId(@PathVariable Long id) {
         usuarioService.deletarUsuarioId(id);
     }
-
 }
