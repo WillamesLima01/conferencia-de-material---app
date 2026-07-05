@@ -63,7 +63,7 @@ public class Usuario implements Serializable {
     private LocalDateTime dataLiberacao;
 
     @Column(name = "LIBERADOPOR")
-    private Integer liberadoPor;
+    private Long liberadoPor;
 
     @CreationTimestamp
     @Column(name = "DATACADASTRO", nullable = false, updatable = false)
@@ -74,7 +74,7 @@ public class Usuario implements Serializable {
     private LocalDateTime dataModificacao;
 
     @Column(name = "`userModificador`")
-    private Integer userModificador;
+    private Long userModificador;
 
     @PrePersist
     public void prePersist() {
@@ -96,9 +96,6 @@ public class Usuario implements Serializable {
             this.dataSolicitacao = agora;
         }
 
-        if (this.userModificador == null) {
-            this.userModificador = 0;
-        }
     }
 
 }

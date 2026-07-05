@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record UsuarioRequestDTO(
+public record UsuarioAdminRequestDTO(
 
         @NotBlank(message = "A matrícula é obrigatória.")
         String matricula,
@@ -19,12 +19,17 @@ public record UsuarioRequestDTO(
         @Email(message = "E-mail inválido.")
         String email,
 
+        Integer nivel,
+
         String postGrad,
 
         String setor,
 
         String nomeCompleto,
 
-        String unidade
+        String unidade,
+
+        String statusAcesso
+
 ) {
 }
