@@ -12,8 +12,6 @@ public record UsuarioAdminRequestDTO(
         @NotBlank(message = "O nome de guerra é obrigatório.")
         String nome,
 
-        @NotBlank(message = "A senha é obrigatória.")
-        @Size(min = 4, message = "A senha deve ter no mínimo 4 caracteres.")
         String senha,
 
         @Email(message = "E-mail inválido.")

@@ -6,81 +6,23 @@ import {
   FaEyeSlash,
   FaSignInAlt,
   FaUserPlus,
-  FaEnvelope,
   FaKey,
-  FaTimes,
 } from 'react-icons/fa';
+
 import rpmontBrasao from '../assets/RPMONT.png';
+import { login } from '../services/authService';
 import '../styles/Login.css';
 
-const STORAGE_KEY_USUARIOS = 'usuarios';
-
-const NIVEIS_USUARIO = {
-  ADMIN_MASTER: 1,
-  ADMIN: 2,
-  USUARIO_COMUM: 3,
-};
-
-const criarUsuariosIniciais = () => {
-  const agora = new Date();
-
-  return [
-    {
-      ID: 1,
-      MATRICULA: '525.709-3',
-      NOME: 'willames',
-      SENHA: '123456',
-      EMAIL: 'illaap@hotmail.com',
-      NIVEL: NIVEIS_USUARIO.ADMIN_MASTER,
-      POSTGRAD: 'CB',
-      SETOR: 'P4',
-      NOMECOMPLETO: 'Willames Pereira de Lima',
-      UNIDADE: 'RPMont',
-      STATUSACESSO: 'LIBERADO',
-      ATIVO: 1,
-      DATASOLICITACAO: agora.toISOString(),
-      DATALIBERACAO: agora.toISOString(),
-      LIBERADOPOR: 1,
-      DATACADASTRO: agora.toISOString().slice(0, 10),
-      DATAMODIFICACAO: agora.toISOString(),
-      userModificador: 1,
-      DIGITAL: null,
-    },
-    {
-      ID: 2,
-      MATRICULA: '530.381-8',
-      NOME: 'Nascimento',
-      SENHA: '123456',
-      EMAIL: '',
-      NIVEL: NIVEIS_USUARIO.ADMIN,
-      POSTGRAD: '1Ten',
-      SETOR: 'P4',
-      NOMECOMPLETO: 'Nome completo do militar',
-      UNIDADE: 'RPMont',
-      STATUSACESSO: 'LIBERADO',
-      ATIVO: 1,
-      DATASOLICITACAO: agora.toISOString(),
-      DATALIBERACAO: agora.toISOString(),
-      LIBERADOPOR: 1,
-      DATACADASTRO: agora.toISOString().slice(0, 10),
-      DATAMODIFICACAO: agora.toISOString(),
-      userModificador: 1,
-      DIGITAL: null,
-    },
-  ];
-};
-
-function Login({ onLoginSuccess, onSolicitarAcesso }) {
+function Login({
+  onLoginSuccess,
+  onSolicitarAcesso,
+  onRecuperarSenha,
+}) {
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [usuarioEncontrado, setUsuarioEncontrado] = useState(null);
   const [mensagem, setMensagem] = useState('');
-
-  const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
-  const [emailRecuperacao, setEmailRecuperacao] = useState('');
-  const [mensagemRecuperacao, setMensagemRecuperacao] = useState('');
-  const [recuperacaoSucesso, setRecuperacaoSucesso] = useState(false);
+  const [carregando, setCarregando] = useState(false);
 
   const formatarMatricula = (valor) => {
     const apenasNumeros = String(valor || '')
@@ -105,230 +47,29 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
     return String(valor || '').replace(/\D/g, '');
   };
 
-  const normalizarEmail = (valor) => {
-    return String(valor || '').trim().toLowerCase();
-  };
-
-  const normalizarStatusAcesso = (valor) => {
-    return String(valor || 'LIBERADO').trim().toUpperCase();
-  };
-
-  const gerarSenhaSeisDigitos = () => {
-    return String(Math.floor(100000 + Math.random() * 900000));
-  };
-
-  const carregarUsuariosCadastrados = () => {
-    const usuariosIniciais = criarUsuariosIniciais();
-    const usuariosSalvos = localStorage.getItem(STORAGE_KEY_USUARIOS);
-
-    let usuariosAtuais = [];
-
-    if (usuariosSalvos) {
-      try {
-        const dadosConvertidos = JSON.parse(usuariosSalvos);
-
-        if (Array.isArray(dadosConvertidos)) {
-          usuariosAtuais = dadosConvertidos;
-        }
-      } catch {
-        usuariosAtuais = [];
-      }
-    }
-
-    const usuariosAtualizados = [...usuariosAtuais];
-
-    usuariosIniciais.forEach((usuarioInicial) => {
-      const matriculaInicial = normalizarMatricula(usuarioInicial.MATRICULA);
-
-      const indiceUsuarioExistente = usuariosAtualizados.findIndex(
-        (usuarioAtual) =>
-          normalizarMatricula(
-            usuarioAtual.MATRICULA || usuarioAtual.matricula
-          ) === matriculaInicial
-      );
-
-      if (indiceUsuarioExistente >= 0) {
-        const usuarioExistente = usuariosAtualizados[indiceUsuarioExistente];
-
-        const matriculaExistente = normalizarMatricula(
-          usuarioExistente.MATRICULA || usuarioExistente.matricula
-        );
-
-        const usuarioWillamesTeste = matriculaExistente === '5257093';
-
-        usuariosAtualizados[indiceUsuarioExistente] = {
-          ...usuarioExistente,
-
-          ID: usuarioExistente.ID ?? usuarioInicial.ID,
-          MATRICULA: usuarioExistente.MATRICULA ?? usuarioInicial.MATRICULA,
-          NOME: usuarioExistente.NOME ?? usuarioInicial.NOME,
-          SENHA: usuarioExistente.SENHA ?? usuarioInicial.SENHA,
-          EMAIL: usuarioExistente.EMAIL ?? usuarioInicial.EMAIL,
-          POSTGRAD: usuarioExistente.POSTGRAD ?? usuarioInicial.POSTGRAD,
-          SETOR: usuarioWillamesTeste
-            ? 'P4'
-            : usuarioExistente.SETOR ?? usuarioInicial.SETOR,
-          NOMECOMPLETO:
-            usuarioExistente.NOMECOMPLETO ?? usuarioInicial.NOMECOMPLETO,
-          UNIDADE: usuarioWillamesTeste
-            ? 'RPMont'
-            : usuarioExistente.UNIDADE ?? usuarioInicial.UNIDADE,
-
-          NIVEL: usuarioWillamesTeste
-            ? NIVEIS_USUARIO.ADMIN_MASTER
-            : usuarioExistente.NIVEL ?? usuarioInicial.NIVEL,
-
-          STATUSACESSO:
-            usuarioExistente.STATUSACESSO ||
-            usuarioExistente.statusAcesso ||
-            usuarioInicial.STATUSACESSO,
-
-          ATIVO:
-            usuarioExistente.ATIVO ??
-            usuarioExistente.ativo ??
-            usuarioInicial.ATIVO,
-
-          DATASOLICITACAO:
-            usuarioExistente.DATASOLICITACAO ?? usuarioInicial.DATASOLICITACAO,
-          DATALIBERACAO:
-            usuarioExistente.DATALIBERACAO ?? usuarioInicial.DATALIBERACAO,
-          LIBERADOPOR:
-            usuarioExistente.LIBERADOPOR ?? usuarioInicial.LIBERADOPOR,
-          DATACADASTRO:
-            usuarioExistente.DATACADASTRO ?? usuarioInicial.DATACADASTRO,
-          DATAMODIFICACAO:
-            usuarioExistente.DATAMODIFICACAO ??
-            usuarioInicial.DATAMODIFICACAO,
-          userModificador:
-            usuarioExistente.userModificador ?? usuarioInicial.userModificador,
-          DIGITAL: usuarioExistente.DIGITAL ?? usuarioInicial.DIGITAL,
-        };
-      } else {
-        usuariosAtualizados.push(usuarioInicial);
-      }
-    });
-
-    localStorage.setItem(
-      STORAGE_KEY_USUARIOS,
-      JSON.stringify(usuariosAtualizados)
-    );
-
-    return usuariosAtualizados;
-  };
-
-  const normalizarUsuario = (usuario) => {
-    const matriculaUsuario = usuario.MATRICULA ?? usuario.matricula ?? '';
-    const matriculaLimpa = normalizarMatricula(matriculaUsuario);
-    const usuarioWillamesTeste = matriculaLimpa === '5257093';
-
-    return {
-      id: usuario.ID ?? usuario.id,
-      matricula: matriculaUsuario,
-      nome: usuario.NOME ?? usuario.nome ?? '',
-      nomeCompleto: usuario.NOMECOMPLETO ?? usuario.nomeCompleto ?? '',
-      postGrad: usuario.POSTGRAD ?? usuario.postGrad ?? '',
-      unidade: usuarioWillamesTeste
-        ? 'RPMont'
-        : usuario.UNIDADE ?? usuario.unidade ?? '',
-      setor: usuarioWillamesTeste ? 'P4' : usuario.SETOR ?? usuario.setor ?? '',
-      nivel: usuarioWillamesTeste
-        ? NIVEIS_USUARIO.ADMIN_MASTER
-        : Number(usuario.NIVEL ?? usuario.nivel ?? NIVEIS_USUARIO.USUARIO_COMUM),
-      senha: usuario.SENHA ?? usuario.senha ?? '',
-      email: usuario.EMAIL ?? usuario.email ?? '',
-      digital: usuario.DIGITAL ?? usuario.digital ?? null,
-      statusAcesso:
-        usuario.STATUSACESSO ?? usuario.statusAcesso ?? 'LIBERADO',
-      ativo: usuario.ATIVO ?? usuario.ativo ?? 1,
-      dataSolicitacao:
-        usuario.DATASOLICITACAO ?? usuario.dataSolicitacao ?? null,
-      dataLiberacao:
-        usuario.DATALIBERACAO ?? usuario.dataLiberacao ?? null,
-      liberadoPor: usuario.LIBERADOPOR ?? usuario.liberadoPor ?? null,
-    };
-  };
-
   const formatarNomeExibicao = (postGrad, nome) => {
     const postGradFormatado = String(postGrad || '').toUpperCase();
+
     const nomeTexto = String(nome || '').trim();
 
     const nomeFormatado = nomeTexto
-      ? nomeTexto.charAt(0).toUpperCase() + nomeTexto.slice(1).toLowerCase()
+      ? nomeTexto.charAt(0).toUpperCase() +
+        nomeTexto.slice(1).toLowerCase()
       : '';
 
     return `${postGradFormatado} ${nomeFormatado}`.trim();
   };
 
-  const usuarioEstaLiberado = (usuario) => {
-    const status = normalizarStatusAcesso(usuario?.statusAcesso);
-    const ativo = Number(usuario?.ativo);
-
-    if (status === 'PENDENTE') {
-      setMensagem(
-        'Seu acesso ainda está aguardando liberação do administrador.'
-      );
-      return false;
-    }
-
-    if (status === 'BLOQUEADO' || ativo !== 1) {
-      setMensagem(
-        'Seu acesso está bloqueado. Procure o administrador do sistema.'
-      );
-      return false;
-    }
-
-    if (status !== 'LIBERADO') {
-      setMensagem(
-        'Seu acesso não está liberado. Procure o administrador do sistema.'
-      );
-      return false;
-    }
-
-    return true;
-  };
-
   const handleMatriculaChange = (event) => {
     setMatricula(formatarMatricula(event.target.value));
-    setSenha('');
     setMensagem('');
-    setUsuarioEncontrado(null);
   };
 
-  const verificarMatricula = () => {
+  const entrar = async () => {
     const matriculaNormalizada = normalizarMatricula(matricula);
 
     if (matriculaNormalizada.length !== 7) {
       setMensagem('Informe uma matrícula válida.');
-      setUsuarioEncontrado(null);
-      return;
-    }
-
-    const usuariosCadastrados = carregarUsuariosCadastrados();
-
-    const usuarioLocalizado = usuariosCadastrados
-      .map(normalizarUsuario)
-      .find(
-        (item) =>
-          normalizarMatricula(item.matricula) === matriculaNormalizada
-      );
-
-    if (!usuarioLocalizado) {
-      setUsuarioEncontrado(null);
-      setMensagem(
-        'Usuário não cadastrado. Toque em Cadastre-se ou procure o administrador do sistema.'
-      );
-      return;
-    }
-
-    console.log('USUÁRIO LOCALIZADO NO LOGIN:', usuarioLocalizado);
-
-    setUsuarioEncontrado(usuarioLocalizado);
-    setMensagem('');
-  };
-
-  const entrar = () => {
-    if (!usuarioEncontrado) {
-      verificarMatricula();
       return;
     }
 
@@ -337,67 +78,91 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
       return;
     }
 
-    if (senha !== String(usuarioEncontrado.senha || '')) {
-      setMensagem('Senha incorreta. Tente novamente.');
-      return;
-    }
+    try {
+      setCarregando(true);
+      setMensagem('');
 
-    if (!usuarioEstaLiberado(usuarioEncontrado)) {
-      return;
-    }
+      const dados = await login(matricula, senha);
 
-    const nomeExibicao = formatarNomeExibicao(
-      usuarioEncontrado.postGrad,
-      usuarioEncontrado.nome
-    );
+      const nomeExibicao = formatarNomeExibicao(
+        dados.postGrad,
+        dados.nome
+      );
 
-    setMensagem('Acesso liberado.');
-
-    setTimeout(() => {
       const usuarioParaLogin = {
-        id: usuarioEncontrado.id,
-        ID: usuarioEncontrado.id,
+        id: dados.id,
+        ID: dados.id,
 
-        matricula: formatarMatricula(usuarioEncontrado.matricula),
-        MATRICULA: formatarMatricula(usuarioEncontrado.matricula),
+        matricula: dados.matricula,
+        MATRICULA: dados.matricula,
 
-        nome: usuarioEncontrado.nome,
-        NOME: usuarioEncontrado.nome,
+        nome: dados.nome,
+        NOME: dados.nome,
 
-        nomeCompleto: usuarioEncontrado.nomeCompleto,
-        NOMECOMPLETO: usuarioEncontrado.nomeCompleto,
+        nomeCompleto: dados.nomeCompleto,
+        NOMECOMPLETO: dados.nomeCompleto,
 
-        postGrad: usuarioEncontrado.postGrad,
-        POSTGRAD: usuarioEncontrado.postGrad,
+        postGrad: dados.postGrad,
+        POSTGRAD: dados.postGrad,
 
         nomeExibicao,
 
-        unidade: usuarioEncontrado.unidade,
-        UNIDADE: usuarioEncontrado.unidade,
+        unidade: dados.unidade,
+        UNIDADE: dados.unidade,
 
-        setor: usuarioEncontrado.setor,
-        SETOR: usuarioEncontrado.setor,
+        setor: dados.setor,
+        SETOR: dados.setor,
 
-        nivel: Number(usuarioEncontrado.nivel),
-        NIVEL: Number(usuarioEncontrado.nivel),
+        nivel: Number(dados.nivel),
+        NIVEL: Number(dados.nivel),
 
-        email: usuarioEncontrado.email,
-        EMAIL: usuarioEncontrado.email,
+        email: dados.email,
+        EMAIL: dados.email,
 
-        digital: usuarioEncontrado.digital,
-        DIGITAL: usuarioEncontrado.digital,
+        statusAcesso: dados.statusAcesso,
+        STATUSACESSO: dados.statusAcesso,
 
-        statusAcesso: usuarioEncontrado.statusAcesso,
-        STATUSACESSO: usuarioEncontrado.statusAcesso,
-
-        ativo: Number(usuarioEncontrado.ativo),
-        ATIVO: Number(usuarioEncontrado.ativo),
+        ativo: Number(dados.ativo),
+        ATIVO: Number(dados.ativo),
       };
 
-      console.log('USUÁRIO ENVIADO PARA O APP:', usuarioParaLogin);
+      localStorage.setItem('token', dados.token);
 
-      onLoginSuccess(usuarioParaLogin);
-    }, 700);
+      localStorage.setItem(
+        'usuarioLogado',
+        JSON.stringify(usuarioParaLogin)
+      );
+
+      setMensagem('Acesso liberado.');
+
+      setTimeout(() => {
+        onLoginSuccess(usuarioParaLogin);
+      }, 700);
+    } catch (erro) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuarioLogado');
+
+      if (erro?.status === 401) {
+        setMensagem('Matrícula ou senha incorreta.');
+        return;
+      }
+
+      if (erro?.status === 403) {
+        setMensagem(
+          erro.message ||
+            'Seu acesso não está liberado. Procure o administrador do sistema.'
+        );
+
+        return;
+      }
+
+      setMensagem(
+        erro?.message ||
+          'Não foi possível conectar ao servidor.'
+      );
+    } finally {
+      setCarregando(false);
+    }
   };
 
   const abrirSolicitacaoAcesso = () => {
@@ -406,93 +171,24 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
       return;
     }
 
-    setMensagem('A tela de cadastro ainda não foi configurada.');
+    setMensagem(
+      'A tela de cadastro ainda não foi configurada.'
+    );
   };
 
-  const abrirModalRecuperacaoSenha = () => {
-    setModalSenhaAberto(true);
-    setEmailRecuperacao('');
-    setMensagemRecuperacao('');
-    setRecuperacaoSucesso(false);
-    setMensagem('');
-  };
-
-  const fecharModalRecuperacaoSenha = () => {
-    setModalSenhaAberto(false);
-    setEmailRecuperacao('');
-    setMensagemRecuperacao('');
-    setRecuperacaoSucesso(false);
-  };
-
-  const enviarNovaSenha = () => {
-    const emailTratado = normalizarEmail(emailRecuperacao);
-
-    if (!emailTratado) {
-      setRecuperacaoSucesso(false);
-      setMensagemRecuperacao('Informe o e-mail cadastrado no sistema.');
+  const abrirRecuperacaoSenha = () => {
+    if (typeof onRecuperarSenha === 'function') {
+      onRecuperarSenha();
       return;
     }
 
-    const usuariosCadastrados = carregarUsuariosCadastrados();
-
-    const indiceUsuario = usuariosCadastrados.findIndex(
-      (item) => normalizarEmail(item.EMAIL || item.email) === emailTratado
-    );
-
-    if (indiceUsuario < 0) {
-      setRecuperacaoSucesso(false);
-      setMensagemRecuperacao(
-        'E-mail não encontrado no sistema. Verifique o e-mail informado ou procure o administrador.'
-      );
-      return;
-    }
-
-    const novaSenha = gerarSenhaSeisDigitos();
-    const agora = new Date().toISOString();
-
-    const usuariosAtualizados = usuariosCadastrados.map((item, index) => {
-      if (index !== indiceUsuario) return item;
-
-      return {
-        ...item,
-        SENHA: novaSenha,
-        senha: novaSenha,
-        DATAMODIFICACAO: agora,
-        dataModificacao: agora,
-      };
-    });
-
-    localStorage.setItem(
-      STORAGE_KEY_USUARIOS,
-      JSON.stringify(usuariosAtualizados)
-    );
-
-    const usuarioAtualizado = normalizarUsuario(usuariosAtualizados[indiceUsuario]);
-
-    if (
-      usuarioEncontrado &&
-      normalizarEmail(usuarioEncontrado.email) === emailTratado
-    ) {
-      setUsuarioEncontrado(usuarioAtualizado);
-      setSenha('');
-    }
-
-    console.log('NOVA SENHA GERADA PARA TESTE:', novaSenha);
-
-    setRecuperacaoSucesso(true);
-    setMensagemRecuperacao(
-      `Senha redefinida com sucesso. Senha temporária para teste: ${novaSenha}`
+    setMensagem(
+      'A tela de recuperação de senha ainda não foi configurada.'
     );
   };
 
-  const nomeExibicao = usuarioEncontrado
-    ? formatarNomeExibicao(
-        usuarioEncontrado.postGrad,
-        usuarioEncontrado.nome
-      )
-    : '';
-
-  const mensagemEhSucesso = mensagem.includes('liberado');
+  const mensagemEhSucesso =
+    mensagem === 'Acesso liberado.';
 
   return (
     <main className="login-page">
@@ -530,13 +226,6 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
             <p>Conferência de Material Patrimonial</p>
           </div>
 
-          {usuarioEncontrado && (
-            <div className="boas-vindas">
-              <strong>Seja bem-vindo, {nomeExibicao}</strong>
-              <span>Unidade: {usuarioEncontrado.unidade}</span>
-            </div>
-          )}
-
           <div className="form-area">
             <label className="input-box">
               <FaUser className="input-icon" />
@@ -546,61 +235,89 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
                 placeholder="Matrícula"
                 value={matricula}
                 onChange={handleMatriculaChange}
-                onBlur={verificarMatricula}
                 inputMode="numeric"
                 maxLength={9}
+                autoComplete="username"
+                disabled={carregando}
               />
             </label>
 
-            {usuarioEncontrado && (
-              <div className="senha-login-area">
-                <label className="input-box input-box-senha">
-                  <FaLock className="input-icon" />
+            <div className="senha-login-area">
+              <label className="input-box input-box-senha">
+                <FaLock className="input-icon" />
 
-                  <input
-                    type={mostrarSenha ? 'text' : 'password'}
-                    placeholder="Senha"
-                    value={senha}
-                    onChange={(event) => {
-                      setSenha(event.target.value);
-                      setMensagem('');
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        entrar();
-                      }
-                    }}
-                  />
-
-                  <button
-                    type="button"
-                    className="eye-button"
-                    onClick={() => setMostrarSenha((valorAtual) => !valorAtual)}
-                    aria-label="Mostrar ou ocultar senha"
-                  >
-                    {mostrarSenha ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </label>
+                <input
+                  type={
+                    mostrarSenha
+                      ? 'text'
+                      : 'password'
+                  }
+                  placeholder="Senha"
+                  value={senha}
+                  onChange={(event) => {
+                    setSenha(event.target.value);
+                    setMensagem('');
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === 'Enter' &&
+                      !carregando
+                    ) {
+                      entrar();
+                    }
+                  }}
+                  autoComplete="current-password"
+                  disabled={carregando}
+                />
 
                 <button
                   type="button"
-                  className="esqueci-senha-button"
-                  onClick={abrirModalRecuperacaoSenha}
+                  className="eye-button"
+                  onClick={() =>
+                    setMostrarSenha(
+                      (valorAtual) => !valorAtual
+                    )
+                  }
+                  aria-label={
+                    mostrarSenha
+                      ? 'Ocultar senha'
+                      : 'Mostrar senha'
+                  }
+                  disabled={carregando}
                 >
-                  <FaKey />
-                  <span>Esqueci minha senha?</span>
+                  {mostrarSenha ? (
+                    <FaEyeSlash />
+                  ) : (
+                    <FaEye />
+                  )}
                 </button>
-              </div>
-            )}
+              </label>
+
+              <button
+                type="button"
+                className="esqueci-senha-button"
+                onClick={abrirRecuperacaoSenha}
+                disabled={carregando}
+              >
+                <FaKey />
+
+                <span>Esqueci minha senha?</span>
+              </button>
+            </div>
 
             <button
               type="button"
               className="entrar-button"
               onClick={entrar}
+              disabled={carregando}
             >
               <FaSignInAlt />
 
-              <span>{usuarioEncontrado ? 'Entrar' : 'Continuar'}</span>
+              <span>
+                {carregando
+                  ? 'Entrando...'
+                  : 'Entrar'}
+              </span>
             </button>
 
             <div className="cadastro-login-area">
@@ -614,6 +331,7 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
                 type="button"
                 className="solicitar-acesso-button"
                 onClick={abrirSolicitacaoAcesso}
+                disabled={carregando}
               >
                 <FaUserPlus />
 
@@ -634,85 +352,15 @@ function Login({ onLoginSuccess, onSolicitarAcesso }) {
             )}
 
             <p className="texto-apoio">
-              Informe sua matrícula e senha para acessar. Caso ainda não tenha cadastro,
-              toque em Cadastre-se e aguarde a liberação do administrador.
+              Informe sua matrícula e senha para acessar.
+              Caso ainda não tenha cadastro, toque em
+              Cadastre-se e aguarde a liberação do
+              administrador.
             </p>
           </div>
         </div>
 
         <div className="decor-bottom"></div>
-
-        {modalSenhaAberto && (
-          <div className="recuperar-senha-overlay">
-            <div className="recuperar-senha-modal">
-              <button
-                type="button"
-                className="recuperar-senha-fechar"
-                onClick={fecharModalRecuperacaoSenha}
-                aria-label="Fechar recuperação de senha"
-              >
-                <FaTimes />
-              </button>
-
-              <div className="recuperar-senha-icon">
-                <FaKey />
-              </div>
-
-              <h2>Esqueci minha senha</h2>
-
-              <p>
-                Informe o e-mail cadastrado no sistema para receber uma nova
-                senha de acesso.
-              </p>
-
-              <label className="input-box recuperar-senha-input">
-                <FaEnvelope className="input-icon" />
-
-                <input
-                  type="email"
-                  placeholder="E-mail cadastrado"
-                  value={emailRecuperacao}
-                  onChange={(event) => {
-                    setEmailRecuperacao(event.target.value);
-                    setMensagemRecuperacao('');
-                    setRecuperacaoSucesso(false);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      enviarNovaSenha();
-                    }
-                  }}
-                />
-              </label>
-
-              <button
-                type="button"
-                className="recuperar-senha-enviar"
-                onClick={enviarNovaSenha}
-              >
-                <FaEnvelope />
-                <span>Enviar nova senha</span>
-              </button>
-
-              {mensagemRecuperacao && (
-                <span
-                  className={
-                    recuperacaoSucesso
-                      ? 'recuperar-senha-mensagem sucesso'
-                      : 'recuperar-senha-mensagem erro'
-                  }
-                >
-                  {mensagemRecuperacao}
-                </span>
-              )}
-
-              <small>
-                Ambiente de teste: a senha temporária será exibida na tela. No backend,
-                ela será enviada automaticamente para o e-mail cadastrado.
-              </small>
-            </div>
-          </div>
-        )}
       </section>
     </main>
   );

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ import java.util.Objects;
 public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     @Override
@@ -66,6 +68,10 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         Usuario usuarioLogado = getUsuarioLogado();
 
+        validarSenhaCadastro(
+                usuarioAdminRequestDTO.senha()
+        );
+
         validarMatriculaEmailDuplicados(
                 usuarioAdminRequestDTO.matricula(),
                 usuarioAdminRequestDTO.email()
@@ -76,10 +82,13 @@ public class UsuarioServiceImpl implements UsuarioService {
                 usuarioAdminRequestDTO
         );
 
-        Integer nivel = usuarioAdminRequestDTO.nivel();
-        String statusAcesso = normalizarStatus(
-                usuarioAdminRequestDTO.statusAcesso()
-        );
+        Integer nivel =
+                usuarioAdminRequestDTO.nivel();
+
+        String statusAcesso =
+                normalizarStatus(
+                        usuarioAdminRequestDTO.statusAcesso()
+                );
 
         validarNivel(nivel);
         validarStatus(statusAcesso);
@@ -92,23 +101,53 @@ public class UsuarioServiceImpl implements UsuarioService {
         );
 
         usuario.setNivel(nivel);
-        usuario.setStatusAcesso(statusAcesso);
-        usuario.setAtivo(definirAtivoPorStatus(statusAcesso));
-        usuario.setDataSolicitacao(LocalDateTime.now());
 
-        if (StatusAcessoUsuario.LIBERADO.name().equals(statusAcesso)) {
-            usuario.setDataLiberacao(LocalDateTime.now());
-            usuario.setLiberadoPor(usuarioLogado.getId());
+        usuario.setStatusAcesso(
+                statusAcesso
+        );
+
+        usuario.setAtivo(
+                definirAtivoPorStatus(
+                        statusAcesso
+                )
+        );
+
+        usuario.setDataSolicitacao(
+                LocalDateTime.now()
+        );
+
+        if (
+                StatusAcessoUsuario.LIBERADO
+                        .name()
+                        .equals(statusAcesso)
+        ) {
+
+            usuario.setDataLiberacao(
+                    LocalDateTime.now()
+            );
+
+            usuario.setLiberadoPor(
+                    usuarioLogado.getId()
+            );
+
         } else {
+
             usuario.setDataLiberacao(null);
             usuario.setLiberadoPor(null);
         }
 
-        usuario.setDataCadastro(LocalDate.now());
-        usuario.setDataModificacao(LocalDateTime.now());
+        usuario.setDataCadastro(
+                LocalDate.now()
+        );
+
+        usuario.setDataModificacao(
+                LocalDateTime.now()
+        );
+
         usuario.setUserModificador(null);
 
-        Usuario usuarioSalvo = usuarioRepository.save(usuario);
+        Usuario usuarioSalvo =
+                usuarioRepository.save(usuario);
 
         return toResponse(usuarioSalvo);
     }
@@ -381,19 +420,68 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
+    private void validarSenhaCadastro(
+            String senha
+    ) {
+
+        String senhaTratada =
+                limparTexto(senha);
+
+        if (senhaTratada == null) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A senha é obrigatória."
+            );
+        }
+
+        if (senhaTratada.length() < 4) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A senha deve ter no mínimo 4 caracteres."
+            );
+        }
+    }
+
     private void preencherDadosSolicitacao(
             Usuario usuario,
             UsuarioRequestDTO dto
     ) {
 
-        usuario.setMatricula(limparTexto(dto.matricula()));
-        usuario.setNome(limparTexto(dto.nome()));
-        usuario.setSenha(limparTexto(dto.senha()));
-        usuario.setEmail(limparTexto(dto.email()));
-        usuario.setPostGrad(limparTexto(dto.postGrad()));
-        usuario.setSetor(limparTexto(dto.setor()));
-        usuario.setNomeCompleto(limparTexto(dto.nomeCompleto()));
-        usuario.setUnidade(limparTexto(dto.unidade()));
+        usuario.setMatricula(
+                limparTexto(dto.matricula())
+        );
+
+        usuario.setNome(
+                limparTexto(dto.nome())
+        );
+
+        usuario.setSenha(
+                passwordEncoder.encode(
+                        dto.senha().trim()
+                )
+        );
+
+        usuario.setEmail(
+                limparTexto(dto.email())
+        );
+
+        usuario.setPostGrad(
+                limparTexto(dto.postGrad())
+        );
+
+        usuario.setSetor(
+                limparTexto(dto.setor())
+        );
+
+        usuario.setNomeCompleto(
+                limparTexto(dto.nomeCompleto())
+        );
+
+        usuario.setUnidade(
+                limparTexto(dto.unidade())
+        );
     }
 
     private void preencherDadosAdministrativos(
@@ -401,14 +489,45 @@ public class UsuarioServiceImpl implements UsuarioService {
             UsuarioAdminRequestDTO dto
     ) {
 
-        usuario.setMatricula(limparTexto(dto.matricula()));
-        usuario.setNome(limparTexto(dto.nome()));
-        usuario.setSenha(limparTexto(dto.senha()));
-        usuario.setEmail(limparTexto(dto.email()));
-        usuario.setPostGrad(limparTexto(dto.postGrad()));
-        usuario.setSetor(limparTexto(dto.setor()));
-        usuario.setNomeCompleto(limparTexto(dto.nomeCompleto()));
-        usuario.setUnidade(limparTexto(dto.unidade()));
+        usuario.setMatricula(
+                limparTexto(dto.matricula())
+        );
+
+        usuario.setNome(
+                limparTexto(dto.nome())
+        );
+
+        String senhaTratada =
+                limparTexto(dto.senha());
+
+        if (senhaTratada != null) {
+
+            usuario.setSenha(
+                    passwordEncoder.encode(
+                            senhaTratada
+                    )
+            );
+        }
+
+        usuario.setEmail(
+                limparTexto(dto.email())
+        );
+
+        usuario.setPostGrad(
+                limparTexto(dto.postGrad())
+        );
+
+        usuario.setSetor(
+                limparTexto(dto.setor())
+        );
+
+        usuario.setNomeCompleto(
+                limparTexto(dto.nomeCompleto())
+        );
+
+        usuario.setUnidade(
+                limparTexto(dto.unidade())
+        );
     }
 
     private Usuario getUsuarioLogado() {

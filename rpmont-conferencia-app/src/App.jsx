@@ -13,6 +13,7 @@ import RelatorioFenoRacao from './pages/RelatorioFenoRacao';
 import ExtravioFenoRacao from './pages/ExtravioFenoRacao';
 import TransferenciaFenoRacao from './pages/TransferenciaFenoRacao';
 import SolicitarAcesso from './pages/SolicitarAcesso';
+import RecuperarSenha from './pages/RecuperarSenha';
 
 import { materiaisMock } from './data/materiais';
 
@@ -28,23 +29,62 @@ const NIVEIS_USUARIO = {
 
 function App() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
-  const [configuracaoConferencia, setConfiguracaoConferencia] = useState(null);
+
+  const [
+    configuracaoConferencia,
+    setConfiguracaoConferencia,
+  ] = useState(null);
+
   const [materiais, setMateriais] = useState(materiaisMock);
 
   const [abrirConsulta, setAbrirConsulta] = useState(false);
   const [abrirAdmin, setAbrirAdmin] = useState(false);
-  const [abrirCadastroAlimentacao, setAbrirCadastroAlimentacao] =
-    useState(false);
-  const [abrirSaidaFenoRacao, setAbrirSaidaFenoRacao] = useState(false);
-  const [abrirExtravioFenoRacao, setAbrirExtravioFenoRacao] = useState(false);
-  const [abrirRelatorioFenoRacao, setAbrirRelatorioFenoRacao] = useState(false);
-  const [abrirTransferenciaFenoRacao, setAbrirTransferenciaFenoRacao] =
-    useState(false);
-  const [abrirModalFenoRacao, setAbrirModalFenoRacao] = useState(false);
 
-  const [cadastroPendente, setCadastroPendente] = useState(null);
-  const [materialEmEdicao, setMaterialEmEdicao] = useState(null);
-  const [abrirSolicitarAcesso, setAbrirSolicitarAcesso] = useState(false);
+  const [
+    abrirCadastroAlimentacao,
+    setAbrirCadastroAlimentacao,
+  ] = useState(false);
+
+  const [
+    abrirSaidaFenoRacao,
+    setAbrirSaidaFenoRacao,
+  ] = useState(false);
+
+  const [
+    abrirExtravioFenoRacao,
+    setAbrirExtravioFenoRacao,
+  ] = useState(false);
+
+  const [
+    abrirRelatorioFenoRacao,
+    setAbrirRelatorioFenoRacao,
+  ] = useState(false);
+
+  const [
+    abrirTransferenciaFenoRacao,
+    setAbrirTransferenciaFenoRacao,
+  ] = useState(false);
+
+  const [
+    abrirModalFenoRacao,
+    setAbrirModalFenoRacao,
+  ] = useState(false);
+
+  const [cadastroPendente, setCadastroPendente] =
+    useState(null);
+
+  const [materialEmEdicao, setMaterialEmEdicao] =
+    useState(null);
+
+  const [
+    abrirSolicitarAcesso,
+    setAbrirSolicitarAcesso,
+  ] = useState(false);
+
+  const [
+    abrirRecuperarSenha,
+    setAbrirRecuperarSenha,
+  ] = useState(false);
 
   const limparNumeros = (valor) => {
     return String(valor || '').replace(/\D/g, '');
@@ -72,15 +112,26 @@ function App() {
   };
 
   const obterSetorUsuario = (usuario) => {
-    return obterValorNormalizado(usuario?.setor ?? usuario?.SETOR ?? '');
+    return obterValorNormalizado(
+      usuario?.setor ??
+        usuario?.SETOR ??
+        ''
+    );
   };
 
   const obterUnidadeUsuario = (usuario) => {
-    return obterValorNormalizado(usuario?.unidade ?? usuario?.UNIDADE ?? '');
+    return obterValorNormalizado(
+      usuario?.unidade ??
+        usuario?.UNIDADE ??
+        ''
+    );
   };
 
   const usuarioEhAdminMaster = (usuario) => {
-    return obterNivelUsuario(usuario) === NIVEIS_USUARIO.ADMIN_MASTER;
+    return (
+      obterNivelUsuario(usuario) ===
+      NIVEIS_USUARIO.ADMIN_MASTER
+    );
   };
 
   const usuarioEhAdmin = (usuario) => {
@@ -111,24 +162,38 @@ function App() {
   };
 
   const usuarioPodeAcessarFenoRacao = (usuario) => {
-    if (!usuarioEhUnidadeEquina(usuario)) return false;
+    if (!usuarioEhUnidadeEquina(usuario)) {
+      return false;
+    }
 
-    return usuarioEhAdmin(usuario) || usuarioEhBaia(usuario);
+    return (
+      usuarioEhAdmin(usuario) ||
+      usuarioEhBaia(usuario)
+    );
   };
 
-  const usuarioPodeAdministrarFenoRacao = (usuario) => {
-    return usuarioEhUnidadeEquina(usuario) && usuarioEhAdmin(usuario);
+  const usuarioPodeAdministrarFenoRacao = (
+    usuario
+  ) => {
+    return (
+      usuarioEhUnidadeEquina(usuario) &&
+      usuarioEhAdmin(usuario)
+    );
   };
 
   const normalizarUsuarioLogado = (usuario) => {
     const matriculaLimpa = limparNumeros(
-      usuario?.matricula ?? usuario?.MATRICULA
+      usuario?.matricula ??
+        usuario?.MATRICULA
     );
 
-    const usuarioWillamesTeste = matriculaLimpa === '5257093';
+    const usuarioWillamesTeste =
+      matriculaLimpa === '5257093';
 
     const nivelRecebido = Number(
-      usuario?.nivel ?? usuario?.NIVEL ?? NIVEIS_USUARIO.USUARIO_COMUM
+      usuario?.nivel ??
+        usuario?.NIVEL ??
+        NIVEIS_USUARIO.USUARIO_COMUM
     );
 
     const nivelFinal = usuarioWillamesTeste
@@ -148,25 +213,64 @@ function App() {
     const usuarioNormalizado = {
       ...usuario,
 
-      id: usuario?.id ?? usuario?.ID,
-      ID: usuario?.ID ?? usuario?.id,
+      id:
+        usuario?.id ??
+        usuario?.ID,
 
-      matricula: usuario?.matricula ?? usuario?.MATRICULA ?? '',
-      MATRICULA: usuario?.MATRICULA ?? usuario?.matricula ?? '',
+      ID:
+        usuario?.ID ??
+        usuario?.id,
 
-      nome: usuario?.nome ?? usuario?.NOME ?? '',
-      NOME: usuario?.NOME ?? usuario?.nome ?? '',
+      matricula:
+        usuario?.matricula ??
+        usuario?.MATRICULA ??
+        '',
 
-      nomeCompleto: usuario?.nomeCompleto ?? usuario?.NOMECOMPLETO ?? '',
-      NOMECOMPLETO: usuario?.NOMECOMPLETO ?? usuario?.nomeCompleto ?? '',
+      MATRICULA:
+        usuario?.MATRICULA ??
+        usuario?.matricula ??
+        '',
 
-      postGrad: usuario?.postGrad ?? usuario?.POSTGRAD ?? '',
-      POSTGRAD: usuario?.POSTGRAD ?? usuario?.postGrad ?? '',
+      nome:
+        usuario?.nome ??
+        usuario?.NOME ??
+        '',
+
+      NOME:
+        usuario?.NOME ??
+        usuario?.nome ??
+        '',
+
+      nomeCompleto:
+        usuario?.nomeCompleto ??
+        usuario?.NOMECOMPLETO ??
+        '',
+
+      NOMECOMPLETO:
+        usuario?.NOMECOMPLETO ??
+        usuario?.nomeCompleto ??
+        '',
+
+      postGrad:
+        usuario?.postGrad ??
+        usuario?.POSTGRAD ??
+        '',
+
+      POSTGRAD:
+        usuario?.POSTGRAD ??
+        usuario?.postGrad ??
+        '',
 
       nomeExibicao:
         usuario?.nomeExibicao ??
-        `${usuario?.postGrad ?? usuario?.POSTGRAD ?? ''} ${
-          usuario?.nome ?? usuario?.NOME ?? ''
+        `${
+          usuario?.postGrad ??
+          usuario?.POSTGRAD ??
+          ''
+        } ${
+          usuario?.nome ??
+          usuario?.NOME ??
+          ''
         }`.trim(),
 
       unidade: unidadeFinal,
@@ -178,28 +282,83 @@ function App() {
       nivel: nivelFinal,
       NIVEL: nivelFinal,
 
-      email: usuario?.email ?? usuario?.EMAIL ?? '',
-      EMAIL: usuario?.EMAIL ?? usuario?.email ?? '',
+      email:
+        usuario?.email ??
+        usuario?.EMAIL ??
+        '',
 
-      digital: usuario?.digital ?? usuario?.DIGITAL ?? null,
-      DIGITAL: usuario?.DIGITAL ?? usuario?.digital ?? null,
+      EMAIL:
+        usuario?.EMAIL ??
+        usuario?.email ??
+        '',
+
+      digital:
+        usuario?.digital ??
+        usuario?.DIGITAL ??
+        null,
+
+      DIGITAL:
+        usuario?.DIGITAL ??
+        usuario?.digital ??
+        null,
 
       statusAcesso:
-        usuario?.statusAcesso ?? usuario?.STATUSACESSO ?? 'LIBERADO',
-      STATUSACESSO:
-        usuario?.STATUSACESSO ?? usuario?.statusAcesso ?? 'LIBERADO',
+        usuario?.statusAcesso ??
+        usuario?.STATUSACESSO ??
+        'LIBERADO',
 
-      ativo: Number(usuario?.ativo ?? usuario?.ATIVO ?? 1),
-      ATIVO: Number(usuario?.ATIVO ?? usuario?.ativo ?? 1),
+      STATUSACESSO:
+        usuario?.STATUSACESSO ??
+        usuario?.statusAcesso ??
+        'LIBERADO',
+
+      ativo: Number(
+        usuario?.ativo ??
+          usuario?.ATIVO ??
+          1
+      ),
+
+      ATIVO: Number(
+        usuario?.ATIVO ??
+          usuario?.ativo ??
+          1
+      ),
     };
 
-    console.log('USUÁRIO LOGADO NORMALIZADO:', usuarioNormalizado);
-    console.log('É ADMIN MASTER?', usuarioEhAdminMaster(usuarioNormalizado));
-    console.log('É ADMIN?', usuarioEhAdmin(usuarioNormalizado));
-    console.log('É P4?', usuarioEhP4(usuarioNormalizado));
-    console.log('UNIDADE:', usuarioNormalizado.unidade);
-    console.log('SETOR:', usuarioNormalizado.setor);
-    console.log('NÍVEL:', usuarioNormalizado.nivel);
+    console.log(
+      'USUÁRIO LOGADO NORMALIZADO:',
+      usuarioNormalizado
+    );
+
+    console.log(
+      'É ADMIN MASTER?',
+      usuarioEhAdminMaster(usuarioNormalizado)
+    );
+
+    console.log(
+      'É ADMIN?',
+      usuarioEhAdmin(usuarioNormalizado)
+    );
+
+    console.log(
+      'É P4?',
+      usuarioEhP4(usuarioNormalizado)
+    );
+
+    console.log(
+      'UNIDADE:',
+      usuarioNormalizado.unidade
+    );
+
+    console.log(
+      'SETOR:',
+      usuarioNormalizado.setor
+    );
+
+    console.log(
+      'NÍVEL:',
+      usuarioNormalizado.nivel
+    );
 
     return usuarioNormalizado;
   };
@@ -219,7 +378,11 @@ function App() {
   };
 
   const sairDoSistema = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuarioLogado');
+
     setUsuarioLogado(null);
+
     fecharTelasSecundarias();
   };
 
@@ -228,16 +391,19 @@ function App() {
       window.alert(
         'Acesso negado. Somente usuários do setor P4 podem zerar a conferência patrimonial.'
       );
+
       return;
     }
 
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
-        material.unidade === usuario.unidade && material.situacao !== 'INATIVO'
+        material.unidade === usuario.unidade &&
+        material.situacao !== 'INATIVO'
           ? {
               ...material,
               Conferido: 0,
-              dataModificacao: new Date().toISOString(),
+              dataModificacao:
+                new Date().toISOString(),
               userModificador: usuario.id,
             }
           : material
@@ -245,17 +411,28 @@ function App() {
     );
   };
 
-  const salvarMaterialCadastrado = (dadosNovoMaterial) => {
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+  const salvarMaterialCadastrado = (
+    dadosNovoMaterial
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. Somente usuários do setor P4 podem cadastrar material patrimonial.'
       );
+
       return;
     }
 
     const novoId =
       materiais.length > 0
-        ? Math.max(...materiais.map((material) => material.ID)) + 1
+        ? Math.max(
+            ...materiais.map(
+              (material) => material.ID
+            )
+          ) + 1
         : 1;
 
     const materialCompleto = {
@@ -264,33 +441,52 @@ function App() {
       ...dadosNovoMaterial,
     };
 
-    setMateriais((materiaisAtuais) => [...materiaisAtuais, materialCompleto]);
+    setMateriais((materiaisAtuais) => [
+      ...materiaisAtuais,
+      materialCompleto,
+    ]);
 
     setCadastroPendente(null);
   };
 
-  const salvarMaterialEditado = (materialAtualizado) => {
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+  const salvarMaterialEditado = (
+    materialAtualizado
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. Somente usuários do setor P4 podem editar material patrimonial.'
       );
+
       return;
     }
 
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
-        material.ID === materialAtualizado.ID ? materialAtualizado : material
+        material.ID === materialAtualizado.ID
+          ? materialAtualizado
+          : material
       )
     );
 
     setMaterialEmEdicao(null);
   };
 
-  const excluirMaterial = (materialParaExcluir) => {
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+  const excluirMaterial = (
+    materialParaExcluir
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. Somente usuários do setor P4 podem inativar material patrimonial.'
       );
+
       return;
     }
 
@@ -299,9 +495,16 @@ function App() {
         material.ID === materialParaExcluir.ID
           ? {
               ...material,
+
               situacao: 'INATIVO',
-              dataModificacao: new Date().toISOString(),
-              userModificador: usuarioLogado?.id || usuarioLogado?.ID || 1,
+
+              dataModificacao:
+                new Date().toISOString(),
+
+              userModificador:
+                usuarioLogado?.id ||
+                usuarioLogado?.ID ||
+                1,
             }
           : material
       )
@@ -311,10 +514,15 @@ function App() {
   };
 
   const abrirTelaCadastroManual = () => {
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. O cadastro de material patrimonial é permitido somente para usuários do setor P4.'
       );
+
       return;
     }
 
@@ -326,11 +534,18 @@ function App() {
     });
   };
 
-  const abrirTelaCadastroConferencia = (codigo) => {
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+  const abrirTelaCadastroConferencia = (
+    codigo
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. O cadastro de material patrimonial é permitido somente para usuários do setor P4.'
       );
+
       return;
     }
 
@@ -340,35 +555,54 @@ function App() {
     });
   };
 
-  const iniciarConferenciaComPermissao = (configuracao) => {
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+  const iniciarConferenciaComPermissao = (
+    configuracao
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
       );
+
       return;
     }
 
     fecharTelasSecundarias();
+
     setConfiguracaoConferencia(configuracao);
   };
 
   const abrirConsultaComPermissao = () => {
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. A consulta patrimonial é permitida somente para usuários do setor P4.'
       );
+
       return;
     }
 
     fecharTelasSecundarias();
+
     setAbrirConsulta(true);
   };
 
   const abrirModuloFenoRacao = () => {
     fecharTelasSecundarias();
 
-    if (usuarioPodeAcessarFenoRacao(usuarioLogado)) {
+    if (
+      usuarioPodeAcessarFenoRacao(
+        usuarioLogado
+      )
+    ) {
       setAbrirModalFenoRacao(true);
+
       return;
     }
 
@@ -378,62 +612,92 @@ function App() {
   };
 
   const abrirTelaCadastroAlimentacao = () => {
-    if (!usuarioPodeAdministrarFenoRacao(usuarioLogado)) {
+    if (
+      !usuarioPodeAdministrarFenoRacao(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. Somente administrador do RPMont ou 3º EPMont pode cadastrar entrada de Feno e Ração.'
       );
+
       return;
     }
 
     fecharTelasSecundarias();
+
     setAbrirCadastroAlimentacao(true);
   };
 
   const abrirTelaSaidaFenoRacao = () => {
-    if (!usuarioPodeAcessarFenoRacao(usuarioLogado)) {
+    if (
+      !usuarioPodeAcessarFenoRacao(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Você não tem permissão para acessar Saída de Feno e Ração.'
       );
+
       return;
     }
 
     fecharTelasSecundarias();
+
     setAbrirSaidaFenoRacao(true);
   };
 
   const abrirTelaExtravioFenoRacao = () => {
-    if (!usuarioPodeAcessarFenoRacao(usuarioLogado)) {
+    if (
+      !usuarioPodeAcessarFenoRacao(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Você não tem permissão para acessar Extravio de Feno e Ração.'
       );
+
       return;
     }
 
     fecharTelasSecundarias();
+
     setAbrirExtravioFenoRacao(true);
   };
 
   const abrirTelaRelatorioFenoRacao = () => {
-    if (!usuarioPodeAdministrarFenoRacao(usuarioLogado)) {
+    if (
+      !usuarioPodeAdministrarFenoRacao(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. Somente administrador do RPMont ou 3º EPMont pode acessar o relatório de Feno e Ração.'
       );
+
       return;
     }
 
     fecharTelasSecundarias();
+
     setAbrirRelatorioFenoRacao(true);
   };
 
   const abrirTelaTransferenciaFenoRacao = () => {
-    if (!usuarioPodeAdministrarFenoRacao(usuarioLogado)) {
+    if (
+      !usuarioPodeAdministrarFenoRacao(
+        usuarioLogado
+      )
+    ) {
       window.alert(
         'Acesso negado. Somente administrador do RPMont ou 3º EPMont pode acessar Transferência de Feno e Ração.'
       );
+
       return;
     }
 
     fecharTelasSecundarias();
+
     setAbrirTransferenciaFenoRacao(true);
   };
 
@@ -457,10 +721,11 @@ function App() {
     setConfiguracaoConferencia(null);
   };
 
-  const voltarDaTransferenciaFenoRacao = () => {
-    setAbrirTransferenciaFenoRacao(false);
-    setConfiguracaoConferencia(null);
-  };
+  const voltarDaTransferenciaFenoRacao =
+    () => {
+      setAbrirTransferenciaFenoRacao(false);
+      setConfiguracaoConferencia(null);
+    };
 
   const voltarDaConsulta = () => {
     setAbrirConsulta(false);
@@ -474,20 +739,63 @@ function App() {
     setConfiguracaoConferencia(null);
   };
 
-  if (abrirSolicitarAcesso) {
+  /*
+   * ============================================
+   * RECUPERAÇÃO DE SENHA
+   * ============================================
+   */
+
+  if (abrirRecuperarSenha) {
     return (
-      <SolicitarAcesso onVoltar={() => setAbrirSolicitarAcesso(false)} />
+      <RecuperarSenha
+        onVoltar={() =>
+          setAbrirRecuperarSenha(false)
+        }
+      />
     );
   }
+
+  /*
+   * ============================================
+   * SOLICITAÇÃO DE ACESSO
+   * ============================================
+   */
+
+  if (abrirSolicitarAcesso) {
+    return (
+      <SolicitarAcesso
+        onVoltar={() =>
+          setAbrirSolicitarAcesso(false)
+        }
+      />
+    );
+  }
+
+  /*
+   * ============================================
+   * LOGIN
+   * ============================================
+   */
 
   if (!usuarioLogado) {
     return (
       <Login
         onLoginSuccess={(usuario) => {
-          const usuarioNormalizado = normalizarUsuarioLogado(usuario);
-          setUsuarioLogado(usuarioNormalizado);
+          const usuarioNormalizado =
+            normalizarUsuarioLogado(usuario);
+
+          setUsuarioLogado(
+            usuarioNormalizado
+          );
         }}
-        onSolicitarAcesso={() => setAbrirSolicitarAcesso(true)}
+        onSolicitarAcesso={() => {
+          setAbrirRecuperarSenha(false);
+          setAbrirSolicitarAcesso(true);
+        }}
+        onRecuperarSenha={() => {
+          setAbrirSolicitarAcesso(false);
+          setAbrirRecuperarSenha(true);
+        }}
       />
     );
   }
@@ -496,7 +804,9 @@ function App() {
     return (
       <TransferenciaFenoRacao
         usuario={usuarioLogado}
-        onVoltar={voltarDaTransferenciaFenoRacao}
+        onVoltar={
+          voltarDaTransferenciaFenoRacao
+        }
       />
     );
   }
@@ -505,7 +815,9 @@ function App() {
     return (
       <RelatorioFenoRacao
         usuario={usuarioLogado}
-        onVoltar={voltarDoRelatorioFenoRacao}
+        onVoltar={
+          voltarDoRelatorioFenoRacao
+        }
       />
     );
   }
@@ -514,7 +826,9 @@ function App() {
     return (
       <ExtravioFenoRacao
         usuario={usuarioLogado}
-        onVoltar={voltarDoExtravioFenoRacao}
+        onVoltar={
+          voltarDoExtravioFenoRacao
+        }
       />
     );
   }
@@ -523,7 +837,9 @@ function App() {
     return (
       <SaidaFenoRacao
         usuario={usuarioLogado}
-        onVoltar={voltarDaSaidaFenoRacao}
+        onVoltar={
+          voltarDaSaidaFenoRacao
+        }
       />
     );
   }
@@ -532,7 +848,9 @@ function App() {
     return (
       <CadastroFenoRacao
         usuario={usuarioLogado}
-        onVoltar={voltarDoCadastroAlimentacao}
+        onVoltar={
+          voltarDoCadastroAlimentacao
+        }
       />
     );
   }
@@ -544,7 +862,9 @@ function App() {
         usuario={usuarioLogado}
         onSalvar={salvarMaterialEditado}
         onInativar={excluirMaterial}
-        onCancelar={() => setMaterialEmEdicao(null)}
+        onCancelar={() =>
+          setMaterialEmEdicao(null)
+        }
       />
     );
   }
@@ -553,17 +873,26 @@ function App() {
     return (
       <CadastroMaterial
         usuario={usuarioLogado}
-        configuracao={configuracaoConferencia}
+        configuracao={
+          configuracaoConferencia
+        }
         codigo={cadastroPendente.codigo}
         modo={cadastroPendente.modo}
         onSalvar={salvarMaterialCadastrado}
-        onCancelar={() => setCadastroPendente(null)}
+        onCancelar={() =>
+          setCadastroPendente(null)
+        }
       />
     );
   }
 
   if (abrirAdmin) {
-    return <AdminPainel usuario={usuarioLogado} onVoltar={voltarDoAdmin} />;
+    return (
+      <AdminPainel
+        usuario={usuarioLogado}
+        onVoltar={voltarDoAdmin}
+      />
+    );
   }
 
   if (abrirConsulta) {
@@ -582,31 +911,58 @@ function App() {
         <SelecionarConferencia
           usuario={usuarioLogado}
           onSair={sairDoSistema}
-          onIniciarConferencia={iniciarConferenciaComPermissao}
-          onZerarConferencia={zerarConferenciaDaUnidade}
-          onAbrirCadastroManual={abrirTelaCadastroManual}
-          onAbrirConsulta={abrirConsultaComPermissao}
-          onAbrirAdmin={() => setAbrirAdmin(true)}
-          onAbrirFenoRacao={abrirModuloFenoRacao}
-          onAbrirCadastroAlimentacao={abrirModuloFenoRacao}
-          onAbrirSaidaFenoRacao={abrirModuloFenoRacao}
+          onIniciarConferencia={
+            iniciarConferenciaComPermissao
+          }
+          onZerarConferencia={
+            zerarConferenciaDaUnidade
+          }
+          onAbrirCadastroManual={
+            abrirTelaCadastroManual
+          }
+          onAbrirConsulta={
+            abrirConsultaComPermissao
+          }
+          onAbrirAdmin={() =>
+            setAbrirAdmin(true)
+          }
+          onAbrirFenoRacao={
+            abrirModuloFenoRacao
+          }
+          onAbrirCadastroAlimentacao={
+            abrirModuloFenoRacao
+          }
+          onAbrirSaidaFenoRacao={
+            abrirModuloFenoRacao
+          }
         />
 
         {abrirModalFenoRacao && (
           <div className="modal-feno-racao-overlay">
             <div className="modal-feno-racao">
               <div className="modal-feno-racao-header">
-                <span>Alimentação equina</span>
+                <span>
+                  Alimentação equina
+                </span>
+
                 <h2>Feno e Ração</h2>
-                <p>Escolha uma opção para continuar.</p>
+
+                <p>
+                  Escolha uma opção para
+                  continuar.
+                </p>
               </div>
 
               <div className="modal-feno-racao-actions">
-                {usuarioPodeAdministrarFenoRacao(usuarioLogado) && (
+                {usuarioPodeAdministrarFenoRacao(
+                  usuarioLogado
+                ) && (
                   <button
                     type="button"
                     className="modal-feno-racao-btn modal-feno-racao-btn-cadastro"
-                    onClick={abrirTelaCadastroAlimentacao}
+                    onClick={
+                      abrirTelaCadastroAlimentacao
+                    }
                   >
                     Cadastrar Feno e Ração
                   </button>
@@ -615,7 +971,9 @@ function App() {
                 <button
                   type="button"
                   className="modal-feno-racao-btn modal-feno-racao-btn-saida"
-                  onClick={abrirTelaSaidaFenoRacao}
+                  onClick={
+                    abrirTelaSaidaFenoRacao
+                  }
                 >
                   Saída de Feno e Ração
                 </button>
@@ -623,17 +981,23 @@ function App() {
                 <button
                   type="button"
                   className="modal-feno-racao-btn modal-feno-racao-btn-extravio"
-                  onClick={abrirTelaExtravioFenoRacao}
+                  onClick={
+                    abrirTelaExtravioFenoRacao
+                  }
                 >
                   Extravio de Feno e Ração
                 </button>
 
-                {usuarioPodeAdministrarFenoRacao(usuarioLogado) && (
+                {usuarioPodeAdministrarFenoRacao(
+                  usuarioLogado
+                ) && (
                   <>
                     <button
                       type="button"
                       className="modal-feno-racao-btn modal-feno-racao-btn-relatorio"
-                      onClick={abrirTelaRelatorioFenoRacao}
+                      onClick={
+                        abrirTelaRelatorioFenoRacao
+                      }
                     >
                       Relatório de Feno e Ração
                     </button>
@@ -641,7 +1005,9 @@ function App() {
                     <button
                       type="button"
                       className="modal-feno-racao-btn modal-feno-racao-btn-transferencia"
-                      onClick={abrirTelaTransferenciaFenoRacao}
+                      onClick={
+                        abrirTelaTransferenciaFenoRacao
+                      }
                     >
                       Transferência de Feno e Ração
                     </button>
@@ -652,7 +1018,9 @@ function App() {
               <button
                 type="button"
                 className="modal-feno-racao-cancelar"
-                onClick={() => setAbrirModalFenoRacao(false)}
+                onClick={() =>
+                  setAbrirModalFenoRacao(false)
+                }
               >
                 Cancelar
               </button>
@@ -670,8 +1038,12 @@ function App() {
       materiais={materiais}
       setMateriais={setMateriais}
       onVoltar={voltarDaConferencia}
-      onAbrirCadastro={abrirTelaCadastroConferencia}
-      onEditarMaterial={setMaterialEmEdicao}
+      onAbrirCadastro={
+        abrirTelaCadastroConferencia
+      }
+      onEditarMaterial={
+        setMaterialEmEdicao
+      }
       onExcluirMaterial={excluirMaterial}
     />
   );

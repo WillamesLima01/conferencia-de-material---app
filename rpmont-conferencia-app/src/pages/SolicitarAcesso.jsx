@@ -13,22 +13,10 @@ import {
 } from 'react-icons/fa6';
 
 import '../styles/SolicitarAcesso.css';
+import { solicitarAcesso } from '../services/usuarioService';
 
-const STORAGE_KEY_USUARIOS = 'usuarios';
 const STORAGE_KEY_UNIDADES = 'unidades';
 const STORAGE_KEY_SETORES = 'setores';
-
-const NIVEIS_USUARIO = {
-  ADMIN_MASTER: 1,
-  ADMIN: 2,
-  USUARIO_COMUM: 3,
-};
-
-const STATUS_ACESSO = {
-  PENDENTE: 'PENDENTE',
-  LIBERADO: 'LIBERADO',
-  BLOQUEADO: 'BLOQUEADO',
-};
 
 const POSTOS_GRADUACOES = [
   'Cel',
@@ -46,22 +34,6 @@ const POSTOS_GRADUACOES = [
   'Sd',
 ];
 
-const gerarId = () => {
-  if (window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const dataHoje = () => {
-  return new Date().toISOString().slice(0, 10);
-};
-
-const dataHoraAtual = () => {
-  return new Date().toISOString();
-};
-
 const carregarStorage = (chave) => {
   const dadosSalvos = localStorage.getItem(chave);
 
@@ -74,10 +46,6 @@ const carregarStorage = (chave) => {
   } catch {
     return [];
   }
-};
-
-const salvarStorage = (chave, dados) => {
-  localStorage.setItem(chave, JSON.stringify(dados));
 };
 
 const formatarMatricula = (valor) => {
@@ -104,7 +72,9 @@ const normalizarMatricula = (valor) => {
 };
 
 const emailValido = (valor) => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(valor || '').trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    String(valor || '').trim()
+  );
 };
 
 const normalizarTexto = (valor) => {
@@ -157,7 +127,7 @@ function SolicitarAcesso({ onVoltar }) {
 
   const [mensagem, setMensagem] = useState('');
   const [solicitacaoEnviada, setSolicitacaoEnviada] = useState(false);
-  const [matriculaBloqueada, setMatriculaBloqueada] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   const unidadesCadastradas = useMemo(() => {
     const unidades = carregarStorage(STORAGE_KEY_UNIDADES);
@@ -227,7 +197,6 @@ function SolicitarAcesso({ onVoltar }) {
     setConfirmarSenha('');
     setMostrarSenha(false);
     setMostrarConfirmarSenha(false);
-    setMatriculaBloqueada(false);
   };
 
   const mostrarMensagem = (texto) => {
@@ -236,57 +205,6 @@ function SolicitarAcesso({ onVoltar }) {
     window.setTimeout(() => {
       setMensagem('');
     }, 4000);
-  };
-
-  const matriculaJaExiste = (usuarios, matriculaTratada) => {
-    const matriculaNovaNormalizada = normalizarMatricula(matriculaTratada);
-
-    return usuarios.some((usuario) => {
-      const matriculaUsuario = usuario.MATRICULA || usuario.matricula || '';
-
-      return normalizarMatricula(matriculaUsuario) === matriculaNovaNormalizada;
-    });
-  };
-
-  const emailJaExiste = (usuarios, emailTratado) => {
-    if (!emailTratado) return false;
-
-    return usuarios.some((usuario) => {
-      const emailUsuario = String(usuario.EMAIL || usuario.email || '')
-        .trim()
-        .toLowerCase();
-
-      return emailUsuario && emailUsuario === emailTratado.toLowerCase();
-    });
-  };
-
-  const verificarMatriculaCadastrada = (valorMatricula) => {
-    const matriculaTratada = formatarMatricula(valorMatricula);
-    const matriculaNormalizada = normalizarMatricula(matriculaTratada);
-
-    if (!matriculaNormalizada) {
-      setMatriculaBloqueada(false);
-      setMensagem('');
-      return;
-    }
-
-    if (matriculaNormalizada.length < 7) {
-      setMatriculaBloqueada(false);
-      setMensagem('');
-      return;
-    }
-
-    const usuariosCadastrados = carregarStorage(STORAGE_KEY_USUARIOS);
-    const jaExiste = matriculaJaExiste(usuariosCadastrados, matriculaTratada);
-
-    if (jaExiste) {
-      setMatriculaBloqueada(true);
-      setMensagem('Matrícula já cadastrada no banco de dados.');
-      return;
-    }
-
-    setMatriculaBloqueada(false);
-    setMensagem('');
   };
 
   const validarFormulario = () => {
@@ -301,19 +219,6 @@ function SolicitarAcesso({ onVoltar }) {
 
     if (matriculaNormalizada.length !== 7) {
       mostrarMensagem('Informe uma matrícula válida com 7 números.');
-      return null;
-    }
-
-    if (matriculaBloqueada) {
-      setMensagem('Matrícula já cadastrada no banco de dados.');
-      return null;
-    }
-
-    const usuariosCadastrados = carregarStorage(STORAGE_KEY_USUARIOS);
-
-    if (matriculaJaExiste(usuariosCadastrados, matriculaTratada)) {
-      setMatriculaBloqueada(true);
-      setMensagem('Matrícula já cadastrada no banco de dados.');
       return null;
     }
 
@@ -334,11 +239,6 @@ function SolicitarAcesso({ onVoltar }) {
 
     if (!emailValido(emailTratado)) {
       mostrarMensagem('Informe um e-mail válido.');
-      return null;
-    }
-
-    if (emailJaExiste(usuariosCadastrados, emailTratado)) {
-      mostrarMensagem('Já existe cadastro ou solicitação com este e-mail.');
       return null;
     }
 
@@ -373,111 +273,53 @@ function SolicitarAcesso({ onVoltar }) {
     }
 
     return {
-      matriculaTratada,
-      nomeTratado,
-      nomeCompletoTratado,
-      emailTratado,
-      postGradTratado,
-      senhaTratada,
+      matricula: matriculaTratada,
+      nome: nomeTratado,
+      nomeCompleto: nomeCompletoTratado,
+      email: emailTratado,
+      postGrad: postGradTratado,
+      unidade: unidadeSelecionada,
+      setor: setorSelecionado,
+      senha: senhaTratada,
     };
   };
 
-  const handleSalvar = (event) => {
+  const handleSalvar = async (event) => {
     event.preventDefault();
 
     const dadosValidados = validarFormulario();
 
     if (!dadosValidados) return;
 
-    const usuariosCadastrados = carregarStorage(STORAGE_KEY_USUARIOS);
-    const agora = dataHoraAtual();
-    const novoId = gerarId();
+    try {
+      setEnviando(true);
+      setMensagem('');
 
-    const novoUsuarioSolicitado = {
-      ID: novoId,
-      id: novoId,
+      await solicitarAcesso(dadosValidados);
 
-      MATRICULA: dadosValidados.matriculaTratada,
-      matricula: dadosValidados.matriculaTratada,
+      limparFormulario();
+      setSolicitacaoEnviada(true);
 
-      NOME: dadosValidados.nomeTratado,
-      nome: dadosValidados.nomeTratado,
+      window.setTimeout(() => {
+        const telaCadastro = document.querySelector(
+          '.solicitar-acesso-phone'
+        );
 
-      NOMECOMPLETO: dadosValidados.nomeCompletoTratado,
-      nomeCompleto: dadosValidados.nomeCompletoTratado,
-
-      EMAIL: dadosValidados.emailTratado,
-      email: dadosValidados.emailTratado,
-
-      POSTGRAD: dadosValidados.postGradTratado,
-      postGrad: dadosValidados.postGradTratado,
-
-      UNIDADE: unidadeSelecionada,
-      unidade: unidadeSelecionada,
-
-      SETOR: setorSelecionado,
-      setor: setorSelecionado,
-
-      SENHA: dadosValidados.senhaTratada,
-      senha: dadosValidados.senhaTratada,
-
-      // Novo padrão de nível:
-      // 1 = AdminMaster
-      // 2 = Administrador
-      // 3 = Usuário comum
-      NIVEL: NIVEIS_USUARIO.USUARIO_COMUM,
-      nivel: NIVEIS_USUARIO.USUARIO_COMUM,
-
-      STATUSACESSO: STATUS_ACESSO.PENDENTE,
-      statusAcesso: STATUS_ACESSO.PENDENTE,
-
-      ATIVO: 0,
-      ativo: 0,
-
-      DATASOLICITACAO: agora,
-      dataSolicitacao: agora,
-
-      DATALIBERACAO: null,
-      dataLiberacao: null,
-
-      LIBERADOPOR: null,
-      liberadoPor: null,
-
-      DATACADASTRO: dataHoje(),
-      dataCadastro: dataHoje(),
-
-      DATAMODIFICACAO: agora,
-      dataModificacao: agora,
-
-      userModificador: 0,
-
-      DIGITAL: null,
-      digital: null,
-
-      HISTORICO_UNIDADE: [],
-    };
-
-    const usuariosAtualizados = [
-      novoUsuarioSolicitado,
-      ...usuariosCadastrados,
-    ];
-
-    salvarStorage(STORAGE_KEY_USUARIOS, usuariosAtualizados);
-
-    limparFormulario();
-    setSolicitacaoEnviada(true);
-    setMensagem('');
-
-    window.setTimeout(() => {
-      const telaCadastro = document.querySelector('.solicitar-acesso-phone');
-
-      if (telaCadastro) {
-        telaCadastro.scrollTo({
-          top: 0,
-          behavior: 'smooth',
-        });
-      }
-    }, 100);
+        if (telaCadastro) {
+          telaCadastro.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+          });
+        }
+      }, 100);
+    } catch (erro) {
+      mostrarMensagem(
+        erro?.message ||
+          'Não foi possível enviar a solicitação de acesso.'
+      );
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -550,13 +392,9 @@ function SolicitarAcesso({ onVoltar }) {
                     placeholder="000.000-0"
                     inputMode="numeric"
                     maxLength={9}
+                    disabled={enviando}
                     onChange={(event) => {
-                      const novaMatricula = formatarMatricula(
-                        event.target.value
-                      );
-
-                      setMatricula(novaMatricula);
-                      verificarMatriculaCadastrada(novaMatricula);
+                      setMatricula(formatarMatricula(event.target.value));
                     }}
                   />
                 </div>
@@ -573,7 +411,7 @@ function SolicitarAcesso({ onVoltar }) {
                     type="text"
                     value={nome}
                     placeholder="Ex.: Silva"
-                    disabled={matriculaBloqueada}
+                    disabled={enviando}
                     onChange={(event) => setNome(event.target.value)}
                   />
                 </div>
@@ -590,7 +428,7 @@ function SolicitarAcesso({ onVoltar }) {
                     type="text"
                     value={nomeCompleto}
                     placeholder="Digite o nome completo"
-                    disabled={matriculaBloqueada}
+                    disabled={enviando}
                     onChange={(event) => setNomeCompleto(event.target.value)}
                   />
                 </div>
@@ -607,7 +445,7 @@ function SolicitarAcesso({ onVoltar }) {
                     type="email"
                     value={email}
                     placeholder="email@exemplo.com"
-                    disabled={matriculaBloqueada}
+                    disabled={enviando}
                     onChange={(event) => setEmail(event.target.value)}
                     required
                   />
@@ -620,7 +458,7 @@ function SolicitarAcesso({ onVoltar }) {
                 <select
                   id="postGrad"
                   value={postGrad}
-                  disabled={matriculaBloqueada}
+                  disabled={enviando}
                   onChange={(event) => setPostGrad(event.target.value)}
                 >
                   <option value="">Selecione o Post/Grad</option>
@@ -640,7 +478,7 @@ function SolicitarAcesso({ onVoltar }) {
                   <select
                     id="unidade"
                     value={unidadeSelecionada}
-                    disabled={matriculaBloqueada}
+                    disabled={enviando}
                     onChange={(event) => {
                       setUnidadeSelecionada(event.target.value);
                       setSetorSelecionado('');
@@ -669,7 +507,7 @@ function SolicitarAcesso({ onVoltar }) {
                   <select
                     id="setor"
                     value={setorSelecionado}
-                    disabled={!unidadeSelecionada || matriculaBloqueada}
+                    disabled={!unidadeSelecionada || enviando}
                     onChange={(event) => setSetorSelecionado(event.target.value)}
                   >
                     <option value="">
@@ -703,14 +541,14 @@ function SolicitarAcesso({ onVoltar }) {
                       type={mostrarSenha ? 'text' : 'password'}
                       value={senha}
                       placeholder="Mínimo 6 caracteres"
-                      disabled={matriculaBloqueada}
+                      disabled={enviando}
                       onChange={(event) => setSenha(event.target.value)}
                     />
 
                     <button
                       type="button"
                       className="solicitar-acesso-eye"
-                      disabled={matriculaBloqueada}
+                      disabled={enviando}
                       onClick={() => setMostrarSenha((valorAtual) => !valorAtual)}
                       aria-label="Mostrar ou ocultar senha"
                     >
@@ -730,7 +568,7 @@ function SolicitarAcesso({ onVoltar }) {
                       type={mostrarConfirmarSenha ? 'text' : 'password'}
                       value={confirmarSenha}
                       placeholder="Repita a senha"
-                      disabled={matriculaBloqueada}
+                      disabled={enviando}
                       onChange={(event) =>
                         setConfirmarSenha(event.target.value)
                       }
@@ -739,7 +577,7 @@ function SolicitarAcesso({ onVoltar }) {
                     <button
                       type="button"
                       className="solicitar-acesso-eye"
-                      disabled={matriculaBloqueada}
+                      disabled={enviando}
                       onClick={() =>
                         setMostrarConfirmarSenha((valorAtual) => !valorAtual)
                       }
@@ -764,10 +602,10 @@ function SolicitarAcesso({ onVoltar }) {
               <button
                 type="submit"
                 className="solicitar-acesso-salvar"
-                disabled={matriculaBloqueada}
+                disabled={enviando}
               >
                 <FaUserPlus />
-                Enviar cadastro
+                {enviando ? 'Enviando...' : 'Enviar cadastro'}
               </button>
             </form>
           </>
