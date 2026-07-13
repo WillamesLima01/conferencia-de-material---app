@@ -24,44 +24,113 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+
+    /*
+     * =========================================
+     * CONFIGURAÇÃO DE SEGURANÇA
+     * =========================================
+     */
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity httpSecurity
     ) throws Exception {
 
         return httpSecurity
-                .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
+
+                .cors(
+                        Customizer.withDefaults()
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .dispatcherTypeMatchers(
-                                DispatcherType.ERROR
-                        ).permitAll()
-                        .requestMatchers(
-                                "/auth/login"
-                        ).permitAll()
-                        .requestMatchers(
-                                "/usuario/solicitar-acesso"
-                        ).permitAll()
-                        .requestMatchers(
-                                "/usuario/**"
-                        ).hasAnyRole(
-                                "ADMIN_MASTER",
-                                "ADMIN"
-                        )
-                        .anyRequest()
-                        .authenticated()
+
+                .csrf(
+                        csrf -> csrf.disable()
                 )
+
+                .sessionManagement(
+                        session ->
+                                session.sessionCreationPolicy(
+                                        SessionCreationPolicy.STATELESS
+                                )
+                )
+
+                .authorizeHttpRequests(
+                        auth -> auth
+
+                                /*
+                                 * =========================================
+                                 * ERROS INTERNOS
+                                 * =========================================
+                                 */
+
+                                .dispatcherTypeMatchers(
+                                        DispatcherType.ERROR
+                                )
+                                .permitAll()
+
+
+                                /*
+                                 * =========================================
+                                 * AUTENTICAÇÃO
+                                 * =========================================
+                                 */
+
+                                .requestMatchers(
+                                        "/auth/**"
+                                )
+                                .permitAll()
+
+
+                                /*
+                                 * =========================================
+                                 * SOLICITAÇÃO DE ACESSO
+                                 * =========================================
+                                 */
+
+                                .requestMatchers(
+                                        "/usuario/solicitar-acesso"
+                                )
+                                .permitAll()
+
+
+                                /*
+                                 * =========================================
+                                 * USUÁRIOS
+                                 * =========================================
+                                 */
+
+                                .requestMatchers(
+                                        "/usuario/**"
+                                )
+                                .hasAnyRole(
+                                        "ADMIN_MASTER",
+                                        "ADMIN"
+                                )
+
+
+                                /*
+                                 * =========================================
+                                 * DEMAIS ROTAS
+                                 * =========================================
+                                 */
+
+                                .anyRequest()
+                                .authenticated()
+                )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 )
+
                 .build();
     }
+
+
+    /*
+     * =========================================
+     * CORS
+     * =========================================
+     */
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -69,12 +138,14 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
+
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
-                        "http://192.168.0.17:5173"
+                        "http://192.168.0.19:5173"
                 )
         );
+
 
         configuration.setAllowedMethods(
                 List.of(
@@ -87,6 +158,7 @@ public class SecurityConfig {
                 )
         );
 
+
         configuration.setAllowedHeaders(
                 List.of(
                         "Authorization",
@@ -94,25 +166,37 @@ public class SecurityConfig {
                 )
         );
 
+
         configuration.setExposedHeaders(
                 List.of(
                         "Authorization"
                 )
         );
 
+
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
+
 
         source.registerCorsConfiguration(
                 "/**",
                 configuration
         );
 
+
         return source;
     }
 
+
+    /*
+     * =========================================
+     * PASSWORD ENCODER
+     * =========================================
+     */
+
     @Bean
     public PasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder();
     }
 }
