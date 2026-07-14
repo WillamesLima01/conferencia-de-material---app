@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Login from './pages/Login';
 import SelecionarConferencia from './pages/SelecionarConferencia';
@@ -84,7 +84,29 @@ function App() {
   const [
     abrirRecuperarSenha,
     setAbrirRecuperarSenha,
-  ] = useState(false);
+  ] = useState(() => {
+    return (
+      sessionStorage.getItem(
+        'recuperacaoSenhaEmAndamento'
+      ) === 'true'
+    );
+  });
+
+
+  useEffect(() => {
+    if (abrirRecuperarSenha) {
+      sessionStorage.setItem(
+        'recuperacaoSenhaEmAndamento',
+        'true'
+      );
+
+      return;
+    }
+
+    sessionStorage.removeItem(
+      'recuperacaoSenhaEmAndamento'
+    );
+  }, [abrirRecuperarSenha]);
 
   const limparNumeros = (valor) => {
     return String(valor || '').replace(/\D/g, '');
@@ -748,9 +770,13 @@ function App() {
   if (abrirRecuperarSenha) {
     return (
       <RecuperarSenha
-        onVoltar={() =>
-          setAbrirRecuperarSenha(false)
-        }
+        onVoltar={() => {
+          sessionStorage.removeItem(
+            'recuperacaoSenhaEmAndamento'
+          );
+
+          setAbrirRecuperarSenha(false);
+        }}
       />
     );
   }
@@ -789,10 +815,19 @@ function App() {
           );
         }}
         onSolicitarAcesso={() => {
+          sessionStorage.removeItem(
+            'recuperacaoSenhaEmAndamento'
+          );
+
           setAbrirRecuperarSenha(false);
           setAbrirSolicitarAcesso(true);
         }}
         onRecuperarSenha={() => {
+          sessionStorage.setItem(
+            'recuperacaoSenhaEmAndamento',
+            'true'
+          );
+
           setAbrirSolicitarAcesso(false);
           setAbrirRecuperarSenha(true);
         }}

@@ -425,13 +425,116 @@
   cursor: not-allowed;
 }
 
-.recuperar-input-box input[id="codigo"] {
-  font-size: 21px;
+/* ================================
+   CÓDIGO OTP
+================================ */
+
+.recuperar-codigo-area {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+.recuperar-codigo-icone {
+  width: 46px;
+  height: 54px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.13);
+
+  border-radius: 13px;
+
+  background:
+    rgba(255, 255, 255, 0.075);
+
+  color: #f3c64f;
+
+  font-size: 17px;
+}
+
+.recuperar-codigo-campos {
+  width: 100%;
+
+  display: grid;
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+
+  gap: 8px;
+}
+
+.recuperar-codigo-campos input {
+  width: 100%;
+  min-width: 0;
+  height: 54px;
+
+  padding: 0;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.16);
+
+  border-radius: 12px;
+
+  outline: none;
+
+  background:
+    rgba(255, 255, 255, 0.075);
+
+  color: #ffffff;
+
+  font-size: 22px;
   font-weight: 800;
 
-  letter-spacing: 7px;
-
   text-align: center;
+
+  caret-color: #f3c64f;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.recuperar-codigo-campos input:hover:not(:disabled) {
+  border-color:
+    rgba(243, 198, 79, 0.38);
+}
+
+.recuperar-codigo-campos input:focus {
+  border-color: #f3c64f;
+
+  background:
+    rgba(243, 198, 79, 0.1);
+
+  box-shadow:
+    0 0 0 3px
+      rgba(243, 198, 79, 0.1);
+
+  transform:
+    translateY(-1px);
+}
+
+.recuperar-codigo-campos input.preenchido {
+  border-color:
+    rgba(243, 198, 79, 0.55);
+
+  background:
+    rgba(243, 198, 79, 0.08);
+}
+
+.recuperar-codigo-campos input:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
 }
 
 
@@ -929,10 +1032,24 @@
     max-width: 270px;
   }
 
-  .recuperar-input-box input[id="codigo"] {
-    font-size: 19px;
+  .recuperar-codigo-area {
+    gap: 8px;
+  }
 
-    letter-spacing: 5px;
+  .recuperar-codigo-icone {
+    display: none;
+  }
+
+  .recuperar-codigo-campos {
+    gap: 6px;
+  }
+
+  .recuperar-codigo-campos input {
+    height: 50px;
+
+    border-radius: 10px;
+
+    font-size: 20px;
   }
 
   .recuperar-concluido {
@@ -972,6 +1089,16 @@
 
   .recuperar-etapas {
     max-width: 240px;
+  }
+
+  .recuperar-codigo-campos {
+    gap: 4px;
+  }
+
+  .recuperar-codigo-campos input {
+    height: 46px;
+
+    font-size: 18px;
   }
 }
 

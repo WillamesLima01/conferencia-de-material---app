@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   FaArrowLeft,
@@ -33,13 +33,39 @@ function RecuperarSenha({
    */
 
   const [etapa, setEtapa] =
-    useState(1);
+    useState(() => {
+      const etapaSalva =
+        sessionStorage.getItem(
+          'recuperacaoSenhaEtapa'
+        );
+
+      const etapaConvertida =
+        Number(etapaSalva);
+
+      return [1, 2, 3, 4].includes(
+        etapaConvertida
+      )
+        ? etapaConvertida
+        : 1;
+    });
 
   const [email, setEmail] =
-    useState('');
+    useState(() => {
+      return (
+        sessionStorage.getItem(
+          'recuperacaoSenhaEmail'
+        ) || ''
+      );
+    });
 
   const [codigo, setCodigo] =
-    useState('');
+    useState(() => {
+      return (
+        sessionStorage.getItem(
+          'recuperacaoSenhaCodigo'
+        ) || ''
+      );
+    });
 
   const [novaSenha, setNovaSenha] =
     useState('');
@@ -71,6 +97,75 @@ function RecuperarSenha({
     carregando,
     setCarregando,
   ] = useState(false);
+
+
+  const camposCodigoRef =
+    useRef([]);
+
+
+  /*
+   * =========================================
+   * PERSISTÊNCIA TEMPORÁRIA DO FLUXO
+   * =========================================
+   */
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      'recuperacaoSenhaEtapa',
+      String(etapa)
+    );
+  }, [etapa]);
+
+
+  useEffect(() => {
+    if (email) {
+      sessionStorage.setItem(
+        'recuperacaoSenhaEmail',
+        email
+      );
+
+      return;
+    }
+
+    sessionStorage.removeItem(
+      'recuperacaoSenhaEmail'
+    );
+  }, [email]);
+
+
+  useEffect(() => {
+    if (codigo) {
+      sessionStorage.setItem(
+        'recuperacaoSenhaCodigo',
+        codigo
+      );
+
+      return;
+    }
+
+    sessionStorage.removeItem(
+      'recuperacaoSenhaCodigo'
+    );
+  }, [codigo]);
+
+
+  const limparFluxoRecuperacao = () => {
+    sessionStorage.removeItem(
+      'recuperacaoSenhaEtapa'
+    );
+
+    sessionStorage.removeItem(
+      'recuperacaoSenhaEmail'
+    );
+
+    sessionStorage.removeItem(
+      'recuperacaoSenhaCodigo'
+    );
+
+    sessionStorage.removeItem(
+      'recuperacaoSenhaEmAndamento'
+    );
+  };
 
 
   /*
@@ -138,6 +233,182 @@ function RecuperarSenha({
 
   /*
    * =========================================
+   * CAMPO OTP - CÓDIGO DE 6 DÍGITOS
+   * =========================================
+   */
+
+  const obterDigitosCodigo = () => {
+    return Array.from(
+      { length: 6 },
+      (_, indice) =>
+        String(codigo || '')[indice] || ''
+    );
+  };
+
+
+  const focarCampoCodigo = (
+    indice
+  ) => {
+    camposCodigoRef.current[
+      indice
+    ]?.focus();
+  };
+
+
+  const alterarDigitoCodigo = (
+    indice,
+    valorInformado
+  ) => {
+    const numeros =
+      String(valorInformado || '')
+        .replace(/\D/g, '');
+
+    if (!numeros) {
+      const digitos =
+        obterDigitosCodigo();
+
+      digitos[indice] = '';
+
+      setCodigo(
+        digitos.join('')
+      );
+
+      limparMensagem();
+
+      return;
+    }
+
+    const digitos =
+      obterDigitosCodigo();
+
+    let proximoIndice =
+      indice;
+
+    numeros
+      .slice(0, 6 - indice)
+      .split('')
+      .forEach((numero) => {
+        digitos[proximoIndice] =
+          numero;
+
+        proximoIndice += 1;
+      });
+
+    setCodigo(
+      digitos.join('')
+    );
+
+    limparMensagem();
+
+    if (proximoIndice < 6) {
+      focarCampoCodigo(
+        proximoIndice
+      );
+    } else {
+      focarCampoCodigo(5);
+    }
+  };
+
+
+  const tratarTeclaCodigo = (
+    event,
+    indice
+  ) => {
+    if (
+      event.key === 'Backspace'
+    ) {
+      const digitos =
+        obterDigitosCodigo();
+
+      if (digitos[indice]) {
+        digitos[indice] = '';
+
+        setCodigo(
+          digitos.join('')
+        );
+
+        limparMensagem();
+
+        return;
+      }
+
+      if (indice > 0) {
+        event.preventDefault();
+
+        digitos[indice - 1] = '';
+
+        setCodigo(
+          digitos.join('')
+        );
+
+        limparMensagem();
+
+        focarCampoCodigo(
+          indice - 1
+        );
+      }
+
+      return;
+    }
+
+    if (
+      event.key === 'ArrowLeft' &&
+      indice > 0
+    ) {
+      event.preventDefault();
+
+      focarCampoCodigo(
+        indice - 1
+      );
+
+      return;
+    }
+
+    if (
+      event.key === 'ArrowRight' &&
+      indice < 5
+    ) {
+      event.preventDefault();
+
+      focarCampoCodigo(
+        indice + 1
+      );
+    }
+  };
+
+
+  const colarCodigo = (
+    event
+  ) => {
+    event.preventDefault();
+
+    const codigoColado =
+      event.clipboardData
+        .getData('text')
+        .replace(/\D/g, '')
+        .slice(0, 6);
+
+    if (!codigoColado) {
+      return;
+    }
+
+    setCodigo(
+      codigoColado
+    );
+
+    limparMensagem();
+
+    focarCampoCodigo(
+      Math.min(
+        codigoColado.length,
+        6
+      ) - 1
+    );
+  };
+
+
+  /*
+   * =========================================
    * ETAPA 1
    * SOLICITAR CÓDIGO
    * =========================================
@@ -184,6 +455,16 @@ function RecuperarSenha({
         );
 
       setEmail(emailTratado);
+
+      sessionStorage.setItem(
+        'recuperacaoSenhaEmail',
+        emailTratado
+      );
+
+      sessionStorage.setItem(
+        'recuperacaoSenhaEtapa',
+        '2'
+      );
 
       setEtapa(2);
 
@@ -270,6 +551,16 @@ function RecuperarSenha({
         );
 
       setCodigo(codigoTratado);
+
+      sessionStorage.setItem(
+        'recuperacaoSenhaCodigo',
+        codigoTratado
+      );
+
+      sessionStorage.setItem(
+        'recuperacaoSenhaEtapa',
+        '3'
+      );
 
       setEtapa(3);
 
@@ -365,6 +656,8 @@ function RecuperarSenha({
           confirmarSenha,
         });
 
+      limparFluxoRecuperacao();
+
       setEtapa(4);
 
       exibirSucesso(
@@ -407,6 +700,12 @@ function RecuperarSenha({
         );
 
       setCodigo('');
+
+      sessionStorage.removeItem(
+        'recuperacaoSenhaCodigo'
+      );
+
+      focarCampoCodigo(0);
 
       exibirSucesso(
         resposta?.mensagem ||
@@ -453,12 +752,22 @@ function RecuperarSenha({
 
 
     if (etapa === 1) {
+      limparFluxoRecuperacao();
       onVoltar?.();
       return;
     }
 
 
     if (etapa === 2) {
+      sessionStorage.setItem(
+        'recuperacaoSenhaEtapa',
+        '1'
+      );
+
+      sessionStorage.removeItem(
+        'recuperacaoSenhaCodigo'
+      );
+
       setEtapa(1);
       setCodigo('');
       return;
@@ -466,6 +775,11 @@ function RecuperarSenha({
 
 
     if (etapa === 3) {
+      sessionStorage.setItem(
+        'recuperacaoSenhaEtapa',
+        '2'
+      );
+
       setEtapa(2);
       setNovaSenha('');
       setConfirmarSenha('');
@@ -473,6 +787,7 @@ function RecuperarSenha({
     }
 
 
+    limparFluxoRecuperacao();
     onVoltar?.();
   };
 
@@ -753,38 +1068,79 @@ function RecuperarSenha({
 
               <div className="recuperar-campo-area">
 
-                <label htmlFor="codigo">
+                <label id="codigo-label">
                   Código de recuperação
                 </label>
 
 
-                <div className="recuperar-input-box">
+                <div className="recuperar-codigo-area">
 
-                  <FaKey />
+                  <div className="recuperar-codigo-icone">
+                    <FaKey />
+                  </div>
 
 
-                  <input
-                    id="codigo"
-                    type="text"
-                    inputMode="numeric"
-                    value={codigo}
-
-                    onChange={(event) => {
-                      const valor =
-                        event.target.value
-                          .replace(/\D/g, '')
-                          .slice(0, 6);
-
-                      setCodigo(valor);
-
-                      limparMensagem();
-                    }}
-
-                    placeholder="000000"
-                    maxLength={6}
-                    autoComplete="one-time-code"
-                    disabled={carregando}
-                  />
+                  <div
+                    className="recuperar-codigo-campos"
+                    role="group"
+                    aria-labelledby="codigo-label"
+                    onPaste={colarCodigo}
+                  >
+                    {obterDigitosCodigo().map(
+                      (
+                        digito,
+                        indice
+                      ) => (
+                        <input
+                          key={indice}
+                          ref={(elemento) => {
+                            camposCodigoRef.current[
+                              indice
+                            ] = elemento;
+                          }}
+                          id={
+                            indice === 0
+                              ? 'codigo'
+                              : undefined
+                          }
+                          className={
+                            digito
+                              ? 'preenchido'
+                              : ''
+                          }
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={digito}
+                          maxLength={1}
+                          autoComplete={
+                            indice === 0
+                              ? 'one-time-code'
+                              : 'off'
+                          }
+                          aria-label={
+                            `Dígito ${indice + 1} do código`
+                          }
+                          disabled={carregando}
+                          onFocus={(event) =>
+                            event.target.select()
+                          }
+                          onChange={(event) =>
+                            alterarDigitoCodigo(
+                              indice,
+                              event.target.value
+                            )
+                          }
+                          onKeyDown={(event) =>
+                            tratarTeclaCodigo(
+                              event,
+                              indice
+                            )
+                          }
+                        />
+                      )
+                    )}
+                  </div>
 
                 </div>
 
@@ -1020,7 +1376,10 @@ function RecuperarSenha({
               <button
                 type="button"
                 className="recuperar-enviar"
-                onClick={onVoltar}
+                onClick={() => {
+                  limparFluxoRecuperacao();
+                  onVoltar?.();
+                }}
               >
                 Voltar para o login
               </button>
