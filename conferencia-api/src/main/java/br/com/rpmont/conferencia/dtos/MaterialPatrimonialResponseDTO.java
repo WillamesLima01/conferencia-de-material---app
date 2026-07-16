@@ -9,6 +9,10 @@ public record MaterialPatrimonialResponseDTO(
 
         String numeroSerie,
 
+        String nome,
+
+        String marca,
+
         String descricao,
 
         String observacao,

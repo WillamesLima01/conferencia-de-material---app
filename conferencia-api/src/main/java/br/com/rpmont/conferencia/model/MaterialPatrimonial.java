@@ -21,75 +21,42 @@ public class MaterialPatrimonial implements Serializable {
     @Column(name = "`ID`")
     private Long id;
 
-    @Column(
-            name = "`NSerie`",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "`NSerie`", nullable = false, length = 100)
     private String numeroSerie;
 
-    @Column(
-            name = "`descricao`",
-            nullable = false,
-            length = 300
-    )
+    @Column(name = "nome", length = 100)
+    private String nome;
+
+    @Column(name = "marca", length = 100)
+    private String marca;
+
+    @Column(name = "`descricao`", nullable = false, length = 300)
     private String descricao;
 
-    @Column(
-            name = "`observacao`",
-            nullable = false,
-            length = 500
-    )
+    @Column(name = "`observacao`", nullable = false, length = 500)
     private String observacao;
 
-    @Column(
-            name = "`setor`",
-            nullable = false,
-            length = 50
-    )
+    @Column(name = "`setor`", nullable = false, length = 50)
     private String setor;
 
-    @Column(
-            name = "`unidade`",
-            nullable = false,
-            length = 50
-    )
+    @Column(name = "`unidade`", nullable = false, length = 50)
     private String unidade;
 
-    @Column(
-            name = "`dataCadastro`",
-            nullable = false
-    )
+    @Column(name = "`dataCadastro`", nullable = false)
     private LocalDate dataCadastro;
 
-    @Column(
-            name = "`userID`",
-            nullable = false
-    )
+    @Column(name = "`userID`", nullable = false)
     private Long usuarioId;
 
-    @Column(
-            name = "`dataModificacao`",
-            nullable = false
-    )
+    @Column(name = "`dataModificacao`", nullable = false)
     private LocalDateTime dataModificacao;
 
-    @Column(
-            name = "`userModificador`",
-            nullable = false
-    )
+    @Column(name = "`userModificador`", nullable = false)
     private Long usuarioModificadorId;
 
-    @Column(
-            name = "`Conferido`",
-            nullable = false
-    )
+    @Column(name = "`Conferido`", nullable = false)
     private Boolean conferido;
 
-    @Column(
-            name = "`situacao`",
-            nullable = false,
-            length = 30
-    )
+    @Column(name = "`situacao`", nullable = false, length = 30)
     private String situacao;
 }

@@ -2,6 +2,10 @@ package br.com.rpmont.conferencia.service;
 
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
+import br.com.rpmont.conferencia.exception.BusinessException;
+import br.com.rpmont.conferencia.exception.ConflictException;
+import br.com.rpmont.conferencia.exception.ForbiddenException;
+import br.com.rpmont.conferencia.exception.ResourceNotFoundException;
 import br.com.rpmont.conferencia.model.MaterialPatrimonial;
 import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.repository.MaterialPatrimonialRepository;
@@ -71,7 +75,7 @@ public class MaterialPatrimonialServiceImpl
                         );
 
         if (numeroSerieJaExiste) {
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     "Já existe um material cadastrado com esse número de série."
             );
         }
@@ -259,7 +263,7 @@ public class MaterialPatrimonialServiceImpl
                                 numeroSerieTratado
                         )
                         .orElseThrow(
-                                () -> new IllegalArgumentException(
+                                () -> new ResourceNotFoundException(
                                         "Material patrimonial não encontrado."
                                 )
                         );
@@ -332,7 +336,7 @@ public class MaterialPatrimonialServiceImpl
                 )
                 .ifPresent(
                         materialEncontrado -> {
-                            throw new IllegalArgumentException(
+                            throw new ConflictException(
                                     "Já existe outro material com esse número de série."
                             );
                         }
@@ -479,7 +483,7 @@ public class MaterialPatrimonialServiceImpl
                         material.getSituacao()
                 )
         ) {
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     "O material já está inativo."
             );
         }
@@ -523,7 +527,7 @@ public class MaterialPatrimonialServiceImpl
                 matriculaUsuario == null ||
                         matriculaUsuario.isBlank()
         ) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     "Usuário autenticado não identificado."
             );
         }
@@ -536,7 +540,7 @@ public class MaterialPatrimonialServiceImpl
                         matriculaFormatada
                 )
                 .orElseThrow(
-                        () -> new IllegalArgumentException(
+                        () -> new ResourceNotFoundException(
                                 "Usuário autenticado não encontrado."
                         )
                 );
@@ -555,7 +559,7 @@ public class MaterialPatrimonialServiceImpl
                 usuario.getAtivo() == null ||
                         usuario.getAtivo() != 1
         ) {
-            throw new SecurityException(
+            throw new ForbiddenException(
                     "Usuário inativo."
             );
         }
@@ -566,7 +570,7 @@ public class MaterialPatrimonialServiceImpl
                                 usuario.getStatusAcesso()
                         )
         ) {
-            throw new SecurityException(
+            throw new ForbiddenException(
                     "O acesso do usuário não está liberado."
             );
         }
@@ -577,7 +581,7 @@ public class MaterialPatrimonialServiceImpl
                                 usuario.getSetor().trim()
                         )
         ) {
-            throw new SecurityException(
+            throw new ForbiddenException(
                     "Acesso permitido somente para usuários do setor P4."
             );
         }
@@ -600,7 +604,7 @@ public class MaterialPatrimonialServiceImpl
                                         material.getUnidade().trim()
                                 )
         ) {
-            throw new SecurityException(
+            throw new ForbiddenException(
                     "Você não possui permissão para acessar materiais de outra unidade."
             );
         }
@@ -624,7 +628,7 @@ public class MaterialPatrimonialServiceImpl
             MaterialPatrimonialRequestDTO request
     ) {
         if (request == null) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     "Os dados do material são obrigatórios."
             );
         }
@@ -639,7 +643,7 @@ public class MaterialPatrimonialServiceImpl
                                 material.getSituacao()
                         )
         ) {
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     "Não é possível alterar um material inativo."
             );
         }
@@ -649,7 +653,7 @@ public class MaterialPatrimonialServiceImpl
             Long id
     ) {
         if (id == null) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     "O ID do material é obrigatório."
             );
         }
@@ -659,7 +663,7 @@ public class MaterialPatrimonialServiceImpl
                         id
                 )
                 .orElseThrow(
-                        () -> new IllegalArgumentException(
+                        () -> new ResourceNotFoundException(
                                 "Material patrimonial não encontrado."
                         )
                 );
@@ -679,7 +683,7 @@ public class MaterialPatrimonialServiceImpl
                 valor == null ||
                         valor.isBlank()
         ) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     mensagem
             );
         }
@@ -712,6 +716,8 @@ public class MaterialPatrimonialServiceImpl
         return new MaterialPatrimonialResponseDTO(
                 material.getId(),
                 material.getNumeroSerie(),
+                material.getNome(),
+                material.getMarca(),
                 material.getDescricao(),
                 material.getObservacao(),
                 material.getSetor(),

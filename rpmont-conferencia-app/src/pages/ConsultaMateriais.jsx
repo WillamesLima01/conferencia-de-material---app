@@ -4,6 +4,7 @@ import {
   FaBarcode,
   FaBoxesStacked,
   FaCheck,
+  FaEye,
   FaFilePdf,
   FaFilter,
   FaMagnifyingGlass,
@@ -12,43 +13,88 @@ import {
 
 import { setoresDaUnidade } from '../data/setores';
 import { gerarRelatorioPatrimonioPdf } from '../relatorios/gerarRelatorioPatrimonioPdf';
+import MaterialDetalhesModal from '../components/MaterialDetalhesModal';
 
 import '../styles/ConsultaMateriais.css';
 
-function ConsultaMateriais({ usuario, materiais, onVoltar }) {
+function ConsultaMateriais({
+  usuario,
+  materiais = [],
+  onVoltar,
+  onEditarMaterial,
+}) {
+  const [nome, setNome] = useState('');
+  const [marca, setMarca] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [nSerie, setNSerie] = useState('');
+  const [numeroSerie, setNumeroSerie] = useState('');
   const [setor, setSetor] = useState('');
   const [status, setStatus] = useState('TODOS');
   const [situacao, setSituacao] = useState('ATIVO');
   const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [materialDetalhes, setMaterialDetalhes] = useState(null);
+
+  const normalizar = (valor) =>
+    String(valor ?? '')
+      .trim()
+      .toLowerCase();
+
+  const materialEstaConferido = (material) =>
+    material?.conferido === true ||
+    material?.conferido === 1 ||
+    material?.Conferido === true ||
+    material?.Conferido === 1;
+
+  const obterNumeroSerie = (material) =>
+    material?.numeroSerie ?? material?.NSerie ?? '';
+
+  const obterId = (material) =>
+    material?.id ?? material?.ID;
 
   const materiaisFiltrados = useMemo(() => {
+    const filtroNome = normalizar(nome);
+    const filtroMarca = normalizar(marca);
+    const filtroDescricao = normalizar(descricao);
+    const filtroNumeroSerie = normalizar(numeroSerie);
+
     return materiais.filter((material) => {
-      const mesmaUnidade = material.unidade === usuario.unidade;
+      const mesmaUnidade =
+        normalizar(material?.unidade) === normalizar(usuario?.unidade);
 
-      const descricaoConfere = material.descricao
-        ?.toLowerCase()
-        .includes(descricao.toLowerCase().trim());
+      const nomeConfere =
+        !filtroNome ||
+        normalizar(material?.nome).includes(filtroNome);
 
-      const serieConfere = material.NSerie
-        ?.toLowerCase()
-        .includes(nSerie.toLowerCase().trim());
+      const marcaConfere =
+        !filtroMarca ||
+        normalizar(material?.marca).includes(filtroMarca);
 
-      const setorConfere = setor ? material.setor === setor : true;
+      const descricaoConfere =
+        !filtroDescricao ||
+        normalizar(material?.descricao).includes(filtroDescricao);
+
+      const serieConfere =
+        !filtroNumeroSerie ||
+        normalizar(obterNumeroSerie(material)).includes(filtroNumeroSerie);
+
+      const setorConfere =
+        !setor ||
+        normalizar(material?.setor) === normalizar(setor);
+
+      const conferido = materialEstaConferido(material);
 
       const statusConfere =
-        status === 'TODOS'
-          ? true
-          : status === 'CONFERIDO'
-            ? material.Conferido === 1
-            : material.Conferido === 0;
+        status === 'TODOS' ||
+        (status === 'CONFERIDO' && conferido) ||
+        (status === 'PENDENTE' && !conferido);
 
       const situacaoConfere =
-        situacao === 'TODOS' ? true : material.situacao === situacao;
+        situacao === 'TODOS' ||
+        normalizar(material?.situacao) === normalizar(situacao);
 
       return (
         mesmaUnidade &&
+        nomeConfere &&
+        marcaConfere &&
         descricaoConfere &&
         serieConfere &&
         setorConfere &&
@@ -56,50 +102,68 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
         situacaoConfere
       );
     });
-  }, [materiais, usuario.unidade, descricao, nSerie, setor, status, situacao]);
+  }, [
+    materiais,
+    usuario?.unidade,
+    nome,
+    marca,
+    descricao,
+    numeroSerie,
+    setor,
+    status,
+    situacao,
+  ]);
 
   const total = materiaisFiltrados.length;
 
   const totalConferidos = materiaisFiltrados.filter(
-    (material) => material.Conferido === 1
+    materialEstaConferido
   ).length;
 
-  const totalPendentes = materiaisFiltrados.filter(
-    (material) => material.Conferido === 0
-  ).length;
+  const totalPendentes = total - totalConferidos;
 
   const totalAtivos = materiaisFiltrados.filter(
-    (material) => material.situacao === 'ATIVO'
+    (material) =>
+      normalizar(material?.situacao) === 'ativo'
   ).length;
 
   const totalInativos = materiaisFiltrados.filter(
-    (material) => material.situacao === 'INATIVO'
+    (material) =>
+      normalizar(material?.situacao) === 'inativo'
   ).length;
 
   const resumoPorSetor = useMemo(() => {
     const resumo = {};
 
     materiaisFiltrados.forEach((material) => {
-      if (!resumo[material.setor]) {
-        resumo[material.setor] = 0;
+      const nomeSetor = material?.setor || 'Não informado';
+
+      if (!resumo[nomeSetor]) {
+        resumo[nomeSetor] = 0;
       }
 
-      resumo[material.setor] += 1;
+      resumo[nomeSetor] += 1;
     });
 
-    return Object.entries(resumo).sort((a, b) => a[0].localeCompare(b[0]));
+    return Object.entries(resumo).sort((a, b) =>
+      a[0].localeCompare(b[0], 'pt-BR')
+    );
   }, [materiaisFiltrados]);
 
   const limparFiltros = () => {
+    setNome('');
+    setMarca('');
     setDescricao('');
-    setNSerie('');
+    setNumeroSerie('');
     setSetor('');
     setStatus('TODOS');
     setSituacao('ATIVO');
   };
 
   const gerarPDF = async () => {
-    if (gerandoPdf || materiaisFiltrados.length === 0) return;
+    if (gerandoPdf || materiaisFiltrados.length === 0) {
+      return;
+    }
 
     try {
       setGerandoPdf(true);
@@ -107,8 +171,11 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
       await gerarRelatorioPatrimonioPdf({
         usuario,
         filtros: {
+          nome,
+          marca,
           descricao,
-          nSerie,
+          numeroSerie,
+          nSerie: numeroSerie,
           setor,
           status,
           situacao,
@@ -134,14 +201,19 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
     <main className="consulta-page">
       <section className="consulta-phone">
         <header className="consulta-header">
-          <button type="button" className="consulta-voltar" onClick={onVoltar}>
+          <button
+            type="button"
+            className="consulta-voltar"
+            onClick={onVoltar}
+            aria-label="Voltar"
+          >
             <FaArrowLeft />
           </button>
 
           <div>
             <span>Consulta patrimonial</span>
             <h1>Filtros avançados</h1>
-            <p>Unidade: {usuario.unidade}</p>
+            <p>Unidade: {usuario?.unidade || 'Não informada'}</p>
           </div>
         </header>
 
@@ -175,16 +247,49 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
         <section className="consulta-filtros-card">
           <div className="consulta-card-titulo">
             <FaFilter />
+
             <div>
               <h2>Filtrar materiais</h2>
-              <p>Busque por descrição, série, setor, status ou situação.</p>
+              <p>
+                Busque por nome, marca, descrição, série, setor,
+                status ou situação.
+              </p>
             </div>
           </div>
+
+          <label className="consulta-label">
+            Nome
+            <div className="consulta-input-icon">
+              <FaMagnifyingGlass />
+
+              <input
+                type="text"
+                value={nome}
+                placeholder="Ex.: monitor, cadeira, armário"
+                onChange={(event) => setNome(event.target.value)}
+              />
+            </div>
+          </label>
+
+          <label className="consulta-label">
+            Marca
+            <div className="consulta-input-icon">
+              <FaMagnifyingGlass />
+
+              <input
+                type="text"
+                value={marca}
+                placeholder="Ex.: Lenovo, Dell, Antera"
+                onChange={(event) => setMarca(event.target.value)}
+              />
+            </div>
+          </label>
 
           <label className="consulta-label">
             Descrição
             <div className="consulta-input-icon">
               <FaMagnifyingGlass />
+
               <input
                 type="text"
                 value={descricao}
@@ -198,11 +303,12 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
             Nº Série / Código
             <div className="consulta-input-icon">
               <FaBarcode />
+
               <input
                 type="text"
-                value={nSerie}
-                placeholder="Ex.: 100005"
-                onChange={(event) => setNSerie(event.target.value)}
+                value={numeroSerie}
+                placeholder="Ex.: 00494550"
+                onChange={(event) => setNumeroSerie(event.target.value)}
               />
             </div>
           </label>
@@ -215,6 +321,7 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
                 onChange={(event) => setSetor(event.target.value)}
               >
                 <option value="">Todos</option>
+
                 {setoresDaUnidade.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -279,14 +386,19 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
           {resumoPorSetor.length > 0 ? (
             <div className="consulta-setores-lista">
               {resumoPorSetor.map(([nomeSetor, quantidade]) => (
-                <div key={nomeSetor} className="consulta-setor-item">
+                <div
+                  key={nomeSetor}
+                  className="consulta-setor-item"
+                >
                   <span>{nomeSetor}</span>
                   <strong>{quantidade}</strong>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="consulta-vazio">Nenhum setor encontrado.</div>
+            <div className="consulta-vazio">
+              Nenhum setor encontrado.
+            </div>
           )}
         </section>
 
@@ -297,34 +409,69 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
           </div>
 
           <div className="consulta-resultados-scroll">
-            {materiaisFiltrados.map((material) => (
-              <article
-                key={material.ID}
-                className={`consulta-material-card ${
-                  material.situacao === 'INATIVO'
-                    ? 'consulta-material-inativo'
-                    : ''
-                }`}
-              >
-                <div className="consulta-material-icon">
-                  {material.Conferido === 1 ? <FaCheck /> : <FaBoxesStacked />}
-                </div>
+            {materiaisFiltrados.map((material) => {
+              const conferido = materialEstaConferido(material);
+              const materialInativo =
+                normalizar(material?.situacao) === 'inativo';
 
-                <div className="consulta-material-info">
-                  <strong>{material.NSerie}</strong>
-                  <h3>{material.descricao}</h3>
-                  <p>{material.observacao}</p>
-
-                  <div className="consulta-material-tags">
-                    <span>{material.setor}</span>
-                    <span>{material.situacao}</span>
-                    <span>
-                      {material.Conferido === 1 ? 'CONFERIDO' : 'PENDENTE'}
-                    </span>
+              return (
+                <article
+                  key={obterId(material) ?? obterNumeroSerie(material)}
+                  className={`consulta-material-card ${
+                    materialInativo
+                      ? 'consulta-material-inativo'
+                      : ''
+                  }`}
+                >
+                  <div className="consulta-material-icon">
+                    {conferido ? <FaCheck /> : <FaBoxesStacked />}
                   </div>
-                </div>
-              </article>
-            ))}
+
+                  <div className="consulta-material-info">
+                    <strong>
+                      {obterNumeroSerie(material) || 'Sem número de série'}
+                    </strong>
+
+                    <h3>
+                      {material?.nome || material?.descricao || 'Material'}
+                    </h3>
+
+                    {material?.marca && (
+                      <p>
+                        <strong>Marca:</strong> {material.marca}
+                      </p>
+                    )}
+
+                    <p>{material?.descricao || 'Sem descrição'}</p>
+
+                    <p>
+                      {material?.observacao || 'Sem observação'}
+                    </p>
+
+                    <div className="consulta-material-tags">
+                      <span>{material?.setor || 'Sem setor'}</span>
+                      <span>{material?.situacao || 'Sem situação'}</span>
+                      <span>
+                        {conferido ? 'CONFERIDO' : 'PENDENTE'}
+                      </span>
+                    </div>
+
+                    <div className="consulta-material-acoes">
+                      <button
+                        type="button"
+                        className="consulta-detalhes-button"
+                        onClick={() =>
+                          setMaterialDetalhes(material)
+                        }
+                      >
+                        <FaEye />
+                        Ver detalhes
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
 
             {materiaisFiltrados.length === 0 && (
               <div className="consulta-vazio">
@@ -333,6 +480,23 @@ function ConsultaMateriais({ usuario, materiais, onVoltar }) {
             )}
           </div>
         </section>
+        <MaterialDetalhesModal
+          aberto={Boolean(materialDetalhes)}
+          material={materialDetalhes}
+          onFechar={() => setMaterialDetalhes(null)}
+          onEditar={
+            typeof onEditarMaterial === 'function'
+              ? (material) => {
+                  setMaterialDetalhes(null);
+                  onEditarMaterial(material);
+                }
+              : undefined
+          }
+          podeEditar={
+            typeof onEditarMaterial === 'function'
+          }
+        />
+
       </section>
     </main>
   );

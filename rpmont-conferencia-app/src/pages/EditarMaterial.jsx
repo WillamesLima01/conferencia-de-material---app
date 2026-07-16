@@ -13,72 +13,103 @@ import {
 import { setoresDaUnidade } from '../data/setores';
 import '../styles/EditarMaterial.css';
 
-const unidadesSistema = ['RPMont', '3º EPMont'];
+function EditarMaterial({
+  material,
+  usuario,
+  onSalvar,
+  onInativar,
+  onCancelar,
+}) {
+  const [numeroSerie, setNumeroSerie] = useState(
+    material?.numeroSerie || ''
+  );
 
-function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar }) {
-  const [descricao, setDescricao] = useState(material.descricao || '');
-  const [observacao, setObservacao] = useState(material.observacao || '');
-  const [setor, setSetor] = useState(material.setor || '');
-  const [unidade, setUnidade] = useState(material.unidade || usuario.unidade);
+  const [nome, setNome] = useState(
+    material?.nome || ''
+  );
+
+  const [marca, setMarca] = useState(
+    material?.marca || ''
+  );
+
+  const [descricao, setDescricao] = useState(
+    material?.descricao || ''
+  );
+
+  const [observacao, setObservacao] = useState(
+    material?.observacao === '-'
+      ? ''
+      : material?.observacao || ''
+  );
+
+  const [setor, setSetor] = useState(
+    material?.setor || ''
+  );
+
   const [mensagem, setMensagem] = useState('');
 
   const [modalInativar, setModalInativar] = useState(false);
-  const [senhaAdmin, setSenhaAdmin] = useState('');
-  const [mensagemInativar, setMensagemInativar] = useState('');
 
-  const usuarioEhAdmin = Number(usuario.nivel) === 1;
+  const limparMensagem = () => {
+    if (mensagem) {
+      setMensagem('');
+    }
+  };
 
   const salvarAlteracoes = () => {
-    if (!descricao.trim()) {
+    const numeroSerieTratado = numeroSerie.trim();
+    const nomeTratado = nome.trim();
+    const marcaTratada = marca.trim();
+    const descricaoTratada = descricao.trim();
+    const observacaoTratada = observacao.trim();
+    const setorTratado = setor.trim();
+
+    if (!numeroSerieTratado) {
+      setMensagem('Informe o Nº Série / código do material.');
+      return;
+    }
+
+    if (!descricaoTratada) {
       setMensagem('Informe a descrição do material.');
       return;
     }
 
-    if (!setor) {
+    if (!setorTratado) {
       setMensagem('Selecione o setor do material.');
       return;
     }
 
-    if (!unidade) {
-      setMensagem('Selecione a unidade do material.');
-      return;
-    }
+    /*
+     * Envia somente os campos aceitos pelo
+     * MaterialPatrimonialRequestDTO.
+     *
+     * Unidade, auditoria, datas e situação
+     * são controladas pelo backend.
+     */
+    const materialAtualizado = {
+      numeroSerie: numeroSerieTratado,
+      nome: nomeTratado || null,
+      marca: marcaTratada || null,
+      descricao: descricaoTratada,
+      observacao: observacaoTratada || null,
+      setor: setorTratado,
+      conferido: Boolean(material?.conferido),
+    };
 
-    onSalvar({
-      ...material,
-      descricao: descricao.trim(),
-      observacao: observacao.trim() || '-',
-      setor,
-      unidade,
-      situacao: material.situacao || 'ATIVO',
-      dataModificacao: new Date().toISOString(),
-      userModificador: usuario.id,
-    });
+    onSalvar(materialAtualizado);
   };
 
   const abrirModalInativar = () => {
-    setSenhaAdmin('');
-    setMensagemInativar('');
     setModalInativar(true);
   };
 
   const fecharModalInativar = () => {
-    setSenhaAdmin('');
-    setMensagemInativar('');
     setModalInativar(false);
   };
 
   const confirmarInativacao = () => {
-    /*
-      Simulação no React.
-      Depois, no backend, essa senha será validada contra a tabela TB_Usuario_P4.
-    */
-    if (senhaAdmin !== '123456') {
-      setMensagemInativar('Senha de administrador incorreta.');
-      return;
-    }
-
     onInativar(material);
+    fecharModalInativar();
   };
 
   return (
@@ -89,6 +120,7 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
             type="button"
             className="voltar-editar-button"
             onClick={onCancelar}
+            aria-label="Voltar"
           >
             <FaArrowLeft />
           </button>
@@ -102,11 +134,13 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
 
         <section className="editar-alerta">
           <FaPenToSquare />
+
           <div>
-            <strong>Alteração administrativa</strong>
+            <strong>Alteração de material</strong>
+
             <p>
-              As alterações ficarão vinculadas ao usuário administrador que está
-              realizando a edição.
+              As alterações ficarão vinculadas ao usuário que está realizando
+              a edição.
             </p>
           </div>
         </section>
@@ -115,32 +149,79 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
           <div className="editar-info-card">
             <FaBarcode />
             <span>Nº Série</span>
-            <strong>{material.NSerie}</strong>
+            <strong>
+              {material?.numeroSerie || 'Não informado'}
+            </strong>
           </div>
 
           <div className="editar-info-card">
             <FaBuilding />
-            <span>Unidade atual</span>
-            <strong>{unidade}</strong>
+            <span>Unidade</span>
+            <strong>
+              {material?.unidade || usuario?.unidade || 'Não informada'}
+            </strong>
           </div>
 
           <div className="editar-info-card editar-info-card-full">
             <FaLayerGroup />
             <span>Setor atual</span>
-            <strong>{setor}</strong>
+            <strong>{setor || 'Não informado'}</strong>
           </div>
         </section>
 
         <section className="editar-form-card">
           <label className="editar-material-label">
+            Nº Série / Código
+            <input
+              type="text"
+              value={numeroSerie}
+              maxLength={100}
+              placeholder="Ex.: 00494550"
+              onChange={(event) => {
+                setNumeroSerie(event.target.value);
+                limparMensagem();
+              }}
+            />
+          </label>
+
+          <label className="editar-material-label">
+            Nome do material
+            <input
+              type="text"
+              value={nome}
+              maxLength={100}
+              placeholder="Ex.: Monitor"
+              onChange={(event) => {
+                setNome(event.target.value);
+                limparMensagem();
+              }}
+            />
+          </label>
+
+          <label className="editar-material-label">
+            Marca
+            <input
+              type="text"
+              value={marca}
+              maxLength={100}
+              placeholder="Ex.: Lenovo"
+              onChange={(event) => {
+                setMarca(event.target.value);
+                limparMensagem();
+              }}
+            />
+          </label>
+
+          <label className="editar-material-label">
             Descrição do material
             <input
               type="text"
               value={descricao}
-              placeholder="Ex.: Ar-condicionado Split 12.000 BTUs"
+              maxLength={300}
+              placeholder="Ex.: Monitor LED modelo ThinkVision de 24 polegadas"
               onChange={(event) => {
                 setDescricao(event.target.value);
-                setMensagem('');
+                limparMensagem();
               }}
             />
           </label>
@@ -149,8 +230,12 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
             Observação
             <textarea
               value={observacao}
+              maxLength={500}
               placeholder="Observação do material"
-              onChange={(event) => setObservacao(event.target.value)}
+              onChange={(event) => {
+                setObservacao(event.target.value);
+                limparMensagem();
+              }}
             />
           </label>
 
@@ -160,10 +245,11 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
               value={setor}
               onChange={(event) => {
                 setSetor(event.target.value);
-                setMensagem('');
+                limparMensagem();
               }}
             >
               <option value="">Selecione o setor</option>
+
               {setoresDaUnidade.map((item) => (
                 <option key={item} value={item}>
                   {item}
@@ -174,22 +260,22 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
 
           <label className="editar-material-label">
             Unidade
-            <select
-              value={unidade}
-              onChange={(event) => {
-                setUnidade(event.target.value);
-                setMensagem('');
-              }}
-            >
-              {unidadesSistema.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={
+                material?.unidade ||
+                usuario?.unidade ||
+                ''
+              }
+              disabled
+            />
           </label>
 
-          {mensagem && <div className="editar-material-mensagem">{mensagem}</div>}
+          {mensagem && (
+            <div className="editar-material-mensagem">
+              {mensagem}
+            </div>
+          )}
 
           <button
             type="button"
@@ -200,16 +286,14 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
             Salvar alterações
           </button>
 
-          {usuarioEhAdmin && (
-            <button
-              type="button"
-              className="inativar-material-button"
-              onClick={abrirModalInativar}
-            >
-              <FaTrashCan />
-              Inativar material
-            </button>
-          )}
+          <button
+            type="button"
+            className="inativar-material-button"
+            onClick={abrirModalInativar}
+          >
+            <FaTrashCan />
+            Inativar material
+          </button>
 
           <button
             type="button"
@@ -227,6 +311,7 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
                 type="button"
                 className="fechar-modal-inativar"
                 onClick={fecharModalInativar}
+                aria-label="Fechar"
               >
                 <FaXmark />
               </button>
@@ -238,39 +323,33 @@ function EditarMaterial({ material, usuario, onSalvar, onInativar, onCancelar })
               <h2>Inativar material?</h2>
 
               <p>
-                O material <strong>{material.NSerie}</strong> será removido das
-                listagens ativas da conferência.
+                O material{' '}
+                <strong>
+                  {material?.numeroSerie}
+                </strong>{' '}
+                será removido das listagens ativas da conferência.
               </p>
 
               <div className="material-inativar-resumo">
+                <span>Nome</span>
+                <strong>
+                  {material?.nome || 'Não informado'}
+                </strong>
+
+                <span>Marca</span>
+                <strong>
+                  {material?.marca || 'Não informada'}
+                </strong>
+
                 <span>Descrição</span>
-                <strong>{material.descricao}</strong>
+                <strong>{material?.descricao}</strong>
 
                 <span>Setor</span>
-                <strong>{material.setor}</strong>
+                <strong>{material?.setor}</strong>
 
                 <span>Unidade</span>
-                <strong>{material.unidade}</strong>
+                <strong>{material?.unidade}</strong>
               </div>
-
-              <label>
-                Senha de administrador
-                <input
-                  type="password"
-                  value={senhaAdmin}
-                  placeholder="Digite a senha"
-                  onChange={(event) => {
-                    setSenhaAdmin(event.target.value);
-                    setMensagemInativar('');
-                  }}
-                />
-              </label>
-
-              {mensagemInativar && (
-                <div className="mensagem-inativar erro">
-                  {mensagemInativar}
-                </div>
-              )}
 
               <button
                 type="button"

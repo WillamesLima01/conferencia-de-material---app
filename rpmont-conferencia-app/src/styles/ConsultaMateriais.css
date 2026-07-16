@@ -512,3 +512,39 @@
     max-height: 170px;
   }
 }
+
+.consulta-material-acoes {
+  display: flex;
+  margin-top: 12px;
+}
+
+.consulta-detalhes-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 42px;
+  padding: 10px 16px;
+
+  border: 2px solid #111111;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #111111;
+
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.consulta-detalhes-button:hover {
+  background: #111111;
+  color: #ffdf00;
+}
+
+@media (max-width: 600px) {
+  .consulta-detalhes-button {
+    width: 100%;
+  }
+}

@@ -9,6 +9,12 @@ public record MaterialPatrimonialRequestDTO(
         @Size(max = 100, message = "O número de série deve possuir no máximo 100 caracteres.")
         String numeroSerie,
 
+        @Size(max = 100, message = "O nome deve possuir no máximo 100 caracteres.")
+        String nome,
+
+        @Size(max = 100, message = "A marca deve possuir no máximo 100 caracteres.")
+        String marca,
+
         @NotBlank(message = "A descrição é obrigatória.")
         @Size(max = 300, message = "A descrição deve possuir no máximo 300 caracteres.")
         String descricao,

@@ -15,7 +15,13 @@ import TransferenciaFenoRacao from './pages/TransferenciaFenoRacao';
 import SolicitarAcesso from './pages/SolicitarAcesso';
 import RecuperarSenha from './pages/RecuperarSenha';
 
-import { materiaisMock } from './data/materiais';
+import {
+  atualizarMaterial,
+  cadastrarMaterial,
+  conferirMaterial,
+  inativarMaterial,
+  listarMateriais,
+} from './services/materialPatrimonialService';
 
 import './App.css';
 
@@ -35,7 +41,9 @@ function App() {
     setConfiguracaoConferencia,
   ] = useState(null);
 
-  const [materiais, setMateriais] = useState(materiaisMock);
+  const [materiais, setMateriais] = useState([]);
+  const [carregandoMateriais, setCarregandoMateriais] = useState(false);
+  const [erroMateriais, setErroMateriais] = useState('');
 
   const [abrirConsulta, setAbrirConsulta] = useState(false);
   const [abrirAdmin, setAbrirAdmin] = useState(false);
@@ -107,6 +115,64 @@ function App() {
       'recuperacaoSenhaEmAndamento'
     );
   }, [abrirRecuperarSenha]);
+
+  const obterMensagemErro = (error) => {
+    return (
+      error?.response?.data?.message ||
+      error?.message ||
+      'Não foi possível concluir a operação.'
+    );
+  };
+
+  const obterIdMaterial = (material) => {
+    return material?.id ?? material?.ID;
+  };
+
+  const carregarMateriais = async () => {
+    if (!usuarioLogado) {
+      setMateriais([]);
+      return;
+    }
+
+    try {
+      setCarregandoMateriais(true);
+      setErroMateriais('');
+
+      const materiaisRecebidos = await listarMateriais();
+
+      setMateriais(
+        Array.isArray(materiaisRecebidos)
+          ? materiaisRecebidos
+          : []
+      );
+    } catch (error) {
+      console.error(
+        'Erro ao carregar materiais patrimoniais:',
+        error
+      );
+
+      setMateriais([]);
+      setErroMateriais(obterMensagemErro(error));
+    } finally {
+      setCarregandoMateriais(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!usuarioLogado) {
+      setMateriais([]);
+      setErroMateriais('');
+      return;
+    }
+
+    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
+      setMateriais([]);
+      setErroMateriais('');
+      return;
+    }
+
+    carregarMateriais();
+  }, [usuarioLogado]);
 
   const limparNumeros = (valor) => {
     return String(valor || '').replace(/\D/g, '');
@@ -417,23 +483,25 @@ function App() {
       return;
     }
 
+    /*
+     * Esta ação ainda é apenas local.
+     * Quando criarmos o endpoint de zerar conferência no backend,
+     * este trecho deverá chamar a API.
+     */
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
         material.unidade === usuario.unidade &&
         material.situacao !== 'INATIVO'
           ? {
               ...material,
-              Conferido: 0,
-              dataModificacao:
-                new Date().toISOString(),
-              userModificador: usuario.id,
+              conferido: false,
             }
           : material
       )
     );
   };
 
-  const salvarMaterialCadastrado = (
+  const salvarMaterialCadastrado = async (
     dadosNovoMaterial
   ) => {
     if (
@@ -448,31 +516,30 @@ function App() {
       return;
     }
 
-    const novoId =
-      materiais.length > 0
-        ? Math.max(
-            ...materiais.map(
-              (material) => material.ID
-            )
-          ) + 1
-        : 1;
+    try {
+      const materialCadastrado =
+        await cadastrarMaterial(
+          dadosNovoMaterial
+        );
 
-    const materialCompleto = {
-      ID: novoId,
-      situacao: 'ATIVO',
-      ...dadosNovoMaterial,
-    };
+      setMateriais((materiaisAtuais) => [
+        ...materiaisAtuais,
+        materialCadastrado,
+      ]);
 
-    setMateriais((materiaisAtuais) => [
-      ...materiaisAtuais,
-      materialCompleto,
-    ]);
+      setCadastroPendente(null);
+    } catch (error) {
+      console.error(
+        'Erro ao cadastrar material:',
+        error
+      );
 
-    setCadastroPendente(null);
+      window.alert(obterMensagemErro(error));
+    }
   };
 
-  const salvarMaterialEditado = (
-    materialAtualizado
+  const salvarMaterialEditado = async (
+    dadosAtualizados
   ) => {
     if (
       !usuarioPodeAcessarPatrimonio(
@@ -486,18 +553,44 @@ function App() {
       return;
     }
 
-    setMateriais((materiaisAtuais) =>
-      materiaisAtuais.map((material) =>
-        material.ID === materialAtualizado.ID
-          ? materialAtualizado
-          : material
-      )
-    );
+    const idMaterial =
+      obterIdMaterial(materialEmEdicao);
 
-    setMaterialEmEdicao(null);
+    if (idMaterial === null || idMaterial === undefined) {
+      window.alert(
+        'Não foi possível identificar o material que será editado.'
+      );
+
+      return;
+    }
+
+    try {
+      const materialAtualizado =
+        await atualizarMaterial(
+          idMaterial,
+          dadosAtualizados
+        );
+
+      setMateriais((materiaisAtuais) =>
+        materiaisAtuais.map((material) =>
+          obterIdMaterial(material) === idMaterial
+            ? materialAtualizado
+            : material
+        )
+      );
+
+      setMaterialEmEdicao(null);
+    } catch (error) {
+      console.error(
+        'Erro ao editar material:',
+        error
+      );
+
+      window.alert(obterMensagemErro(error));
+    }
   };
 
-  const excluirMaterial = (
+  const excluirMaterial = async (
     materialParaExcluir
   ) => {
     if (
@@ -512,27 +605,89 @@ function App() {
       return;
     }
 
-    setMateriais((materiaisAtuais) =>
-      materiaisAtuais.map((material) =>
-        material.ID === materialParaExcluir.ID
-          ? {
-              ...material,
+    const idMaterial =
+      obterIdMaterial(materialParaExcluir);
 
-              situacao: 'INATIVO',
+    if (idMaterial === null || idMaterial === undefined) {
+      window.alert(
+        'Não foi possível identificar o material que será inativado.'
+      );
 
-              dataModificacao:
-                new Date().toISOString(),
+      return;
+    }
 
-              userModificador:
-                usuarioLogado?.id ||
-                usuarioLogado?.ID ||
-                1,
-            }
-          : material
+    try {
+      const materialInativado =
+        await inativarMaterial(idMaterial);
+
+      setMateriais((materiaisAtuais) =>
+        materiaisAtuais.map((material) =>
+          obterIdMaterial(material) === idMaterial
+            ? materialInativado
+            : material
+        )
+      );
+
+      setMaterialEmEdicao(null);
+    } catch (error) {
+      console.error(
+        'Erro ao inativar material:',
+        error
+      );
+
+      window.alert(obterMensagemErro(error));
+    }
+  };
+
+  const conferirMaterialPatrimonial = async (
+    materialParaConferir
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
       )
-    );
+    ) {
+      window.alert(
+        'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
+      );
 
-    setMaterialEmEdicao(null);
+      return null;
+    }
+
+    const idMaterial =
+      obterIdMaterial(materialParaConferir);
+
+    if (idMaterial === null || idMaterial === undefined) {
+      window.alert(
+        'Não foi possível identificar o material que será conferido.'
+      );
+
+      return null;
+    }
+
+    try {
+      const materialConferido =
+        await conferirMaterial(idMaterial);
+
+      setMateriais((materiaisAtuais) =>
+        materiaisAtuais.map((material) =>
+          obterIdMaterial(material) === idMaterial
+            ? materialConferido
+            : material
+        )
+      );
+
+      return materialConferido;
+    } catch (error) {
+      console.error(
+        'Erro ao conferir material:',
+        error
+      );
+
+      window.alert(obterMensagemErro(error));
+
+      return null;
+    }
   };
 
   const abrirTelaCadastroManual = () => {
@@ -890,6 +1045,50 @@ function App() {
     );
   }
 
+  if (
+    carregandoMateriais &&
+    (
+      configuracaoConferencia ||
+      abrirConsulta ||
+      cadastroPendente ||
+      materialEmEdicao
+    )
+  ) {
+    return (
+      <main className="app-feedback-page">
+        <p>Carregando materiais patrimoniais...</p>
+      </main>
+    );
+  }
+
+  if (
+    erroMateriais &&
+    (
+      configuracaoConferencia ||
+      abrirConsulta
+    )
+  ) {
+    return (
+      <main className="app-feedback-page">
+        <p>{erroMateriais}</p>
+
+        <button
+          type="button"
+          onClick={carregarMateriais}
+        >
+          Tentar novamente
+        </button>
+
+        <button
+          type="button"
+          onClick={fecharTelasSecundarias}
+        >
+          Voltar
+        </button>
+      </main>
+    );
+  }
+
   if (materialEmEdicao) {
     return (
       <EditarMaterial
@@ -936,6 +1135,9 @@ function App() {
         usuario={usuarioLogado}
         materiais={materiais}
         onVoltar={voltarDaConsulta}
+        onEditarMaterial={
+          setMaterialEmEdicao
+        }
       />
     );
   }
@@ -1080,6 +1282,9 @@ function App() {
         setMaterialEmEdicao
       }
       onExcluirMaterial={excluirMaterial}
+      onConferirMaterial={
+        conferirMaterialPatrimonial
+      }
     />
   );
 }

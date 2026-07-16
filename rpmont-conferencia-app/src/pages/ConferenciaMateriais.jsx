@@ -5,111 +5,248 @@ import {
   FaCamera,
   FaCheck,
   FaCircleExclamation,
+  FaEye,
   FaMagnifyingGlass,
-  FaPlus,
-  FaXmark,
   FaPenToSquare,
+  FaPlus,
   FaTrashCan,
   FaTriangleExclamation,
+  FaXmark,
 } from 'react-icons/fa6';
+
+import MaterialDetalhesModal from '../components/MaterialDetalhesModal';
 
 import '../styles/ConferenciaMateriais.css';
 
 function ConferenciaMateriais({
   usuario,
   configuracao,
-  materiais,
+  materiais = [],
   setMateriais,
   onVoltar,
   onAbrirCadastro,
   onEditarMaterial,
   onExcluirMaterial,
+  onConferirMaterial,
 }) {
-  const todosMateriais = materiais;
-  const setTodosMateriais = setMateriais;
-
   const [codigoLido, setCodigoLido] = useState('');
   const [codigoPendente, setCodigoPendente] = useState('');
-  const [modalNaoEncontrado, setModalNaoEncontrado] = useState(false);
-  const [modalOutroSetor, setModalOutroSetor] = useState(null);
-  const [mensagem, setMensagem] = useState('');
 
-  const [cameraAberta, setCameraAberta] = useState(false);
-  const [carregandoCamera, setCarregandoCamera] = useState(false);
+  const [modalNaoEncontrado, setModalNaoEncontrado] =
+    useState(false);
+
+  const [modalOutroSetor, setModalOutroSetor] =
+    useState(null);
+
+  const [modalExcluir, setModalExcluir] =
+    useState(null);
+
+  const [materialDetalhes, setMaterialDetalhes] =
+    useState(null);
+
+  const [mensagem, setMensagem] = useState('');
+  const [conferindoMaterial, setConferindoMaterial] =
+    useState(false);
+
+  const [cameraAberta, setCameraAberta] =
+    useState(false);
+
+  const [carregandoCamera, setCarregandoCamera] =
+    useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const leitorAtivoRef = useRef(false);
 
-  const [modalExcluir, setModalExcluir] = useState(null);
-  const [senhaExcluir, setSenhaExcluir] = useState('');
-  const [mensagemExcluir, setMensagemExcluir] = useState('');
+  const normalizarTexto = (valor) =>
+    String(valor ?? '')
+      .trim()
+      .toLowerCase();
 
-  const usuarioEhAdmin = Number(usuario.nivel) === 1;
+  const normalizarCodigo = (valor) =>
+    String(valor ?? '').trim();
+
+  const obterId = (material) =>
+    material?.id ?? material?.ID;
+
+  const obterNumeroSerie = (material) =>
+    material?.numeroSerie ??
+    material?.NSerie ??
+    '';
+
+  const materialEstaConferido = (material) =>
+    material?.conferido === true ||
+    material?.conferido === 1 ||
+    material?.Conferido === true ||
+    material?.Conferido === 1;
+
+  const materialEstaAtivo = (material) =>
+    normalizarTexto(material?.situacao) !==
+    'inativo';
 
   const materiaisDaConferencia = useMemo(() => {
-    return todosMateriais.filter((material) => {
-      const materialAtivo = material.situacao !== 'INATIVO';
-      const mesmaUnidade = material.unidade === usuario.unidade;
+    return materiais.filter((material) => {
+      const mesmaUnidade =
+        normalizarTexto(material?.unidade) ===
+        normalizarTexto(usuario?.unidade);
 
-      if (configuracao.tipo === 'TODOS') {
-        return materialAtivo && mesmaUnidade;
+      if (
+        !materialEstaAtivo(material) ||
+        !mesmaUnidade
+      ) {
+        return false;
+      }
+
+      if (configuracao?.tipo === 'TODOS') {
+        return true;
       }
 
       return (
-        materialAtivo &&
-        mesmaUnidade &&
-        material.setor === configuracao.setor
+        configuracao?.tipo === 'SETOR' &&
+        normalizarTexto(material?.setor) ===
+          normalizarTexto(configuracao?.setor)
       );
     });
-  }, [todosMateriais, usuario.unidade, configuracao]);
+  }, [
+    materiais,
+    usuario?.unidade,
+    configuracao?.tipo,
+    configuracao?.setor,
+  ]);
 
   const total = materiaisDaConferencia.length;
 
   const conferidos = materiaisDaConferencia.filter(
-    (material) => material.Conferido === 1
+    materialEstaConferido
   ).length;
 
   const pendentes = total - conferidos;
-
-  const normalizarCodigo = (valor) => {
-    return String(valor || '').trim();
-  };
 
   const limparMensagens = () => {
     setMensagem('');
   };
 
-  const conferirCodigoPorValor = (valorCodigo) => {
-    limparMensagens();
-
-    const codigo = normalizarCodigo(valorCodigo);
-
-    if (!codigo) {
-      setMensagem('Informe ou leia um código de barras.');
+  /*
+   * Atualização local temporária.
+   *
+   * Atualmente utilizada somente no fluxo de mudança
+   * de setor. A conferência normal já é persistida
+   * pelo backend por meio de onConferirMaterial.
+   */
+  const atualizarMaterialNaLista = (
+    idMaterial,
+    dadosAtualizados
+  ) => {
+    if (typeof setMateriais !== 'function') {
       return;
     }
 
-    const materialNaLista = materiaisDaConferencia.find(
-      (material) => material.NSerie === codigo
+    setMateriais((materiaisAtuais) =>
+      materiaisAtuais.map((material) =>
+        obterId(material) === idMaterial
+          ? {
+              ...material,
+              ...dadosAtualizados,
+            }
+          : material
+      )
     );
+  };
 
-    if (materialNaLista) {
-      setTodosMateriais((materiaisAtuais) =>
-        materiaisAtuais.map((material) =>
-          material.ID === materialNaLista.ID
-            ? {
-                ...material,
-                Conferido: 1,
-                dataModificacao: new Date().toISOString(),
-                userModificador: usuario.id,
-              }
-            : material
-        )
+  /*
+   * ==========================================
+   * CONFERIR MATERIAL
+   * ==========================================
+   */
+
+  const conferirCodigoPorValor = async (
+    valorCodigo
+  ) => {
+    limparMensagens();
+
+    const codigo =
+      normalizarCodigo(valorCodigo);
+
+    if (!codigo) {
+      setMensagem(
+        'Informe ou leia um código de barras.'
       );
 
-      setMensagem(`Material conferido: ${materialNaLista.descricao}`);
-      setCodigoLido('');
+      return;
+    }
+
+    if (conferindoMaterial) {
+      return;
+    }
+
+    const materialNaLista =
+      materiaisDaConferencia.find(
+        (material) =>
+          normalizarCodigo(
+            obterNumeroSerie(material)
+          ) === codigo
+      );
+
+    if (materialNaLista) {
+      if (
+        typeof onConferirMaterial !==
+        'function'
+      ) {
+        setMensagem(
+          'O serviço de conferência não está disponível.'
+        );
+
+        return;
+      }
+
+      try {
+        setConferindoMaterial(true);
+
+        /*
+         * O App.jsx chama:
+         *
+         * PATCH /material-patrimonial/{id}/conferir
+         */
+        const materialConferido =
+          await onConferirMaterial(
+            materialNaLista
+          );
+
+        if (!materialConferido) {
+          setMensagem(
+            'Não foi possível confirmar a conferência do material.'
+          );
+
+          return;
+        }
+
+        const identificacaoMaterial =
+          materialConferido?.nome ||
+          materialConferido?.descricao ||
+          obterNumeroSerie(
+            materialConferido
+          );
+
+        setMensagem(
+          `Material conferido: ${identificacaoMaterial}`
+        );
+
+        setCodigoLido('');
+        setCodigoPendente('');
+      } catch (error) {
+        console.error(
+          'Erro ao conferir material:',
+          error
+        );
+
+        setMensagem(
+          error?.message ||
+            'Não foi possível conferir o material.'
+        );
+      } finally {
+        setConferindoMaterial(false);
+      }
+
       return;
     }
 
@@ -117,15 +254,28 @@ function ConferenciaMateriais({
     setModalNaoEncontrado(true);
   };
 
-  const conferirCodigo = () => {
-    conferirCodigoPorValor(codigoLido);
+  const conferirCodigo = async () => {
+    await conferirCodigoPorValor(
+      codigoLido
+    );
   };
+
+  /*
+   * ==========================================
+   * CÂMERA
+   * ==========================================
+   */
 
   const pararCamera = () => {
     leitorAtivoRef.current = false;
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current
+        .getTracks()
+        .forEach((track) =>
+          track.stop()
+        );
+
       streamRef.current = null;
     }
 
@@ -137,147 +287,261 @@ function ConferenciaMateriais({
     setCarregandoCamera(false);
   };
 
-  const processarCodigoCamera = (codigo) => {
+  const processarCodigoCamera = async (
+    codigo
+  ) => {
     setCodigoLido(codigo);
+
     pararCamera();
-    conferirCodigoPorValor(codigo);
+
+    await conferirCodigoPorValor(codigo);
   };
 
-  const abrirLeitorCodigoBarra = async () => {
-    limparMensagens();
+  const abrirLeitorCodigoBarra =
+    async () => {
+      limparMensagens();
 
-    if (!('BarcodeDetector' in window)) {
-      setMensagem(
-        'Leitor de código de barras não disponível neste navegador. No app Android final, vamos usar o leitor nativo.'
-      );
-      return;
-    }
+      if (!('BarcodeDetector' in window)) {
+        setMensagem(
+          'Leitor de código de barras não disponível neste navegador. No aplicativo Android será utilizado o leitor nativo.'
+        );
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setMensagem('Câmera não disponível neste dispositivo.');
-      return;
-    }
+        return;
+      }
 
-    try {
-      setCarregandoCamera(true);
-      setCameraAberta(true);
-      leitorAtivoRef.current = true;
+      if (
+        !navigator.mediaDevices
+          ?.getUserMedia
+      ) {
+        setMensagem(
+          'Câmera não disponível neste dispositivo.'
+        );
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-        },
-        audio: false,
-      });
+        return;
+      }
 
-      streamRef.current = stream;
+      try {
+        setCarregandoCamera(true);
+        setCameraAberta(true);
 
-      setTimeout(async () => {
-        if (!videoRef.current) return;
+        leitorAtivoRef.current = true;
 
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-
-        const detector = new window.BarcodeDetector();
-
-        const detectarCodigo = async () => {
-          if (!leitorAtivoRef.current || !videoRef.current) return;
-
-          try {
-            const codigos = await detector.detect(videoRef.current);
-
-            if (codigos.length > 0) {
-              const codigoDetectado = codigos[0].rawValue;
-              processarCodigoCamera(codigoDetectado);
-              return;
+        const stream =
+          await navigator.mediaDevices.getUserMedia(
+            {
+              video: {
+                facingMode:
+                  'environment',
+              },
+              audio: false,
             }
-          } catch {
-            setMensagem('Não foi possível ler o código. Tente novamente.');
-            pararCamera();
+          );
+
+        streamRef.current = stream;
+
+        setTimeout(async () => {
+          if (!videoRef.current) {
             return;
           }
 
-          requestAnimationFrame(detectarCodigo);
-        };
+          videoRef.current.srcObject =
+            stream;
 
-        setCarregandoCamera(false);
-        detectarCodigo();
-      }, 300);
-    } catch {
-      setMensagem('Não foi possível abrir a câmera. Verifique a permissão.');
-      pararCamera();
-    }
-  };
+          await videoRef.current.play();
+
+          const detector =
+            new window.BarcodeDetector();
+
+          const detectarCodigo =
+            async () => {
+              if (
+                !leitorAtivoRef.current ||
+                !videoRef.current
+              ) {
+                return;
+              }
+
+              try {
+                const codigos =
+                  await detector.detect(
+                    videoRef.current
+                  );
+
+                if (
+                  codigos.length > 0
+                ) {
+                  const codigoDetectado =
+                    codigos[0].rawValue;
+
+                  await processarCodigoCamera(
+                    codigoDetectado
+                  );
+
+                  return;
+                }
+              } catch {
+                setMensagem(
+                  'Não foi possível ler o código. Tente novamente.'
+                );
+
+                pararCamera();
+
+                return;
+              }
+
+              requestAnimationFrame(
+                detectarCodigo
+              );
+            };
+
+          setCarregandoCamera(false);
+
+          detectarCodigo();
+        }, 300);
+      } catch {
+        setMensagem(
+          'Não foi possível abrir a câmera. Verifique a permissão.'
+        );
+
+        pararCamera();
+      }
+    };
 
   useEffect(() => {
     return () => {
       leitorAtivoRef.current = false;
 
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current
+          .getTracks()
+          .forEach((track) =>
+            track.stop()
+          );
+
         streamRef.current = null;
       }
     };
   }, []);
 
+  /*
+   * ==========================================
+   * MATERIAL NÃO ENCONTRADO
+   * ==========================================
+   */
+
   const verificarEmTodosItens = () => {
-    const materialEncontrado = todosMateriais.find(
-      (material) => material.NSerie === codigoPendente
-    );
+    const materialEncontrado =
+      materiais.find(
+        (material) =>
+          normalizarCodigo(
+            obterNumeroSerie(material)
+          ) ===
+          normalizarCodigo(
+            codigoPendente
+          )
+      );
 
     if (!materialEncontrado) {
       setModalNaoEncontrado(false);
-      onAbrirCadastro(codigoPendente);
+
+      onAbrirCadastro(
+        codigoPendente
+      );
+
       return;
     }
 
-    if (materialEncontrado.unidade !== usuario.unidade) {
+    const mesmaUnidade =
+      normalizarTexto(
+        materialEncontrado?.unidade
+      ) ===
+      normalizarTexto(
+        usuario?.unidade
+      );
+
+    if (!mesmaUnidade) {
       setModalNaoEncontrado(false);
 
       setMensagem(
-        `Material localizado em outra unidade: ${materialEncontrado.unidade}. Procure o administrador.`
+        `Material localizado em outra unidade: ${
+          materialEncontrado?.unidade ||
+          'não informada'
+        }. Procure o administrador.`
       );
 
       return;
     }
 
     if (
-      configuracao.tipo === 'SETOR' &&
-      materialEncontrado.setor !== configuracao.setor
+      !materialEstaAtivo(
+        materialEncontrado
+      )
     ) {
       setModalNaoEncontrado(false);
-      setModalOutroSetor(materialEncontrado);
+
+      setMensagem(
+        'O material foi localizado, mas está inativo.'
+      );
+
+      return;
+    }
+
+    const materialEmOutroSetor =
+      configuracao?.tipo === 'SETOR' &&
+      normalizarTexto(
+        materialEncontrado?.setor
+      ) !==
+        normalizarTexto(
+          configuracao?.setor
+        );
+
+    if (materialEmOutroSetor) {
+      setModalNaoEncontrado(false);
+
+      setModalOutroSetor(
+        materialEncontrado
+      );
+
       return;
     }
 
     setModalNaoEncontrado(false);
-    setMensagem('Material localizado, mas não pertence ao escopo atual.');
+
+    setMensagem(
+      'Material localizado, mas não pertence ao escopo atual.'
+    );
   };
 
   const abrirCadastroRapido = () => {
     setModalNaoEncontrado(false);
-    onAbrirCadastro(codigoPendente);
+
+    onAbrirCadastro(
+      codigoPendente
+    );
   };
 
+  /*
+   * Esta operação ainda altera setor e conferência
+   * somente no estado local.
+   *
+   * Depois deverá ser conectada a um endpoint específico
+   * do backend para transferência de setor.
+   */
   const atualizarSetorEConferir = () => {
-    if (!modalOutroSetor) return;
+    if (!modalOutroSetor) {
+      return;
+    }
 
-    setTodosMateriais((materiaisAtuais) =>
-      materiaisAtuais.map((material) =>
-        material.ID === modalOutroSetor.ID
-          ? {
-              ...material,
-              setor: configuracao.setor,
-              Conferido: 1,
-              dataModificacao: new Date().toISOString(),
-              userModificador: usuario.id,
-            }
-          : material
-      )
+    atualizarMaterialNaLista(
+      obterId(modalOutroSetor),
+      {
+        setor: configuracao?.setor,
+        conferido: true,
+      }
     );
 
     setMensagem(
-      `Material transferido para ${configuracao.setor} e conferido com sucesso.`
+      `Material transferido para ${configuracao?.setor} e conferido com sucesso.`
     );
 
     setModalOutroSetor(null);
@@ -291,32 +555,68 @@ function ConferenciaMateriais({
     setCodigoPendente('');
   };
 
-  const abrirModalExcluir = (material) => {
+  /*
+   * ==========================================
+   * INATIVAR MATERIAL
+   * ==========================================
+   */
+
+  const abrirModalExcluir = (
+    material
+  ) => {
     setModalExcluir(material);
-    setSenhaExcluir('');
-    setMensagemExcluir('');
   };
 
   const fecharModalExcluir = () => {
     setModalExcluir(null);
-    setSenhaExcluir('');
-    setMensagemExcluir('');
   };
 
-  const confirmarExclusao = () => {
-    if (!modalExcluir) return;
+  const confirmarExclusao =
+    async () => {
+      if (!modalExcluir) {
+        return;
+      }
 
-    if (senhaExcluir !== '123456') {
-      setMensagemExcluir('Senha de administrador incorreta.');
-      return;
-    }
+      if (
+        typeof onExcluirMaterial !==
+        'function'
+      ) {
+        setMensagem(
+          'O serviço de inativação não está disponível.'
+        );
 
-    onExcluirMaterial(modalExcluir);
+        return;
+      }
 
-    setMensagem(`Material excluído: ${modalExcluir.descricao}`);
+      try {
+        await onExcluirMaterial(
+          modalExcluir
+        );
 
-    fecharModalExcluir();
-  };
+        const identificacaoMaterial =
+          modalExcluir?.nome ||
+          modalExcluir?.descricao ||
+          obterNumeroSerie(
+            modalExcluir
+          );
+
+        setMensagem(
+          `Material inativado: ${identificacaoMaterial}`
+        );
+
+        fecharModalExcluir();
+      } catch (error) {
+        console.error(
+          'Erro ao inativar material:',
+          error
+        );
+
+        setMensagem(
+          error?.message ||
+            'Não foi possível inativar o material.'
+        );
+      }
+    };
 
   return (
     <main className="conferencia-page">
@@ -326,20 +626,27 @@ function ConferenciaMateriais({
             type="button"
             className="voltar-button"
             onClick={onVoltar}
+            aria-label="Voltar"
           >
             <FaArrowLeft />
           </button>
 
           <div>
-            <span>Conferência Patrimonial</span>
+            <span>
+              Conferência Patrimonial
+            </span>
 
             <h1>
-              {configuracao.tipo === 'TODOS'
+              {configuracao?.tipo ===
+              'TODOS'
                 ? 'Todos os materiais'
-                : configuracao.setor}
+                : configuracao?.setor}
             </h1>
 
-            <p>{usuario.unidade}</p>
+            <p>
+              {usuario?.unidade ||
+                'Unidade não informada'}
+            </p>
           </div>
         </header>
 
@@ -351,12 +658,16 @@ function ConferenciaMateriais({
 
           <div>
             <span>Conferidos</span>
-            <strong>{conferidos}</strong>
+            <strong>
+              {conferidos}
+            </strong>
           </div>
 
           <div>
             <span>Pendentes</span>
-            <strong>{pendentes}</strong>
+            <strong>
+              {pendentes}
+            </strong>
           </div>
         </section>
 
@@ -365,8 +676,14 @@ function ConferenciaMateriais({
             <FaBarcode />
 
             <div>
-              <h2>Leitura do código</h2>
-              <p>Digite ou leia o Nº Série do material.</p>
+              <h2>
+                Leitura do código
+              </h2>
+
+              <p>
+                Digite ou leia o Nº Série
+                do material.
+              </p>
             </div>
           </div>
 
@@ -374,19 +691,40 @@ function ConferenciaMateriais({
             <input
               type="text"
               value={codigoLido}
-              placeholder="Ex.: 100005"
+              maxLength={100}
+              placeholder="Ex.: 00494550"
+              disabled={
+                conferindoMaterial
+              }
               onChange={(event) => {
-                setCodigoLido(event.target.value);
+                setCodigoLido(
+                  event.target.value
+                );
+
                 limparMensagens();
               }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  conferirCodigo();
+              onKeyDown={async (
+                event
+              ) => {
+                if (
+                  event.key ===
+                  'Enter'
+                ) {
+                  await conferirCodigo();
                 }
               }}
             />
 
-            <button type="button" onClick={conferirCodigo}>
+            <button
+              type="button"
+              onClick={
+                conferirCodigo
+              }
+              disabled={
+                conferindoMaterial
+              }
+              aria-label="Pesquisar material"
+            >
               <FaMagnifyingGlass />
             </button>
           </div>
@@ -394,79 +732,193 @@ function ConferenciaMateriais({
           <button
             type="button"
             className="leitor-codigo-button"
-            onClick={abrirLeitorCodigoBarra}
+            onClick={
+              abrirLeitorCodigoBarra
+            }
+            disabled={
+              conferindoMaterial
+            }
           >
             <FaCamera />
+
             Leitor de código de barras
           </button>
 
-          {mensagem && (
+          {conferindoMaterial && (
             <div className="mensagem-conferencia">
-              {mensagem}
+              Registrando conferência...
             </div>
           )}
+
+          {!conferindoMaterial &&
+            mensagem && (
+              <div className="mensagem-conferencia">
+                {mensagem}
+              </div>
+            )}
         </section>
 
         <section className="lista-materiais">
           <div className="lista-topo">
-            <h2>Materiais esperados</h2>
-            <span>{pendentes} pendente(s)</span>
+            <h2>
+              Materiais esperados
+            </h2>
+
+            <span>
+              {pendentes} pendente(s)
+            </span>
           </div>
 
           <div className="materiais-scroll">
-            {materiaisDaConferencia.map((material) => (
-              <article
-                key={material.ID}
-                className={`material-card ${
-                  material.Conferido === 1 ? 'material-conferido' : ''
-                }`}
-              >
-                <div className="material-status">
-                  {material.Conferido === 1 ? <FaCheck /> : <FaBarcode />}
-                </div>
+            {materiaisDaConferencia.map(
+              (material) => {
+                const conferido =
+                  materialEstaConferido(
+                    material
+                  );
 
-                <div className="material-info">
-                  <strong>{material.NSerie}</strong>
-                  <h3>{material.descricao}</h3>
-                  <p>{material.observacao}</p>
-
-                  <div className="material-tags">
-                    <span>{material.setor}</span>
-                    <span>{material.unidade}</span>
-                  </div>
-
-                  {usuarioEhAdmin && (
-                    <div className="material-acoes-admin">
-                      <button
-                        type="button"
-                        className="editar-material-button"
-                        onClick={() => onEditarMaterial(material)}
-                      >
-                        <FaPenToSquare />
-                        Editar
-                      </button>
-
-                      <button
-                        type="button"
-                        className="excluir-material-button"
-                        onClick={() => abrirModalExcluir(material)}
-                      >
-                        <FaTrashCan />
-                        Excluir
-                      </button>
+                return (
+                  <article
+                    key={
+                      obterId(
+                        material
+                      ) ??
+                      obterNumeroSerie(
+                        material
+                      )
+                    }
+                    className={`material-card ${
+                      conferido
+                        ? 'material-conferido'
+                        : ''
+                    }`}
+                  >
+                    <div className="material-status">
+                      {conferido ? (
+                        <FaCheck />
+                      ) : (
+                        <FaBarcode />
+                      )}
                     </div>
-                  )}
-                </div>
-              </article>
-            ))}
 
-            {materiaisDaConferencia.length === 0 && (
+                    <div className="material-info">
+                      <strong>
+                        {obterNumeroSerie(
+                          material
+                        ) ||
+                          'Sem número de série'}
+                      </strong>
+
+                      <h3>
+                        {material?.nome ||
+                          material?.descricao ||
+                          'Material'}
+                      </h3>
+
+                      {material?.marca && (
+                        <p>
+                          <strong>
+                            Marca:
+                          </strong>{' '}
+                          {
+                            material.marca
+                          }
+                        </p>
+                      )}
+
+                      <p>
+                        {material?.descricao ||
+                          'Sem descrição'}
+                      </p>
+
+                      <p>
+                        {material?.observacao ||
+                          'Sem observação'}
+                      </p>
+
+                      <div className="material-tags">
+                        <span>
+                          {material?.setor ||
+                            'Sem setor'}
+                        </span>
+
+                        <span>
+                          {material?.unidade ||
+                            'Sem unidade'}
+                        </span>
+                      </div>
+
+                      <div className="material-acoes-admin">
+                        <button
+                          type="button"
+                          className="detalhes-material-button"
+                          onClick={() =>
+                            setMaterialDetalhes(
+                              material
+                            )
+                          }
+                        >
+                          <FaEye />
+                          Ver detalhes
+                        </button>
+
+                        <button
+                          type="button"
+                          className="editar-material-button"
+                          onClick={() =>
+                            onEditarMaterial(
+                              material
+                            )
+                          }
+                        >
+                          <FaPenToSquare />
+                          Editar
+                        </button>
+
+                        <button
+                          type="button"
+                          className="excluir-material-button"
+                          onClick={() =>
+                            abrirModalExcluir(
+                              material
+                            )
+                          }
+                        >
+                          <FaTrashCan />
+                          Inativar
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              }
+            )}
+
+            {materiaisDaConferencia.length ===
+              0 && (
               <div className="lista-vazia">
-                Nenhum material encontrado para este filtro.
+                Nenhum material encontrado
+                para este filtro.
               </div>
             )}
           </div>
         </section>
+
+        <MaterialDetalhesModal
+          aberto={Boolean(materialDetalhes)}
+          material={materialDetalhes}
+          onFechar={() =>
+            setMaterialDetalhes(null)
+          }
+          onEditar={(material) => {
+            setMaterialDetalhes(null);
+            onEditarMaterial(material);
+          }}
+          podeEditar={
+            typeof onEditarMaterial ===
+            'function'
+          }
+        />
 
         {modalNaoEncontrado && (
           <div className="modal-overlay">
@@ -475,11 +927,31 @@ function ConferenciaMateriais({
                 <FaCircleExclamation />
               </div>
 
-              <h2>Produto não cadastrado neste setor</h2>
+              <h2>
+                {configuracao?.tipo === 'SETOR'
+                  ? `Produto não cadastrado neste setor: ${
+                      configuracao?.setor || 'não informado'
+                    }`
+                  : 'Produto não cadastrado'}
+              </h2>
 
               <p>
-                O código <strong>{codigoPendente}</strong> não foi encontrado
-                na lista atual da conferência.
+                O código{' '}
+                <strong>{codigoPendente}</strong>{' '}
+                {configuracao?.tipo === 'SETOR' ? (
+                  <>
+                    não foi encontrado na lista do setor{' '}
+                    <strong>
+                      {configuracao?.setor || 'selecionado'}
+                    </strong>
+                    .
+                  </>
+                ) : (
+                  <>
+                    não foi encontrado no cadastro de materiais
+                    patrimoniais.
+                  </>
+                )}
               </p>
 
               <div className="modal-actions">
@@ -492,14 +964,16 @@ function ConferenciaMateriais({
                   Cadastrar agora
                 </button>
 
-                <button
-                  type="button"
-                  className="modal-secondary"
-                  onClick={verificarEmTodosItens}
-                >
-                  <FaMagnifyingGlass />
-                  Verificar em todos os itens
-                </button>
+                {configuracao?.tipo === 'SETOR' && (
+                  <button
+                    type="button"
+                    className="modal-secondary"
+                    onClick={verificarEmTodosItens}
+                  >
+                    <FaMagnifyingGlass />
+                    Verificar em todos os itens
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -507,7 +981,7 @@ function ConferenciaMateriais({
                   onClick={fecharModais}
                 >
                   <FaXmark />
-                  Não
+                  Fechar
                 </button>
               </div>
             </div>
@@ -521,33 +995,69 @@ function ConferenciaMateriais({
                 <FaCircleExclamation />
               </div>
 
-              <h2>Produto localizado em outro setor</h2>
+              <h2>
+                Produto localizado em
+                outro setor
+              </h2>
 
               <p>
-                <strong>{modalOutroSetor.descricao}</strong>
+                <strong>
+                  {modalOutroSetor?.nome ||
+                    modalOutroSetor?.descricao}
+                </strong>
               </p>
 
-              <div className="divergencia-box">
-                <span>Setor cadastrado no banco</span>
-                <strong>{modalOutroSetor.setor}</strong>
+              {modalOutroSetor?.marca && (
+                <p>
+                  Marca:{' '}
+                  {
+                    modalOutroSetor.marca
+                  }
+                </p>
+              )}
 
-                <span>Setor onde o material foi encontrado agora</span>
-                <strong>{configuracao.setor}</strong>
+              <div className="divergencia-box">
+                <span>
+                  Setor cadastrado no
+                  banco
+                </span>
+
+                <strong>
+                  {
+                    modalOutroSetor?.setor
+                  }
+                </strong>
+
+                <span>
+                  Setor onde o material
+                  foi encontrado
+                </span>
+
+                <strong>
+                  {
+                    configuracao?.setor
+                  }
+                </strong>
               </div>
 
               <div className="modal-actions">
                 <button
                   type="button"
                   className="modal-primary"
-                  onClick={atualizarSetorEConferir}
+                  onClick={
+                    atualizarSetorEConferir
+                  }
                 >
-                  Atualizar setor e conferir
+                  Atualizar setor e
+                  conferir
                 </button>
 
                 <button
                   type="button"
                   className="modal-cancel"
-                  onClick={fecharModais}
+                  onClick={
+                    fecharModais
+                  }
                 >
                   Cancelar
                 </button>
@@ -563,61 +1073,85 @@ function ConferenciaMateriais({
                 <FaTriangleExclamation />
               </div>
 
-              <h2>Excluir material?</h2>
+              <h2>
+                Inativar material?
+              </h2>
 
               <p>
-                O material será removido das listagens ativas, mas continuará
-                no banco como <strong>INATIVO</strong>.
+                O material será removido
+                das listagens ativas, mas
+                continuará registrado no
+                banco como{' '}
+                <strong>
+                  INATIVO
+                </strong>
+                .
               </p>
 
               <div className="divergencia-box">
                 <span>Nº Série</span>
-                <strong>{modalExcluir.NSerie}</strong>
+
+                <strong>
+                  {obterNumeroSerie(
+                    modalExcluir
+                  )}
+                </strong>
+
+                <span>Nome</span>
+
+                <strong>
+                  {modalExcluir?.nome ||
+                    'Não informado'}
+                </strong>
+
+                <span>Marca</span>
+
+                <strong>
+                  {modalExcluir?.marca ||
+                    'Não informada'}
+                </strong>
 
                 <span>Descrição</span>
-                <strong>{modalExcluir.descricao}</strong>
+
+                <strong>
+                  {
+                    modalExcluir?.descricao
+                  }
+                </strong>
 
                 <span>Setor</span>
-                <strong>{modalExcluir.setor}</strong>
+
+                <strong>
+                  {modalExcluir?.setor}
+                </strong>
 
                 <span>Unidade</span>
-                <strong>{modalExcluir.unidade}</strong>
+
+                <strong>
+                  {
+                    modalExcluir?.unidade
+                  }
+                </strong>
               </div>
-
-              <label className="senha-excluir-label">
-                Senha de administrador
-
-                <input
-                  type="password"
-                  value={senhaExcluir}
-                  placeholder="Digite a senha"
-                  onChange={(event) => {
-                    setSenhaExcluir(event.target.value);
-                    setMensagemExcluir('');
-                  }}
-                />
-              </label>
-
-              {mensagemExcluir && (
-                <div className="mensagem-excluir-erro">
-                  {mensagemExcluir}
-                </div>
-              )}
 
               <div className="modal-actions">
                 <button
                   type="button"
                   className="modal-primary"
-                  onClick={confirmarExclusao}
+                  onClick={
+                    confirmarExclusao
+                  }
                 >
                   <FaTrashCan />
-                  Confirmar exclusão
+                  Confirmar inativação
                 </button>
 
                 <button
                   type="button"
                   className="modal-cancel"
-                  onClick={fecharModalExcluir}
+                  onClick={
+                    fecharModalExcluir
+                  }
                 >
                   Cancelar
                 </button>
@@ -633,15 +1167,22 @@ function ConferenciaMateriais({
                 <FaCamera />
               </div>
 
-              <h2>Leitor de código</h2>
+              <h2>
+                Leitor de código
+              </h2>
 
               <p>
-                Aponte a câmera para o código de barras do material
-                patrimonial.
+                Aponte a câmera para o
+                código de barras do
+                material patrimonial.
               </p>
 
               <div className="camera-preview">
-                <video ref={videoRef} playsInline muted />
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                />
               </div>
 
               {carregandoCamera && (
@@ -654,7 +1195,9 @@ function ConferenciaMateriais({
                 <button
                   type="button"
                   className="modal-cancel"
-                  onClick={pararCamera}
+                  onClick={
+                    pararCamera
+                  }
                 >
                   <FaXmark />
                   Fechar leitor
