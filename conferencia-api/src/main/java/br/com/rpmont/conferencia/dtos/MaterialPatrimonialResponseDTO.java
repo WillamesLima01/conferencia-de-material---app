@@ -19,11 +19,11 @@ public record MaterialPatrimonialResponseDTO(
 
         LocalDate dataCadastro,
 
-        Integer usuarioCadastroId,
+        Long usuarioId,
 
         LocalDateTime dataModificacao,
 
-        Integer usuarioModificadorId,
+        Long usuarioModificadorId,
 
         Boolean conferido,
 
