@@ -555,10 +555,9 @@ public class MaterialPatrimonialServiceImpl
     private void validarAcessoPatrimonio(
             Usuario usuario
     ) {
-        if (
-                usuario.getAtivo() == null ||
-                        usuario.getAtivo() != 1
-        ) {
+        if (!Boolean.TRUE.equals(
+                usuario.getAtivo()
+        )) {
             throw new ForbiddenException(
                     "Usuário inativo."
             );

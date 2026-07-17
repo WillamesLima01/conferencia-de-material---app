@@ -25,7 +25,7 @@ public record UsuarioResponseDTO(
 
         String statusAcesso,
 
-        Integer ativo,
+        boolean ativo,
 
         LocalDateTime dataSolicitacao,
 

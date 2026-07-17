@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -18,43 +16,84 @@ import java.time.LocalDateTime;
 @Data
 public class Usuario implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID")
     private Long id;
 
-    @Column(name = "MATRICULA", nullable = false, length = 100)
+    @Column(
+            name = "MATRICULA",
+            nullable = false,
+            length = 100
+    )
     private String matricula;
 
-    @Column(name = "NOME", nullable = false, length = 100)
+    @Column(
+            name = "NOME",
+            nullable = false,
+            length = 100
+    )
     private String nome;
 
-    @Column(name = "SENHA", nullable = false, length = 100)
+    @Column(
+            name = "SENHA",
+            nullable = false,
+            length = 100
+    )
     private String senha;
 
-    @Column(name = "EMAIL", nullable = false, length = 50)
+    @Column(
+            name = "EMAIL",
+            nullable = false,
+            length = 50
+    )
     private String email;
 
-    @Column(name = "NIVEL", nullable = false)
+    @Column(
+            name = "NIVEL",
+            nullable = false
+    )
     private Integer nivel;
 
-    @Column(name = "POSTGRAD", length = 100)
+    @Column(
+            name = "POSTGRAD",
+            length = 100
+    )
     private String postGrad;
 
-    @Column(name = "SETOR", length = 50)
+    @Column(
+            name = "SETOR",
+            length = 50
+    )
     private String setor;
 
-    @Column(name = "NOMECOMPLETO", nullable = false, length = 200)
+    @Column(
+            name = "NOMECOMPLETO",
+            nullable = false,
+            length = 200
+    )
     private String nomeCompleto;
 
-    @Column(name = "UNIDADE", length = 50)
+    @Column(
+            name = "UNIDADE",
+            length = 50
+    )
     private String unidade;
 
-    @Column(name = "STATUSACESSO", length = 20, nullable = false)
+    @Column(
+            name = "STATUSACESSO",
+            nullable = false,
+            length = 20
+    )
     private String statusAcesso;
 
-    @Column(name = "ATIVO", nullable = false)
-    private Integer ativo;
+    @Column(
+            name = "ativo",
+            nullable = false
+    )
+    private Boolean ativo;
 
     @Column(name = "DATASOLICITACAO")
     private LocalDateTime dataSolicitacao;
@@ -65,37 +104,19 @@ public class Usuario implements Serializable {
     @Column(name = "LIBERADOPOR")
     private Long liberadoPor;
 
-    @CreationTimestamp
-    @Column(name = "DATACADASTRO", nullable = false, updatable = false)
+    @Column(
+            name = "DATACADASTRO",
+            nullable = false,
+            updatable = false
+    )
     private LocalDate dataCadastro;
 
-    @UpdateTimestamp
-    @Column(name = "DATAMODIFICACAO", nullable = false)
+    @Column(
+            name = "DATAMODIFICACAO",
+            nullable = false
+    )
     private LocalDateTime dataModificacao;
 
-    @Column(name = "`userModificador`")
+    @Column(name = "userModificador")
     private Long userModificador;
-
-    @PrePersist
-    public void prePersist() {
-        LocalDateTime agora = LocalDateTime.now();
-
-        if (this.nivel == null) {
-            this.nivel = 3;
-        }
-
-        if (this.statusAcesso == null || this.statusAcesso.isBlank()) {
-            this.statusAcesso = "PENDENTE";
-        }
-
-        if (this.ativo == null) {
-            this.ativo = 0;
-        }
-
-        if (this.dataSolicitacao == null) {
-            this.dataSolicitacao = agora;
-        }
-
-    }
-
 }

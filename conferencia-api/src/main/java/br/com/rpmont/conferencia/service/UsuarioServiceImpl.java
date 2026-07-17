@@ -11,12 +11,12 @@ import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,6 +35,9 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioResponseDTO solicitarAcesso(
             UsuarioRequestDTO usuarioRequestDTO
     ) {
+        validarSenhaCadastro(
+                usuarioRequestDTO.senha()
+        );
 
         validarMatriculaEmailDuplicados(
                 usuarioRequestDTO.matricula(),
@@ -43,11 +46,20 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         Usuario usuario = new Usuario();
 
-        preencherDadosSolicitacao(usuario, usuarioRequestDTO);
+        preencherDadosSolicitacao(
+                usuario,
+                usuarioRequestDTO
+        );
 
-        usuario.setNivel(NivelUsuario.USUARIO_COMUM.getCodigo());
-        usuario.setStatusAcesso(StatusAcessoUsuario.PENDENTE.name());
-        usuario.setAtivo(0);
+        usuario.setNivel(
+                NivelUsuario.USUARIO_COMUM.getCodigo()
+        );
+
+        usuario.setStatusAcesso(
+                StatusAcessoUsuario.PENDENTE.name()
+        );
+
+        usuario.setAtivo(false);
         usuario.setDataSolicitacao(LocalDateTime.now());
         usuario.setDataLiberacao(null);
         usuario.setLiberadoPor(null);
@@ -55,7 +67,8 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuario.setDataModificacao(LocalDateTime.now());
         usuario.setUserModificador(null);
 
-        Usuario usuarioSalvo = usuarioRepository.save(usuario);
+        Usuario usuarioSalvo =
+                usuarioRepository.save(usuario);
 
         return toResponse(usuarioSalvo);
     }
@@ -65,7 +78,6 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioResponseDTO salvarUsuario(
             UsuarioAdminRequestDTO usuarioAdminRequestDTO
     ) {
-
         Usuario usuarioLogado = getUsuarioLogado();
 
         validarSenhaCadastro(
@@ -101,10 +113,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         );
 
         usuario.setNivel(nivel);
-
-        usuario.setStatusAcesso(
-                statusAcesso
-        );
+        usuario.setStatusAcesso(statusAcesso);
 
         usuario.setAtivo(
                 definirAtivoPorStatus(
@@ -121,7 +130,6 @@ public class UsuarioServiceImpl implements UsuarioService {
                         .name()
                         .equals(statusAcesso)
         ) {
-
             usuario.setDataLiberacao(
                     LocalDateTime.now()
             );
@@ -129,9 +137,7 @@ public class UsuarioServiceImpl implements UsuarioService {
             usuario.setLiberadoPor(
                     usuarioLogado.getId()
             );
-
         } else {
-
             usuario.setDataLiberacao(null);
             usuario.setLiberadoPor(null);
         }
@@ -155,11 +161,11 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional(readOnly = true)
     @Override
     public List<UsuarioResponseDTO> listarTodosUsuario() {
-
         Usuario usuarioLogado = getUsuarioLogado();
 
         if (isAdminMaster(usuarioLogado)) {
-            return usuarioRepository.findAll()
+            return usuarioRepository
+                    .findAll()
                     .stream()
                     .map(this::toResponse)
                     .toList();
@@ -167,9 +173,14 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         if (isAdmin(usuarioLogado)) {
             return usuarioRepository
-                    .findByUnidade(usuarioLogado.getUnidade())
+                    .findByUnidade(
+                            usuarioLogado.getUnidade()
+                    )
                     .stream()
-                    .filter(usuario -> !isAdminMaster(usuario))
+                    .filter(
+                            usuario ->
+                                    !isAdminMaster(usuario)
+                    )
                     .map(this::toResponse)
                     .toList();
         }
@@ -182,11 +193,13 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Transactional(readOnly = true)
     @Override
-    public UsuarioResponseDTO buscarUsuarioPorId(Long id) {
-
+    public UsuarioResponseDTO buscarUsuarioPorId(
+            Long id
+    ) {
         Usuario usuarioLogado = getUsuarioLogado();
 
-        Usuario usuario = buscarUsuario(id);
+        Usuario usuario =
+                buscarUsuario(id);
 
         validarPermissaoVisualizarUsuario(
                 usuarioLogado,
@@ -201,15 +214,18 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioResponseDTO buscarUsuarioPorMatricula(
             String matricula
     ) {
-
         Usuario usuarioLogado = getUsuarioLogado();
 
         Usuario usuario = usuarioRepository
-                .findByMatricula(limparTexto(matricula))
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Usuário não encontrado com essa matrícula."
-                ));
+                .findByMatricula(
+                        limparTexto(matricula)
+                )
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Usuário não encontrado com essa matrícula."
+                        )
+                );
 
         validarPermissaoVisualizarUsuario(
                 usuarioLogado,
@@ -225,9 +241,11 @@ public class UsuarioServiceImpl implements UsuarioService {
             Long id,
             UsuarioAdminRequestDTO usuarioAdminRequestDTO
     ) {
+        Usuario usuarioExistente =
+                buscarUsuario(id);
 
-        Usuario usuarioExistente = buscarUsuario(id);
-        Usuario usuarioLogado = getUsuarioLogado();
+        Usuario usuarioLogado =
+                getUsuarioLogado();
 
         validarPermissaoAtualizarUsuario(
                 usuarioLogado,
@@ -245,11 +263,18 @@ public class UsuarioServiceImpl implements UsuarioService {
                 usuarioAdminRequestDTO
         );
 
-        usuarioExistente.setDataModificacao(LocalDateTime.now());
-        usuarioExistente.setUserModificador(usuarioLogado.getId());
+        usuarioExistente.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        usuarioExistente.setUserModificador(
+                usuarioLogado.getId()
+        );
 
         Usuario usuarioAtualizado =
-                usuarioRepository.save(usuarioExistente);
+                usuarioRepository.save(
+                        usuarioExistente
+                );
 
         return toResponse(usuarioAtualizado);
     }
@@ -260,40 +285,63 @@ public class UsuarioServiceImpl implements UsuarioService {
             Long id,
             UsuarioStatusRequestDTO usuarioStatusRequestDTO
     ) {
+        Usuario usuarioExistente =
+                buscarUsuario(id);
 
-        Usuario usuarioExistente = buscarUsuario(id);
-        Usuario usuarioLogado = getUsuarioLogado();
+        Usuario usuarioLogado =
+                getUsuarioLogado();
 
         validarPermissaoAlterarStatus(
                 usuarioLogado,
                 usuarioExistente
         );
 
-        String statusAcesso = normalizarStatus(
-                usuarioStatusRequestDTO.statusAcesso()
-        );
+        String statusAcesso =
+                normalizarStatus(
+                        usuarioStatusRequestDTO.statusAcesso()
+                );
 
         validarStatus(statusAcesso);
 
-        usuarioExistente.setStatusAcesso(statusAcesso);
-        usuarioExistente.setAtivo(definirAtivoPorStatus(statusAcesso)
+        usuarioExistente.setStatusAcesso(
+                statusAcesso
         );
 
-        if (StatusAcessoUsuario.LIBERADO.name().equals(statusAcesso)) {
+        usuarioExistente.setAtivo(
+                definirAtivoPorStatus(
+                        statusAcesso
+                )
+        );
 
-            usuarioExistente.setDataLiberacao(LocalDateTime.now());
+        if (
+                StatusAcessoUsuario.LIBERADO
+                        .name()
+                        .equals(statusAcesso)
+        ) {
+            usuarioExistente.setDataLiberacao(
+                    LocalDateTime.now()
+            );
 
-            usuarioExistente.setLiberadoPor(usuarioLogado.getId());
-
+            usuarioExistente.setLiberadoPor(
+                    usuarioLogado.getId()
+            );
         } else {
-
             usuarioExistente.setDataLiberacao(null);
             usuarioExistente.setLiberadoPor(null);
         }
 
-        usuarioExistente.setDataModificacao(LocalDateTime.now());
+        usuarioExistente.setDataModificacao(
+                LocalDateTime.now()
+        );
 
-        Usuario usuarioAtualizado = usuarioRepository.save(usuarioExistente);
+        usuarioExistente.setUserModificador(
+                usuarioLogado.getId()
+        );
+
+        Usuario usuarioAtualizado =
+                usuarioRepository.save(
+                        usuarioExistente
+                );
 
         return toResponse(usuarioAtualizado);
     }
@@ -304,11 +352,14 @@ public class UsuarioServiceImpl implements UsuarioService {
             Long id,
             UsuarioNivelRequestDTO usuarioNivelRequestDTO
     ) {
+        Usuario usuarioExistente =
+                buscarUsuario(id);
 
-        Usuario usuarioExistente = buscarUsuario(id);
-        Usuario usuarioLogado = getUsuarioLogado();
+        Usuario usuarioLogado =
+                getUsuarioLogado();
 
-        Integer novoNivel = usuarioNivelRequestDTO.nivel();
+        Integer novoNivel =
+                usuarioNivelRequestDTO.nivel();
 
         validarNivel(novoNivel);
 
@@ -318,58 +369,89 @@ public class UsuarioServiceImpl implements UsuarioService {
                 novoNivel
         );
 
-        usuarioExistente.setNivel(novoNivel);
-        usuarioExistente.setDataModificacao(LocalDateTime.now());
-        usuarioExistente.setUserModificador(usuarioLogado.getId());
+        usuarioExistente.setNivel(
+                novoNivel
+        );
+
+        usuarioExistente.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        usuarioExistente.setUserModificador(
+                usuarioLogado.getId()
+        );
 
         Usuario usuarioAtualizado =
-                usuarioRepository.save(usuarioExistente);
+                usuarioRepository.save(
+                        usuarioExistente
+                );
 
         return toResponse(usuarioAtualizado);
     }
 
     @Transactional
     @Override
-    public void deletarUsuarioId(Long id) {
+    public void deletarUsuarioId(
+            Long id
+    ) {
+        Usuario usuarioExistente =
+                buscarUsuario(id);
 
-        Usuario usuarioExistente = buscarUsuario(id);
-        Usuario usuarioLogado = getUsuarioLogado();
+        Usuario usuarioLogado =
+                getUsuarioLogado();
 
         validarPermissaoDeletarUsuario(
                 usuarioLogado,
                 usuarioExistente
         );
 
-        usuarioRepository.delete(usuarioExistente);
+        usuarioRepository.delete(
+                usuarioExistente
+        );
     }
 
-    private Usuario buscarUsuario(Long id) {
-
-        return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Usuário não encontrado no banco de dados."
-                ));
+    private Usuario buscarUsuario(
+            Long id
+    ) {
+        return usuarioRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Usuário não encontrado no banco de dados."
+                        )
+                );
     }
 
     private void validarMatriculaEmailDuplicados(
             String matricula,
             String email
     ) {
+        String matriculaTratada =
+                limparTexto(matricula);
 
-        String matriculaTratada = limparTexto(matricula);
-        String emailTratado = limparTexto(email);
+        String emailTratado =
+                limparTexto(email);
 
-        if (usuarioRepository.existsByMatricula(matriculaTratada)) {
+        if (
+                usuarioRepository
+                        .existsByMatricula(
+                                matriculaTratada
+                        )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Já existe um usuário cadastrado com essa matrícula."
             );
         }
 
-        if (emailTratado != null &&
-                usuarioRepository.existsByEmail(emailTratado)) {
-
+        if (
+                emailTratado != null &&
+                        usuarioRepository
+                                .existsByEmail(
+                                        emailTratado
+                                )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Já existe um usuário cadastrado com esse e-mail."
@@ -382,53 +464,62 @@ public class UsuarioServiceImpl implements UsuarioService {
             String matricula,
             String email
     ) {
+        String matriculaTratada =
+                limparTexto(matricula);
 
-        String matriculaTratada = limparTexto(matricula);
-        String emailTratado = limparTexto(email);
+        String emailTratado =
+                limparTexto(email);
 
-        usuarioRepository.findByMatricula(matriculaTratada)
-                .ifPresent(usuarioEncontrado -> {
-
-                    if (!Objects.equals(
-                            usuarioEncontrado.getId(),
-                            id
-                    )) {
-
-                        throw new ResponseStatusException(
-                                HttpStatus.CONFLICT,
-                                "Já existe outro usuário cadastrado com essa matrícula."
-                        );
-                    }
-                });
+        usuarioRepository
+                .findByMatricula(
+                        matriculaTratada
+                )
+                .ifPresent(
+                        usuarioEncontrado -> {
+                            if (
+                                    !Objects.equals(
+                                            usuarioEncontrado.getId(),
+                                            id
+                                    )
+                            ) {
+                                throw new ResponseStatusException(
+                                        HttpStatus.CONFLICT,
+                                        "Já existe outro usuário cadastrado com essa matrícula."
+                                );
+                            }
+                        }
+                );
 
         if (emailTratado != null) {
-
-            usuarioRepository.findByEmail(emailTratado)
-                    .ifPresent(usuarioEncontrado -> {
-
-                        if (!Objects.equals(
-                                usuarioEncontrado.getId(),
-                                id
-                        )) {
-
-                            throw new ResponseStatusException(
-                                    HttpStatus.CONFLICT,
-                                    "Já existe outro usuário cadastrado com esse e-mail."
-                            );
-                        }
-                    });
+            usuarioRepository
+                    .findByEmail(
+                            emailTratado
+                    )
+                    .ifPresent(
+                            usuarioEncontrado -> {
+                                if (
+                                        !Objects.equals(
+                                                usuarioEncontrado.getId(),
+                                                id
+                                        )
+                                ) {
+                                    throw new ResponseStatusException(
+                                            HttpStatus.CONFLICT,
+                                            "Já existe outro usuário cadastrado com esse e-mail."
+                                    );
+                                }
+                            }
+                    );
         }
     }
 
     private void validarSenhaCadastro(
             String senha
     ) {
-
         String senhaTratada =
                 limparTexto(senha);
 
         if (senhaTratada == null) {
-
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "A senha é obrigatória."
@@ -436,7 +527,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         if (senhaTratada.length() < 4) {
-
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "A senha deve ter no mínimo 4 caracteres."
@@ -448,7 +538,6 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             UsuarioRequestDTO dto
     ) {
-
         usuario.setMatricula(
                 limparTexto(dto.matricula())
         );
@@ -488,7 +577,6 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuario,
             UsuarioAdminRequestDTO dto
     ) {
-
         usuario.setMatricula(
                 limparTexto(dto.matricula())
         );
@@ -501,7 +589,6 @@ public class UsuarioServiceImpl implements UsuarioService {
                 limparTexto(dto.senha());
 
         if (senhaTratada != null) {
-
             usuario.setSenha(
                     passwordEncoder.encode(
                             senhaTratada
@@ -531,25 +618,25 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     private Usuario getUsuarioLogado() {
-
         Authentication authentication =
                 SecurityContextHolder
                         .getContext()
                         .getAuthentication();
 
-        if (authentication == null ||
-                authentication.getPrincipal() == null) {
-
+        if (
+                authentication == null ||
+                        authentication.getPrincipal() == null
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Usuário não autenticado."
             );
         }
 
-        Object principal = authentication.getPrincipal();
+        Object principal =
+                authentication.getPrincipal();
 
         if (!(principal instanceof Usuario usuario)) {
-
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Usuário autenticado inválido."
@@ -559,56 +646,69 @@ public class UsuarioServiceImpl implements UsuarioService {
         return usuario;
     }
 
-    private boolean isAdminMaster(Usuario usuario) {
-
+    private boolean isAdminMaster(
+            Usuario usuario
+    ) {
         return usuario != null &&
                 NivelUsuario.ADMIN_MASTER
                         .getCodigo()
-                        .equals(usuario.getNivel());
+                        .equals(
+                                usuario.getNivel()
+                        );
     }
 
-    private boolean isAdmin(Usuario usuario) {
-
+    private boolean isAdmin(
+            Usuario usuario
+    ) {
         return usuario != null &&
                 NivelUsuario.ADMIN
                         .getCodigo()
-                        .equals(usuario.getNivel());
+                        .equals(
+                                usuario.getNivel()
+                        );
     }
 
-    private boolean isUsuarioComum(Usuario usuario) {
-
+    private boolean isUsuarioComum(
+            Usuario usuario
+    ) {
         return usuario != null &&
                 NivelUsuario.USUARIO_COMUM
                         .getCodigo()
-                        .equals(usuario.getNivel());
+                        .equals(
+                                usuario.getNivel()
+                        );
     }
 
     private boolean mesmaUnidade(
             Usuario usuarioLogado,
             Usuario usuarioAlvo
     ) {
-
         return usuarioLogado != null &&
                 usuarioAlvo != null &&
                 usuarioLogado.getUnidade() != null &&
                 usuarioAlvo.getUnidade() != null &&
-                usuarioLogado.getUnidade()
-                        .equalsIgnoreCase(usuarioAlvo.getUnidade());
+                usuarioLogado
+                        .getUnidade()
+                        .equalsIgnoreCase(
+                                usuarioAlvo.getUnidade()
+                        );
     }
 
     private void validarPermissaoVisualizarUsuario(
             Usuario usuarioLogado,
             Usuario usuarioAlvo
     ) {
-
         if (isAdminMaster(usuarioLogado)) {
             return;
         }
 
         if (isAdmin(usuarioLogado)) {
-
-            if (!mesmaUnidade(usuarioLogado, usuarioAlvo)) {
-
+            if (
+                    !mesmaUnidade(
+                            usuarioLogado,
+                            usuarioAlvo
+                    )
+            ) {
                 throw new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
                         "Administrador só pode visualizar usuário da própria unidade."
@@ -616,7 +716,6 @@ public class UsuarioServiceImpl implements UsuarioService {
             }
 
             if (isAdminMaster(usuarioAlvo)) {
-
                 throw new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
                         "Administrador não pode visualizar Admin Master."
@@ -636,13 +735,11 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuarioLogado,
             UsuarioAdminRequestDTO dto
     ) {
-
         if (isAdminMaster(usuarioLogado)) {
             return;
         }
 
         if (!isAdmin(usuarioLogado)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Você não tem permissão para cadastrar usuários."
@@ -652,22 +749,24 @@ public class UsuarioServiceImpl implements UsuarioService {
         String unidadeNovoUsuario =
                 limparTexto(dto.unidade());
 
-        if (unidadeNovoUsuario == null ||
-                usuarioLogado.getUnidade() == null ||
-                !unidadeNovoUsuario.equalsIgnoreCase(
-                        usuarioLogado.getUnidade()
-                )) {
-
+        if (
+                unidadeNovoUsuario == null ||
+                        usuarioLogado.getUnidade() == null ||
+                        !unidadeNovoUsuario.equalsIgnoreCase(
+                                usuarioLogado.getUnidade()
+                        )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador só pode cadastrar usuário da própria unidade."
             );
         }
 
-        if (!NivelUsuario.USUARIO_COMUM
-                .getCodigo()
-                .equals(dto.nivel())) {
-
+        if (
+                !NivelUsuario.USUARIO_COMUM
+                        .getCodigo()
+                        .equals(dto.nivel())
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador só pode cadastrar usuário comum."
@@ -679,21 +778,23 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuarioLogado,
             Usuario usuarioAlvo
     ) {
-
         if (isAdminMaster(usuarioLogado)) {
             return;
         }
 
         if (!isAdmin(usuarioLogado)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Você não tem permissão para editar usuários."
             );
         }
 
-        if (!mesmaUnidade(usuarioLogado, usuarioAlvo)) {
-
+        if (
+                !mesmaUnidade(
+                        usuarioLogado,
+                        usuarioAlvo
+                )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador só pode editar usuário da própria unidade."
@@ -701,7 +802,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         if (isAdminMaster(usuarioAlvo)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador não pode editar Admin Master."
@@ -709,7 +809,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         if (isAdmin(usuarioAlvo)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador não pode editar outro administrador."
@@ -721,21 +820,23 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuarioLogado,
             Usuario usuarioAlvo
     ) {
-
         if (isAdminMaster(usuarioLogado)) {
             return;
         }
 
         if (!isAdmin(usuarioLogado)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Você não tem permissão para alterar status de usuários."
             );
         }
 
-        if (!mesmaUnidade(usuarioLogado, usuarioAlvo)) {
-
+        if (
+                !mesmaUnidade(
+                        usuarioLogado,
+                        usuarioAlvo
+                )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador só pode alterar status de usuário da própria unidade."
@@ -743,7 +844,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         if (!isUsuarioComum(usuarioAlvo)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador só pode alterar status de usuário comum."
@@ -756,14 +856,13 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuarioAlvo,
             Integer novoNivel
     ) {
-
         if (isAdminMaster(usuarioLogado)) {
-
-            if (Objects.equals(
-                    usuarioLogado.getId(),
-                    usuarioAlvo.getId()
-            )) {
-
+            if (
+                    Objects.equals(
+                            usuarioLogado.getId(),
+                            usuarioAlvo.getId()
+                    )
+            ) {
                 throw new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
                         "Admin Master não pode alterar o próprio nível."
@@ -774,15 +873,18 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         if (!isAdmin(usuarioLogado)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Você não tem permissão para alterar nível de usuário."
             );
         }
 
-        if (!mesmaUnidade(usuarioLogado, usuarioAlvo)) {
-
+        if (
+                !mesmaUnidade(
+                        usuarioLogado,
+                        usuarioAlvo
+                )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador só pode alterar nível de usuário da própria unidade."
@@ -790,20 +892,20 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         if (!isUsuarioComum(usuarioAlvo)) {
-
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador só pode alterar nível de usuário comum."
             );
         }
 
-        if (!NivelUsuario.ADMIN
-                .getCodigo()
-                .equals(novoNivel) &&
-                !NivelUsuario.USUARIO_COMUM
+        if (
+                !NivelUsuario.ADMIN
                         .getCodigo()
-                        .equals(novoNivel)) {
-
+                        .equals(novoNivel) &&
+                        !NivelUsuario.USUARIO_COMUM
+                                .getCodigo()
+                                .equals(novoNivel)
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Administrador não pode atribuir nível Admin Master."
@@ -815,7 +917,6 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuarioLogado,
             Usuario usuarioAlvo
     ) {
-
         if (isAdminMaster(usuarioLogado)) {
             return;
         }
@@ -826,10 +927,10 @@ public class UsuarioServiceImpl implements UsuarioService {
         );
     }
 
-    private void validarNivel(Integer nivel) {
-
+    private void validarNivel(
+            Integer nivel
+    ) {
         if (!nivelValido(nivel)) {
-
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Nível de usuário inválido."
@@ -837,10 +938,10 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
-    private void validarStatus(String statusAcesso) {
-
+    private void validarStatus(
+            String statusAcesso
+    ) {
         if (!statusValido(statusAcesso)) {
-
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Status de acesso inválido."
@@ -848,8 +949,9 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
-    private boolean nivelValido(Integer nivel) {
-
+    private boolean nivelValido(
+            Integer nivel
+    ) {
         return nivel != null &&
                 (
                         nivel.equals(
@@ -864,16 +966,21 @@ public class UsuarioServiceImpl implements UsuarioService {
                 );
     }
 
-    private boolean statusValido(String statusAcesso) {
-
+    private boolean statusValido(
+            String statusAcesso
+    ) {
         if (statusAcesso == null) {
             return false;
         }
 
-        for (StatusAcessoUsuario status :
-                StatusAcessoUsuario.values()) {
-
-            if (status.name().equals(statusAcesso)) {
+        for (
+                StatusAcessoUsuario status :
+                StatusAcessoUsuario.values()
+        ) {
+            if (
+                    status.name()
+                            .equals(statusAcesso)
+            ) {
                 return true;
             }
         }
@@ -881,25 +988,19 @@ public class UsuarioServiceImpl implements UsuarioService {
         return false;
     }
 
-    private Integer definirAtivoPorStatus(
+    private Boolean definirAtivoPorStatus(
             String statusAcesso
     ) {
-
-        if (StatusAcessoUsuario.LIBERADO
+        return StatusAcessoUsuario.LIBERADO
                 .name()
-                .equals(statusAcesso)) {
-
-            return 1;
-        }
-
-        return 0;
+                .equals(statusAcesso);
     }
 
     private String normalizarStatus(
             String statusAcesso
     ) {
-
-        String statusTratado = limparTexto(statusAcesso);
+        String statusTratado =
+                limparTexto(statusAcesso);
 
         if (statusTratado == null) {
             return null;
@@ -911,7 +1012,6 @@ public class UsuarioServiceImpl implements UsuarioService {
     private UsuarioResponseDTO toResponse(
             Usuario usuario
     ) {
-
         return new UsuarioResponseDTO(
                 usuario.getId(),
                 usuario.getMatricula(),
@@ -933,13 +1033,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         );
     }
 
-    private String limparTexto(String texto) {
-
+    private String limparTexto(
+            String texto
+    ) {
         if (texto == null) {
             return null;
         }
 
-        String textoTratado = texto.trim();
+        String textoTratado =
+                texto.trim();
 
         if (textoTratado.isBlank()) {
             return null;

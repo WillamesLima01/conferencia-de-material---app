@@ -21,39 +21,62 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
+    public LoginResponseDTO login(
+            LoginRequestDTO loginRequestDTO
+    ) {
+        String matricula =
+                limparTexto(
+                        loginRequestDTO.matricula()
+                );
 
-        String matricula = limparTexto(loginRequestDTO.matricula());
-        String senha = limparTexto(loginRequestDTO.senha());
+        String senha =
+                limparTexto(
+                        loginRequestDTO.senha()
+                );
 
-        Usuario usuario = usuarioRepository.findByMatricula(matricula)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Matrícula ou senha inválida."
-                ));
+        Usuario usuario = usuarioRepository
+                .findByMatricula(matricula)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "Matrícula ou senha inválida."
+                        )
+                );
 
-        if (!senhaValida(senha, usuario.getSenha())) {
+        if (!senhaValida(
+                senha,
+                usuario.getSenha()
+        )) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Matrícula ou senha inválida."
             );
         }
 
-        if (!StatusAcessoUsuario.LIBERADO.name().equalsIgnoreCase(usuario.getStatusAcesso())) {
+        if (
+                !StatusAcessoUsuario.LIBERADO
+                        .name()
+                        .equalsIgnoreCase(
+                                usuario.getStatusAcesso()
+                        )
+        ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Usuário sem acesso liberado ao sistema."
             );
         }
 
-        if (usuario.getAtivo() == null || usuario.getAtivo() != 1) {
+        if (!Boolean.TRUE.equals(
+                usuario.getAtivo()
+        )) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Usuário inativo no sistema."
             );
         }
 
-        String token = jwtService.gerarToken(usuario);
+        String token =
+                jwtService.gerarToken(usuario);
 
         return new LoginResponseDTO(
                 token,
@@ -71,26 +94,42 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    private boolean senhaValida(String senhaDigitada, String senhaBanco) {
-
-        if (senhaDigitada == null || senhaBanco == null) {
+    private boolean senhaValida(
+            String senhaDigitada,
+            String senhaBanco
+    ) {
+        if (
+                senhaDigitada == null ||
+                        senhaBanco == null
+        ) {
             return false;
         }
 
-        if (senhaBanco.startsWith("$2a$") || senhaBanco.startsWith("$2b$") || senhaBanco.startsWith("$2y$")) {
-            return passwordEncoder.matches(senhaDigitada, senhaBanco);
+        if (
+                senhaBanco.startsWith("$2a$") ||
+                        senhaBanco.startsWith("$2b$") ||
+                        senhaBanco.startsWith("$2y$")
+        ) {
+            return passwordEncoder.matches(
+                    senhaDigitada,
+                    senhaBanco
+            );
         }
 
-        return senhaDigitada.equals(senhaBanco);
+        return senhaDigitada.equals(
+                senhaBanco
+        );
     }
 
-    private String limparTexto(String texto) {
-
+    private String limparTexto(
+            String texto
+    ) {
         if (texto == null) {
             return null;
         }
 
-        String textoTratado = texto.trim();
+        String textoTratado =
+                texto.trim();
 
         if (textoTratado.isBlank()) {
             return null;

@@ -13,6 +13,6 @@ public record LoginResponseDTO(
         String nomeCompleto,
         String unidade,
         String statusAcesso,
-        Integer ativo
+        boolean ativo
 ) {
 }
