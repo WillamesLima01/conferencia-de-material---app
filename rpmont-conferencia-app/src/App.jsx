@@ -128,52 +128,6 @@ function App() {
     return material?.id ?? material?.ID;
   };
 
-  const carregarMateriais = async () => {
-    if (!usuarioLogado) {
-      setMateriais([]);
-      return;
-    }
-
-    try {
-      setCarregandoMateriais(true);
-      setErroMateriais('');
-
-      const materiaisRecebidos = await listarMateriais();
-
-      setMateriais(
-        Array.isArray(materiaisRecebidos)
-          ? materiaisRecebidos
-          : []
-      );
-    } catch (error) {
-      console.error(
-        'Erro ao carregar materiais patrimoniais:',
-        error
-      );
-
-      setMateriais([]);
-      setErroMateriais(obterMensagemErro(error));
-    } finally {
-      setCarregandoMateriais(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!usuarioLogado) {
-      setMateriais([]);
-      setErroMateriais('');
-      return;
-    }
-
-    if (!usuarioPodeAcessarPatrimonio(usuarioLogado)) {
-      setMateriais([]);
-      setErroMateriais('');
-      return;
-    }
-
-    carregarMateriais();
-  }, [usuarioLogado]);
-
   const limparNumeros = (valor) => {
     return String(valor || '').replace(/\D/g, '');
   };
@@ -267,6 +221,45 @@ function App() {
       usuarioEhUnidadeEquina(usuario) &&
       usuarioEhAdmin(usuario)
     );
+  };
+
+  const carregarMateriais = async (
+    usuario
+  ) => {
+    if (
+      !usuario ||
+      !usuarioPodeAcessarPatrimonio(usuario)
+    ) {
+      setMateriais([]);
+      setErroMateriais('');
+      return;
+    }
+
+    try {
+      setCarregandoMateriais(true);
+      setErroMateriais('');
+
+      const materiaisRecebidos =
+        await listarMateriais();
+
+      setMateriais(
+        Array.isArray(materiaisRecebidos)
+          ? materiaisRecebidos
+          : []
+      );
+    } catch (error) {
+      console.error(
+        'Erro ao carregar materiais patrimoniais:',
+        error
+      );
+
+      setMateriais([]);
+      setErroMateriais(
+        obterMensagemErro(error)
+      );
+    } finally {
+      setCarregandoMateriais(false);
+    }
   };
 
   const normalizarUsuarioLogado = (usuario) => {
@@ -470,6 +463,9 @@ function App() {
     localStorage.removeItem('usuarioLogado');
 
     setUsuarioLogado(null);
+    setMateriais([]);
+    setErroMateriais('');
+    setCarregandoMateriais(false);
 
     fecharTelasSecundarias();
   };
@@ -961,11 +957,15 @@ function App() {
   if (!usuarioLogado) {
     return (
       <Login
-        onLoginSuccess={(usuario) => {
+        onLoginSuccess={async (usuario) => {
           const usuarioNormalizado =
             normalizarUsuarioLogado(usuario);
 
           setUsuarioLogado(
+            usuarioNormalizado
+          );
+
+          await carregarMateriais(
             usuarioNormalizado
           );
         }}
@@ -1074,7 +1074,11 @@ function App() {
 
         <button
           type="button"
-          onClick={carregarMateriais}
+          onClick={() =>
+            carregarMateriais(
+              usuarioLogado
+            )
+          }
         >
           Tentar novamente
         </button>

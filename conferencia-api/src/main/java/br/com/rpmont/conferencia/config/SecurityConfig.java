@@ -24,7 +24,6 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-
     /*
      * =========================================
      * CONFIGURAÇÃO DE SEGURANÇA
@@ -38,19 +37,14 @@ public class SecurityConfig {
 
         return httpSecurity
 
-                .cors(
-                        Customizer.withDefaults()
-                )
+                .cors(Customizer.withDefaults())
 
-                .csrf(
-                        csrf -> csrf.disable()
-                )
+                .csrf(csrf -> csrf.disable())
 
                 .sessionManagement(
-                        session ->
-                                session.sessionCreationPolicy(
-                                        SessionCreationPolicy.STATELESS
-                                )
+                        session -> session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
                 )
 
                 .authorizeHttpRequests(
@@ -67,7 +61,6 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
-
                                 /*
                                  * =========================================
                                  * AUTENTICAÇÃO
@@ -79,7 +72,6 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
-
                                 /*
                                  * =========================================
                                  * SOLICITAÇÃO DE ACESSO
@@ -90,7 +82,6 @@ public class SecurityConfig {
                                         "/usuario/solicitar-acesso"
                                 )
                                 .permitAll()
-
 
                                 /*
                                  * =========================================
@@ -105,7 +96,6 @@ public class SecurityConfig {
                                         "ADMIN_MASTER",
                                         "ADMIN"
                                 )
-
 
                                 /*
                                  * =========================================
@@ -125,7 +115,6 @@ public class SecurityConfig {
                 .build();
     }
 
-
     /*
      * =========================================
      * CORS
@@ -138,14 +127,13 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
-                        "http://192.168.0.28:5173"
+                        "http://192.168.0.28:5173",
+                        "http://192.168.0.8:5173"
                 )
         );
-
 
         configuration.setAllowedMethods(
                 List.of(
@@ -158,7 +146,6 @@ public class SecurityConfig {
                 )
         );
 
-
         configuration.setAllowedHeaders(
                 List.of(
                         "Authorization",
@@ -166,27 +153,22 @@ public class SecurityConfig {
                 )
         );
 
-
         configuration.setExposedHeaders(
                 List.of(
                         "Authorization"
                 )
         );
 
-
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
-
 
         source.registerCorsConfiguration(
                 "/**",
                 configuration
         );
 
-
         return source;
     }
-
 
     /*
      * =========================================
@@ -196,7 +178,6 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-
         return new BCryptPasswordEncoder();
     }
 }
