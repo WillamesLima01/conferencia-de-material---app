@@ -550,3 +550,39 @@
     padding: 18px;
   }
 }
+
+.admin-unidades-mensagem-erro {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+.admin-unidades-mensagem-sucesso {
+  background: #dcfce7;
+  border: 1px solid #22c55e;
+  color: #166534;
+}
+
+.admin-unidades-item-inativo {
+  opacity: 0.7;
+  background: #f3f4f6;
+}
+
+.btn-reativar-unidade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-unidades-modal-icon.reativar {
+  color: #15803d;
+}
+
+.admin-unidades-form input:disabled,
+.admin-unidades-botoes button:disabled,
+.admin-unidades-modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}

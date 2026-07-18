@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FaBoxesStacked,
   FaBuildingUser,
@@ -14,9 +14,10 @@ import {
   FaRightFromBracket,
 } from 'react-icons/fa6';
 
+import { listarSetoresAtivos } from '../services/setorService';
+
 import '../styles/SelecionarConferencia.css';
 
-const STORAGE_KEY_SETORES = 'setores';
 
 const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
 
@@ -26,19 +27,6 @@ const NIVEIS_USUARIO = {
   USUARIO_COMUM: 3,
 };
 
-const carregarSetoresCadastrados = () => {
-  const setoresSalvos = localStorage.getItem(STORAGE_KEY_SETORES);
-
-  if (!setoresSalvos) return [];
-
-  try {
-    const setoresConvertidos = JSON.parse(setoresSalvos);
-
-    return Array.isArray(setoresConvertidos) ? setoresConvertidos : [];
-  } catch {
-    return [];
-  }
-};
 
 const normalizarTexto = (valor) => {
   return String(valor ?? '')
@@ -111,9 +99,9 @@ function SelecionarConferencia({
   const [modoConferencia, setModoConferencia] = useState('');
   const [setorSelecionado, setSetorSelecionado] = useState('');
 
-  const [setoresCadastrados, setSetoresCadastrados] = useState(() =>
-    carregarSetoresCadastrados()
-  );
+  const [setoresCadastrados, setSetoresCadastrados] = useState([]);
+  const [carregandoSetores, setCarregandoSetores] = useState(true);
+  const [erroSetores, setErroSetores] = useState('');
 
   const [modalZerar, setModalZerar] = useState(false);
   const [senhaAdmin, setSenhaAdmin] = useState('');
@@ -130,19 +118,65 @@ function SelecionarConferencia({
   const usuarioPodeAcessarFenoRacao =
     usuarioEhUnidadeComEquinos && (usuarioEhAdmin || usuarioEhBaia);
 
-  const unidadeUsuarioLogada = String(usuario?.unidade || usuario?.UNIDADE || '')
-    .trim()
-    .toLowerCase();
+
+  useEffect(() => {
+    let componenteAtivo = true;
+
+    const buscarSetoresAtivos = async () => {
+      try {
+        const resposta = await listarSetoresAtivos();
+
+        const lista = Array.isArray(resposta)
+          ? resposta
+          : Array.isArray(resposta?.data)
+            ? resposta.data
+            : [];
+
+        if (componenteAtivo) {
+          setSetoresCadastrados(lista);
+          setErroSetores('');
+        }
+      } catch (erro) {
+        if (componenteAtivo) {
+          setErroSetores(
+            erro?.message ||
+              'Não foi possível carregar os setores cadastrados.'
+          );
+        }
+      } finally {
+        if (componenteAtivo) {
+          setCarregandoSetores(false);
+        }
+      }
+    };
+
+    buscarSetoresAtivos();
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, []);
 
   const setoresDaUnidade = useMemo(() => {
-    return setoresCadastrados.filter((setor) => {
-      const unidadeSetor = String(setor?.unidadeNome || '')
-        .trim()
-        .toLowerCase();
+    const unidadeUsuario = normalizarTexto(
+      usuario?.unidade ?? usuario?.UNIDADE ?? ''
+    );
 
-      return unidadeSetor === unidadeUsuarioLogada;
+    return setoresCadastrados.filter((setor) => {
+      const unidadeNome = normalizarTexto(
+        setor?.unidadeNome ?? setor?.unidade?.nome ?? ''
+      );
+
+      const unidadeSigla = normalizarTexto(
+        setor?.unidadeSigla ?? setor?.unidade?.sigla ?? ''
+      );
+
+      return (
+        unidadeNome === unidadeUsuario ||
+        unidadeSigla === unidadeUsuario
+      );
     });
-  }, [setoresCadastrados, unidadeUsuarioLogada]);
+  }, [setoresCadastrados, usuario]);
 
   const handleSair = () => {
     if (typeof onSair === 'function') {
@@ -173,7 +207,6 @@ function SelecionarConferencia({
       return;
     }
 
-    setSetoresCadastrados(carregarSetoresCadastrados());
     setModoConferencia('SETOR');
     setSetorSelecionado('');
   };
@@ -564,9 +597,17 @@ function SelecionarConferencia({
                   </div>
                 </div>
 
-                {setoresDaUnidade.length === 0 ? (
+                {carregandoSetores ? (
                   <div className="setores-vazio">
-                    Nenhum setor cadastrado para a unidade{' '}
+                    Carregando setores...
+                  </div>
+                ) : erroSetores ? (
+                  <div className="setores-vazio">
+                    {erroSetores}
+                  </div>
+                ) : setoresDaUnidade.length === 0 ? (
+                  <div className="setores-vazio">
+                    Nenhum setor ativo cadastrado para a unidade{' '}
                     {usuario?.unidade || usuario?.UNIDADE}.
                   </div>
                 ) : (

@@ -6,17 +6,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
-public interface UnidadeRepository extends JpaRepository<Unidade, Long> {
+public interface UnidadeRepository
+        extends JpaRepository<Unidade, Long> {
 
     boolean existsBySiglaIgnoreCase(String sigla);
 
-    boolean existsBySiglaIgnoreCaseAndIdNot(String sigla, Long id);
-
     boolean existsByNomeIgnoreCase(String nome);
+
+    boolean existsBySiglaIgnoreCaseAndIdNot(String sigla, Long id);
 
     boolean existsByNomeIgnoreCaseAndIdNot(String nome, Long id);
 
     Optional<Unidade> findBySiglaIgnoreCase(String sigla);
+
+    Optional<Unidade> findByNomeIgnoreCase(String nome);
 
     List<Unidade> findAllByOrderByNomeAsc();
 

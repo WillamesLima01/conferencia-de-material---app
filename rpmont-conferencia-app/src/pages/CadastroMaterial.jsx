@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
 import {
   FaArrowLeft,
   FaBarcode,
@@ -7,8 +8,35 @@ import {
   FaLayerGroup,
   FaPenToSquare,
 } from 'react-icons/fa6';
-import { setoresDaUnidade } from '../data/setores';
+
+import {
+  listarSetoresAtivos,
+} from '../services/setorService';
+
 import '../styles/CadastroMaterial.css';
+
+const normalizarTexto = (valor) => {
+  return String(valor ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/º/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
+
+const normalizarLista = (resposta) => {
+  if (Array.isArray(resposta)) {
+    return resposta;
+  }
+
+  if (Array.isArray(resposta?.data)) {
+    return resposta.data;
+  }
+
+  return [];
+};
 
 function CadastroMaterial({
   usuario,
@@ -26,21 +54,144 @@ function CadastroMaterial({
   const [descricao, setDescricao] = useState('');
   const [observacao, setObservacao] = useState('');
 
-  const [setorSelecionado, setSetorSelecionado] = useState(
-    cadastroManual
-      ? usuario?.setor || ''
-      : configuracao?.tipo === 'SETOR'
-        ? configuracao?.setor || ''
-        : usuario?.setor || ''
-  );
+  const [setores, setSetores] = useState([]);
+  const [setorSelecionadoId, setSetorSelecionadoId] = useState('');
 
+  const [carregandoSetores, setCarregandoSetores] = useState(true);
+  const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState('');
 
-  const setorCadastro = cadastroManual
-    ? setorSelecionado
+  const unidadeUsuario = useMemo(() => {
+    return normalizarTexto(
+      usuario?.unidade ??
+        usuario?.UNIDADE ??
+        ''
+    );
+  }, [usuario]);
+
+  const setoresDaUnidade = useMemo(() => {
+    return setores.filter((setor) => {
+      const unidadeNome = normalizarTexto(
+        setor?.unidadeNome ??
+          setor?.unidade?.nome ??
+          ''
+      );
+
+      const unidadeSigla = normalizarTexto(
+        setor?.unidadeSigla ??
+          setor?.unidade?.sigla ??
+          ''
+      );
+
+      return (
+        unidadeNome === unidadeUsuario ||
+        unidadeSigla === unidadeUsuario
+      );
+    });
+  }, [setores, unidadeUsuario]);
+
+  const setorSelecionado = useMemo(() => {
+    return setoresDaUnidade.find(
+      (setor) =>
+        String(setor.id) === String(setorSelecionadoId)
+    );
+  }, [setoresDaUnidade, setorSelecionadoId]);
+
+  const setorConfiguracao = useMemo(() => {
+    return String(
+      configuracao?.setor?.nome ??
+        configuracao?.setor ??
+        ''
+    ).trim();
+  }, [configuracao]);
+
+  const nomeSetorCadastro = cadastroManual
+    ? setorSelecionado?.nome || ''
     : configuracao?.tipo === 'SETOR'
-      ? configuracao?.setor
-      : usuario?.setor;
+      ? setorConfiguracao
+      : String(
+          usuario?.setor ??
+            usuario?.SETOR ??
+            ''
+        ).trim();
+
+  useEffect(() => {
+    let componenteAtivo = true;
+
+    const carregarSetores = async () => {
+      try {
+        const resposta = await listarSetoresAtivos();
+        const lista = normalizarLista(resposta);
+
+        if (!componenteAtivo) {
+          return;
+        }
+
+        setSetores(lista);
+
+        if (cadastroManual) {
+          const unidadeAtual = normalizarTexto(
+            usuario?.unidade ??
+              usuario?.UNIDADE ??
+              ''
+          );
+
+          const setorUsuario = normalizarTexto(
+            usuario?.setor ??
+              usuario?.SETOR ??
+              ''
+          );
+
+          const setoresPermitidos = lista.filter((setor) => {
+            const unidadeNome = normalizarTexto(
+              setor?.unidadeNome ??
+                setor?.unidade?.nome ??
+                ''
+            );
+
+            const unidadeSigla = normalizarTexto(
+              setor?.unidadeSigla ??
+                setor?.unidade?.sigla ??
+                ''
+            );
+
+            return (
+              unidadeNome === unidadeAtual ||
+              unidadeSigla === unidadeAtual
+            );
+          });
+
+          const setorCorrespondente = setoresPermitidos.find(
+            (setor) =>
+              normalizarTexto(setor?.nome) === setorUsuario
+          );
+
+          if (setorCorrespondente) {
+            setSetorSelecionadoId(
+              String(setorCorrespondente.id)
+            );
+          }
+        }
+      } catch (erro) {
+        if (componenteAtivo) {
+          setMensagem(
+            erro?.message ||
+              'Não foi possível carregar os setores cadastrados.'
+          );
+        }
+      } finally {
+        if (componenteAtivo) {
+          setCarregandoSetores(false);
+        }
+      }
+    };
+
+    carregarSetores();
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, [cadastroManual, usuario]);
 
   const limparMensagem = () => {
     if (mensagem) {
@@ -48,7 +199,7 @@ function CadastroMaterial({
     }
   };
 
-  const salvarMaterial = () => {
+  const salvarMaterial = async () => {
     const numeroSerieTratado = nSerie.trim();
     const nomeTratado = nome.trim();
     const marcaTratada = marca.trim();
@@ -56,41 +207,56 @@ function CadastroMaterial({
     const observacaoTratada = observacao.trim();
 
     if (!numeroSerieTratado) {
-      setMensagem('Informe o Nº Série / código do material.');
+      setMensagem(
+        'Informe o Nº Série / código do material.'
+      );
       return;
     }
 
     if (!descricaoTratada) {
-      setMensagem('Informe a descrição do material.');
+      setMensagem(
+        'Informe a descrição do material.'
+      );
       return;
     }
 
-    if (!setorCadastro?.trim()) {
-      setMensagem('Selecione o setor do material.');
+    if (!nomeSetorCadastro) {
+      setMensagem(
+        'Selecione o setor do material.'
+      );
       return;
     }
 
-    /*
-     * O backend preenche automaticamente:
-     *
-     * unidade;
-     * dataCadastro;
-     * usuarioId;
-     * dataModificacao;
-     * usuarioModificadorId;
-     * situacao.
-     */
+    if (typeof onSalvar !== 'function') {
+      setMensagem(
+        'A função de salvar material não foi configurada.'
+      );
+      return;
+    }
+
     const novoMaterial = {
       numeroSerie: numeroSerieTratado,
       nome: nomeTratado || null,
       marca: marcaTratada || null,
       descricao: descricaoTratada,
       observacao: observacaoTratada || null,
-      setor: setorCadastro.trim(),
+      setor: nomeSetorCadastro,
       conferido: !cadastroManual,
     };
 
-    onSalvar(novoMaterial);
+    try {
+      setSalvando(true);
+      setMensagem('');
+
+      await onSalvar(novoMaterial);
+    } catch (erro) {
+      setMensagem(
+        erro?.message ||
+          'Não foi possível salvar o material.'
+      );
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -102,13 +268,16 @@ function CadastroMaterial({
             className="voltar-cadastro-button"
             onClick={onCancelar}
             aria-label="Voltar"
+            disabled={salvando}
           >
             <FaArrowLeft />
           </button>
 
           <div>
             <span>
-              {cadastroManual ? 'Cadastro manual' : 'Cadastro rápido'}
+              {cadastroManual
+                ? 'Cadastro manual'
+                : 'Cadastro rápido'}
             </span>
 
             <h1>Novo material</h1>
@@ -145,7 +314,11 @@ function CadastroMaterial({
 
             <span>Unidade</span>
 
-            <strong>{usuario?.unidade || 'Não informada'}</strong>
+            <strong>
+              {usuario?.unidade ||
+                usuario?.UNIDADE ||
+                'Não informada'}
+            </strong>
           </div>
 
           <div className="cadastro-info-card">
@@ -153,20 +326,23 @@ function CadastroMaterial({
 
             <span>Setor</span>
 
-            <strong>{setorCadastro || 'Selecione'}</strong>
+            <strong>
+              {nomeSetorCadastro || 'Selecione'}
+            </strong>
           </div>
         </section>
 
         <section className="cadastro-form-card">
           <label className="cadastro-material-label">
             Nº Série / Código
+
             <div className="input-com-icone">
               <FaBarcode />
 
               <input
                 type="text"
                 value={nSerie}
-                disabled={!cadastroManual}
+                disabled={!cadastroManual || salvando}
                 maxLength={100}
                 placeholder="Ex.: 00494550"
                 onChange={(event) => {
@@ -180,30 +356,54 @@ function CadastroMaterial({
           {cadastroManual && (
             <label className="cadastro-material-label">
               Setor
+
               <select
-                value={setorSelecionado}
+                value={setorSelecionadoId}
+                disabled={carregandoSetores || salvando}
                 onChange={(event) => {
-                  setSetorSelecionado(event.target.value);
+                  setSetorSelecionadoId(
+                    event.target.value
+                  );
                   limparMensagem();
                 }}
               >
-                <option value="">Selecione o setor</option>
+                <option value="">
+                  {carregandoSetores
+                    ? 'Carregando setores...'
+                    : 'Selecione o setor'}
+                </option>
 
                 {setoresDaUnidade.map((setor) => (
-                  <option key={setor} value={setor}>
-                    {setor}
+                  <option
+                    key={setor.id}
+                    value={setor.id}
+                  >
+                    {setor.nome}
                   </option>
                 ))}
               </select>
             </label>
           )}
 
+          {cadastroManual &&
+            !carregandoSetores &&
+            setoresDaUnidade.length === 0 && (
+              <div className="cadastro-material-mensagem">
+                Nenhum setor ativo foi encontrado para a
+                unidade{' '}
+                {usuario?.unidade ||
+                  usuario?.UNIDADE}.
+              </div>
+            )}
+
           <label className="cadastro-material-label">
             Nome do material
+
             <input
               type="text"
               value={nome}
               maxLength={100}
+              disabled={salvando}
               placeholder="Ex.: Monitor"
               onChange={(event) => {
                 setNome(event.target.value);
@@ -214,10 +414,12 @@ function CadastroMaterial({
 
           <label className="cadastro-material-label">
             Marca
+
             <input
               type="text"
               value={marca}
               maxLength={100}
+              disabled={salvando}
               placeholder="Ex.: Lenovo"
               onChange={(event) => {
                 setMarca(event.target.value);
@@ -228,10 +430,12 @@ function CadastroMaterial({
 
           <label className="cadastro-material-label">
             Descrição do material
+
             <input
               type="text"
               value={descricao}
               maxLength={300}
+              disabled={salvando}
               placeholder="Ex.: Monitor LED modelo ThinkVision de 24 polegadas"
               onChange={(event) => {
                 setDescricao(event.target.value);
@@ -242,9 +446,11 @@ function CadastroMaterial({
 
           <label className="cadastro-material-label">
             Observação
+
             <textarea
               value={observacao}
               maxLength={500}
+              disabled={salvando}
               placeholder="Ex.: Instalado na sala do P4"
               onChange={(event) => {
                 setObservacao(event.target.value);
@@ -263,18 +469,27 @@ function CadastroMaterial({
             type="button"
             className="salvar-material-button"
             onClick={salvarMaterial}
+            disabled={
+              salvando ||
+              (cadastroManual &&
+                (carregandoSetores ||
+                  setoresDaUnidade.length === 0))
+            }
           >
             <FaFloppyDisk />
 
-            {cadastroManual
-              ? 'Salvar material'
-              : 'Salvar e continuar conferência'}
+            {salvando
+              ? 'Salvando...'
+              : cadastroManual
+                ? 'Salvar material'
+                : 'Salvar e continuar conferência'}
           </button>
 
           <button
             type="button"
             className="cancelar-material-button"
             onClick={onCancelar}
+            disabled={salvando}
           >
             Cancelar
           </button>
