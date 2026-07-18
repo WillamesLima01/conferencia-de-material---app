@@ -65,6 +65,43 @@ export async function conferirMaterial(id) {
   });
 }
 
+export async function transferirEConferirMaterial(
+  id,
+  novoSetor,
+  unidade
+) {
+  if (id === null || id === undefined) {
+    throw new Error('O ID do material é obrigatório.');
+  }
+
+  const novoSetorTratado = String(
+    novoSetor ?? ''
+  ).trim();
+
+  const unidadeTratada = String(
+    unidade ?? ''
+  ).trim();
+
+  if (!novoSetorTratado) {
+    throw new Error('O novo setor é obrigatório.');
+  }
+
+  if (!unidadeTratada) {
+    throw new Error('A unidade é obrigatória.');
+  }
+
+  return api(
+    `${BASE_URL}/${id}/transferir-e-conferir`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        novoSetor: novoSetorTratado,
+        unidade: unidadeTratada,
+      }),
+    }
+  );
+}
+
 export async function inativarMaterial(id) {
   if (id === null || id === undefined) {
     throw new Error('O ID do material é obrigatório.');

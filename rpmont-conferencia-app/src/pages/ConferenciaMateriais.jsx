@@ -27,6 +27,10 @@ import {
   lerCodigoNativo,
 } from '../services/scannerService';
 
+import {
+  transferirEConferirMaterial,
+} from '../services/materialPatrimonialService';
+
 import '../styles/ConferenciaMateriais.css';
 
 function ConferenciaMateriais({
@@ -69,6 +73,16 @@ function ConferenciaMateriais({
     conferindoMaterial,
     setConferindoMaterial,
   ] = useState(false);
+
+  const [
+    transferindoMaterial,
+    setTransferindoMaterial,
+  ] = useState(false);
+
+  const [
+    erroTransferencia,
+    setErroTransferencia,
+  ] = useState('');
 
   const [cameraAberta, setCameraAberta] =
     useState(false);
@@ -650,11 +664,17 @@ function ConferenciaMateriais({
       setModalNaoEncontrado(false);
 
       setMensagem(
-        `Material localizado em outra unidade: ${
+        `Material localizado na unidade ${
           materialEncontrado?.unidade ||
           'não informada'
-        }. Procure o administrador.`
+        }, setor ${
+          materialEncontrado?.setor ||
+          'não informado'
+        }. Procure o administrador responsável.`
       );
+
+      setCodigoLido('');
+      setCodigoPendente('');
 
       return;
     }
@@ -667,7 +687,39 @@ function ConferenciaMateriais({
       setModalNaoEncontrado(false);
 
       setMensagem(
-        'O material foi localizado, mas está inativo.'
+        `O material foi localizado no setor ${
+          materialEncontrado?.setor ||
+          'não informado'
+        }, mas está inativo.`
+      );
+
+      setCodigoLido('');
+      setCodigoPendente('');
+
+      return;
+    }
+
+    /*
+     * A divergência de setor é verificada antes
+     * do status de conferência, para que o
+     * conferente saiba onde o material está
+     * cadastrado, mesmo quando já foi conferido.
+     */
+    const materialEmOutroSetor =
+      configuracao?.tipo === 'SETOR' &&
+      normalizarTexto(
+        materialEncontrado?.setor
+      ) !==
+        normalizarTexto(
+          configuracao?.setor
+        );
+
+    if (materialEmOutroSetor) {
+      setModalNaoEncontrado(false);
+      setErroTransferencia('');
+
+      setModalOutroSetor(
+        materialEncontrado
       );
 
       return;
@@ -688,7 +740,10 @@ function ConferenciaMateriais({
         );
 
       setMensagem(
-        `Material já conferido: ${identificacaoMaterial}`
+        `Material já conferido no setor ${
+          materialEncontrado?.setor ||
+          'não informado'
+        }: ${identificacaoMaterial}`
       );
 
       setCodigoLido('');
@@ -697,29 +752,13 @@ function ConferenciaMateriais({
       return;
     }
 
-    const materialEmOutroSetor =
-      configuracao?.tipo === 'SETOR' &&
-      normalizarTexto(
-        materialEncontrado?.setor
-      ) !==
-        normalizarTexto(
-          configuracao?.setor
-        );
-
-    if (materialEmOutroSetor) {
-      setModalNaoEncontrado(false);
-
-      setModalOutroSetor(
-        materialEncontrado
-      );
-
-      return;
-    }
-
     setModalNaoEncontrado(false);
 
     setMensagem(
-      'Material localizado, mas não pertence ao escopo atual.'
+      `Material localizado no setor ${
+        materialEncontrado?.setor ||
+        'não informado'
+      }, mas não pertence ao escopo atual da conferência.`
     );
   };
 
@@ -737,39 +776,123 @@ function ConferenciaMateriais({
   };
 
   /*
-   * Esta operação ainda altera setor e
-   * conferência somente no estado local.
-   *
-   * Depois deverá ser conectada a um
-   * endpoint específico do backend para
-   * transferência de setor.
+   * ==========================================
+   * TRANSFERIR SETOR E CONFERIR
+   * ==========================================
    */
-  const atualizarSetorEConferir = () => {
-    if (!modalOutroSetor) {
+
+  const atualizarSetorEConferir =
+    async () => {
+      if (
+        !modalOutroSetor ||
+        transferindoMaterial
+      ) {
+        return;
+      }
+
+      const idMaterial =
+        obterId(modalOutroSetor);
+
+      const novoSetor =
+        String(
+          configuracao?.setor ?? ''
+        ).trim();
+
+      const unidade =
+        String(
+          modalOutroSetor?.unidade ??
+            usuario?.unidade ??
+            ''
+        ).trim();
+
+      if (
+        idMaterial === null ||
+        idMaterial === undefined
+      ) {
+        setErroTransferencia(
+          'Não foi possível identificar o material.'
+        );
+
+        return;
+      }
+
+      if (!novoSetor) {
+        setErroTransferencia(
+          'O setor da conferência não foi identificado.'
+        );
+
+        return;
+      }
+
+      if (!unidade) {
+        setErroTransferencia(
+          'A unidade do material não foi identificada.'
+        );
+
+        return;
+      }
+
+      try {
+        setTransferindoMaterial(true);
+        setErroTransferencia('');
+        limparMensagens();
+
+        const materialAtualizado =
+          await transferirEConferirMaterial(
+            idMaterial,
+            novoSetor,
+            unidade
+          );
+
+        if (!materialAtualizado) {
+          throw new Error(
+            'O backend não retornou o material atualizado.'
+          );
+        }
+
+        atualizarMaterialNaLista(
+          idMaterial,
+          materialAtualizado
+        );
+
+        const identificacaoMaterial =
+          materialAtualizado?.nome ||
+          materialAtualizado?.descricao ||
+          obterNumeroSerie(
+            materialAtualizado
+          );
+
+        setMensagem(
+          `Material transferido para ${novoSetor} e conferido com sucesso: ${identificacaoMaterial}`
+        );
+
+        setModalOutroSetor(null);
+        setCodigoLido('');
+        setCodigoPendente('');
+      } catch (error) {
+        console.error(
+          'Erro ao transferir e conferir material:',
+          error
+        );
+
+        setErroTransferencia(
+          error?.message ||
+            'Não foi possível atualizar o setor no banco de dados.'
+        );
+      } finally {
+        setTransferindoMaterial(false);
+      }
+    };
+
+  const fecharModais = () => {
+    if (transferindoMaterial) {
       return;
     }
 
-    atualizarMaterialNaLista(
-      obterId(modalOutroSetor),
-      {
-        setor: configuracao?.setor,
-        conferido: true,
-      }
-    );
-
-    setMensagem(
-      `Material transferido para ${configuracao?.setor} e conferido com sucesso.`
-    );
-
-    setModalOutroSetor(null);
-    setCodigoLido('');
-    setCodigoPendente('');
-  };
-
-  const fecharModais = () => {
     setModalNaoEncontrado(false);
     setModalOutroSetor(null);
     setCodigoPendente('');
+    setErroTransferencia('');
   };
 
   /*
@@ -1248,62 +1371,121 @@ function ConferenciaMateriais({
               </div>
 
               <h2>
-                Produto localizado em
+                Material localizado em
                 outro setor
               </h2>
 
               <p>
-                <strong>
-                  {modalOutroSetor?.nome ||
-                    modalOutroSetor?.descricao}
-                </strong>
+                O material foi encontrado
+                no cadastro geral, mas
+                pertence a outro setor.
               </p>
 
-              {modalOutroSetor?.marca && (
-                <p>
-                  Marca:{' '}
-                  {modalOutroSetor.marca}
-                </p>
-              )}
-
               <div className="divergencia-box">
+                <span>Nº Série</span>
+
+                <strong>
+                  {obterNumeroSerie(
+                    modalOutroSetor
+                  ) || 'Não informado'}
+                </strong>
+
+                <span>Material</span>
+
+                <strong>
+                  {modalOutroSetor?.nome ||
+                    modalOutroSetor?.descricao ||
+                    'Não informado'}
+                </strong>
+
+                {modalOutroSetor?.marca && (
+                  <>
+                    <span>Marca</span>
+
+                    <strong>
+                      {modalOutroSetor.marca}
+                    </strong>
+                  </>
+                )}
+
                 <span>
-                  Setor cadastrado no
-                  banco
+                  Unidade cadastrada
                 </span>
 
                 <strong>
-                  {modalOutroSetor?.setor}
+                  {modalOutroSetor?.unidade ||
+                    'Não informada'}
                 </strong>
 
                 <span>
-                  Setor onde o material
-                  foi encontrado
+                  Setor cadastrado
                 </span>
 
                 <strong>
-                  {configuracao?.setor}
+                  {modalOutroSetor?.setor ||
+                    'Não informado'}
+                </strong>
+
+                <span>
+                  Setor da conferência
+                  atual
+                </span>
+
+                <strong>
+                  {configuracao?.setor ||
+                    'Não informado'}
+                </strong>
+
+                <span>
+                  Status da conferência
+                </span>
+
+                <strong>
+                  {materialEstaConferido(
+                    modalOutroSetor
+                  )
+                    ? 'JÁ CONFERIDO'
+                    : 'PENDENTE'}
                 </strong>
               </div>
 
+              {erroTransferencia && (
+                <div className="mensagem-conferencia">
+                  {erroTransferencia}
+                </div>
+              )}
+
               <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-primary"
-                  onClick={
-                    atualizarSetorEConferir
-                  }
-                >
-                  Atualizar setor e
-                  conferir
-                </button>
+                {!materialEstaConferido(
+                  modalOutroSetor
+                ) && (
+                  <button
+                    type="button"
+                    className="modal-primary"
+                    onClick={
+                      atualizarSetorEConferir
+                    }
+                    disabled={
+                      transferindoMaterial
+                    }
+                  >
+                    {transferindoMaterial
+                      ? 'Atualizando no banco...'
+                      : 'Atualizar setor e conferir'}
+                  </button>
+                )}
 
                 <button
                   type="button"
                   className="modal-cancel"
                   onClick={fecharModais}
+                  disabled={
+                    transferindoMaterial
+                  }
                 >
-                  Cancelar
+                  <FaXmark />
+
+                  Fechar
                 </button>
               </div>
             </div>

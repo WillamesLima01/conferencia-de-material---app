@@ -2,6 +2,7 @@ package br.com.rpmont.conferencia.service;
 
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
+import br.com.rpmont.conferencia.dtos.TransferirConferirMaterialRequestDTO;
 
 import java.util.List;
 
@@ -34,6 +35,12 @@ public interface MaterialPatrimonialService {
 
     MaterialPatrimonialResponseDTO conferir(
             Long id,
+            String matriculaUsuario
+    );
+
+    MaterialPatrimonialResponseDTO transferirEConferir(
+            Long id,
+            TransferirConferirMaterialRequestDTO request,
             String matriculaUsuario
     );
 

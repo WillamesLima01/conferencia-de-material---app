@@ -2,6 +2,7 @@ package br.com.rpmont.conferencia.service;
 
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
+import br.com.rpmont.conferencia.dtos.TransferirConferirMaterialRequestDTO;
 import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.exception.ConflictException;
 import br.com.rpmont.conferencia.exception.ForbiddenException;
@@ -423,6 +424,115 @@ public class MaterialPatrimonialServiceImpl
 
         validarMaterialAtivo(
                 material
+        );
+
+        material.setConferido(
+                true
+        );
+
+        material.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        material.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        MaterialPatrimonial atualizado =
+                materialRepository.save(
+                        material
+                );
+
+        return converterParaResponse(
+                atualizado
+        );
+    }
+
+    /*
+     * ==========================================
+     * TRANSFERIR SETOR E CONFERIR
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MaterialPatrimonialResponseDTO transferirEConferir(
+            Long id,
+            TransferirConferirMaterialRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados da transferência são obrigatórios."
+            );
+        }
+
+        MaterialPatrimonial material =
+                buscarMaterialPorId(
+                        id
+                );
+
+        validarAcessoUnidade(
+                usuarioLogado,
+                material
+        );
+
+        validarMaterialAtivo(
+                material
+        );
+
+        String novoSetor =
+                normalizarTextoObrigatorio(
+                        request.novoSetor(),
+                        "O novo setor é obrigatório."
+                );
+
+        String unidadeInformada =
+                normalizarTextoObrigatorio(
+                        request.unidade(),
+                        "A unidade é obrigatória."
+                );
+
+        if (
+                material.getUnidade() == null ||
+                        !material.getUnidade()
+                                .trim()
+                                .equalsIgnoreCase(
+                                        unidadeInformada
+                                )
+        ) {
+            throw new ConflictException(
+                    "A unidade informada não corresponde à unidade do material."
+            );
+        }
+
+        if (
+                !usuarioEhAdminMaster(usuarioLogado) &&
+                        (
+                                usuarioLogado.getUnidade() == null ||
+                                        !usuarioLogado.getUnidade()
+                                                .trim()
+                                                .equalsIgnoreCase(
+                                                        unidadeInformada
+                                                )
+                        )
+        ) {
+            throw new ForbiddenException(
+                    "Você não possui permissão para transferir materiais desta unidade."
+            );
+        }
+
+        material.setSetor(
+                novoSetor
         );
 
         material.setConferido(

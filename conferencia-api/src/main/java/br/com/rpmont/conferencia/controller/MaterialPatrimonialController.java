@@ -2,6 +2,7 @@ package br.com.rpmont.conferencia.controller;
 
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
+import br.com.rpmont.conferencia.dtos.TransferirConferirMaterialRequestDTO;
 import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.service.MaterialPatrimonialService;
 import jakarta.validation.Valid;
@@ -137,6 +138,31 @@ public class MaterialPatrimonialController {
     ) {
         return materialPatrimonialService.conferir(
                 id,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
+     * TRANSFERIR SETOR E CONFERIR
+     * ==========================================
+     */
+
+    @PatchMapping("/{id}/transferir-e-conferir")
+    @ResponseStatus(HttpStatus.OK)
+    public MaterialPatrimonialResponseDTO transferirEConferir(
+            @PathVariable
+            Long id,
+
+            @Valid
+            @RequestBody
+            TransferirConferirMaterialRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.transferirEConferir(
+                id,
+                request,
                 obterMatriculaUsuario(authentication)
         );
     }
