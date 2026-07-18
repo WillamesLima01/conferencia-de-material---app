@@ -5,6 +5,7 @@ import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -23,12 +24,6 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    /*
-     * =========================================
-     * CONFIGURAÇÃO DE SEGURANÇA
-     * =========================================
-     */
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -51,44 +46,45 @@ public class SecurityConfig {
                         auth -> auth
 
                                 /*
-                                 * =========================================
-                                 * ERROS INTERNOS
-                                 * =========================================
+                                 * Permite o encaminhamento interno
+                                 * das páginas de erro.
                                  */
-
                                 .dispatcherTypeMatchers(
                                         DispatcherType.ERROR
                                 )
                                 .permitAll()
 
                                 /*
-                                 * =========================================
-                                 * AUTENTICAÇÃO
-                                 * =========================================
+                                 * Libera as requisições preflight
+                                 * enviadas pelo navegador.
                                  */
+                                .requestMatchers(
+                                        HttpMethod.OPTIONS,
+                                        "/**"
+                                )
+                                .permitAll()
 
+                                /*
+                                 * Rotas públicas de autenticação,
+                                 * login e recuperação de senha.
+                                 */
                                 .requestMatchers(
                                         "/auth/**"
                                 )
                                 .permitAll()
 
                                 /*
-                                 * =========================================
-                                 * SOLICITAÇÃO DE ACESSO
-                                 * =========================================
+                                 * Solicitação pública de acesso.
                                  */
-
                                 .requestMatchers(
+                                        HttpMethod.POST,
                                         "/usuario/solicitar-acesso"
                                 )
                                 .permitAll()
 
                                 /*
-                                 * =========================================
-                                 * USUÁRIOS
-                                 * =========================================
+                                 * Administração de usuários.
                                  */
-
                                 .requestMatchers(
                                         "/usuario/**"
                                 )
@@ -98,11 +94,8 @@ public class SecurityConfig {
                                 )
 
                                 /*
-                                 * =========================================
-                                 * DEMAIS ROTAS
-                                 * =========================================
+                                 * Todas as demais rotas exigem JWT.
                                  */
-
                                 .anyRequest()
                                 .authenticated()
                 )
@@ -115,12 +108,6 @@ public class SecurityConfig {
                 .build();
     }
 
-    /*
-     * =========================================
-     * CORS
-     * =========================================
-     */
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
@@ -129,8 +116,9 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(
                 List.of(
+                        "http://localhost",
+                        "https://localhost",
                         "http://localhost:5173",
-                        "http://192.168.0.9:5173",
                         "http://192.168.0.8:5173"
                 )
         );
@@ -149,7 +137,10 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(
                 List.of(
                         "Authorization",
-                        "Content-Type"
+                        "Content-Type",
+                        "Accept",
+                        "Origin",
+                        "X-Requested-With"
                 )
         );
 
@@ -158,6 +149,18 @@ public class SecurityConfig {
                         "Authorization"
                 )
         );
+
+        /*
+         * O projeto usa JWT no cabeçalho Authorization,
+         * e não autenticação por cookie.
+         */
+        configuration.setAllowCredentials(false);
+
+        /*
+         * Mantém o resultado do preflight em cache
+         * durante uma hora.
+         */
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
@@ -169,12 +172,6 @@ public class SecurityConfig {
 
         return source;
     }
-
-    /*
-     * =========================================
-     * PASSWORD ENCODER
-     * =========================================
-     */
 
     @Bean
     public PasswordEncoder passwordEncoder() {

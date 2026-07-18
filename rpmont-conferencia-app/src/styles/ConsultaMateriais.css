@@ -2,12 +2,12 @@
   width: 100%;
   min-height: 100dvh;
   height: 100dvh;
-  background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
+  padding: 18px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
-  overflow: hidden;
+  background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
 }
 
 .consulta-phone {
@@ -15,6 +15,7 @@
   height: 100%;
   max-height: 844px;
   position: relative;
+  padding: 52px 22px 24px;
   overflow-y: auto;
   overflow-x: hidden;
   border-radius: 42px;
@@ -23,13 +24,12 @@
     0 28px 70px rgba(0, 0, 0, 0.65),
     inset 0 0 0 8px #121212,
     inset 0 0 0 10px #343434;
-  padding: 52px 22px 24px;
 }
 
 .consulta-header {
   display: flex;
-  gap: 14px;
   align-items: center;
+  gap: 14px;
   margin-bottom: 15px;
 }
 
@@ -39,7 +39,7 @@
   min-width: 42px;
   border: 0;
   border-radius: 15px;
-  background: #111;
+  background: #111111;
   color: #ffe600;
   display: flex;
   align-items: center;
@@ -55,7 +55,7 @@
 
 .consulta-header h1 {
   margin: 2px 0;
-  color: #222;
+  color: #222222;
   font-size: 23px;
   font-weight: 900;
   line-height: 1.1;
@@ -63,7 +63,7 @@
 
 .consulta-header p {
   margin: 0;
-  color: #666;
+  color: #666666;
   font-size: 13px;
   font-weight: 700;
 }
@@ -76,17 +76,17 @@
 }
 
 .consulta-resumo-grid div {
-  background: #ffffff;
-  border: 1px solid #eeeeee;
-  border-radius: 15px;
   padding: 9px 5px;
   text-align: center;
+  border: 1px solid #eeeeee;
+  border-radius: 15px;
+  background: #ffffff;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.07);
 }
 
 .consulta-resumo-grid span {
   display: block;
-  color: #666;
+  color: #666666;
   font-size: 9px;
   font-weight: 900;
 }
@@ -94,7 +94,7 @@
 .consulta-resumo-grid strong {
   display: block;
   margin-top: 3px;
-  color: #222;
+  color: #222222;
   font-size: 17px;
   font-weight: 900;
 }
@@ -102,12 +102,12 @@
 .consulta-filtros-card,
 .consulta-setores-card,
 .consulta-resultados-card {
-  background: #ffffff;
+  margin-bottom: 12px;
+  padding: 14px;
   border: 1px solid #eeeeee;
   border-radius: 22px;
-  padding: 14px;
+  background: #ffffff;
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
-  margin-bottom: 12px;
 }
 
 .consulta-card-titulo {
@@ -125,59 +125,59 @@
 
 .consulta-card-titulo h2 {
   margin: 0;
-  color: #222;
+  color: #222222;
   font-size: 16px;
   font-weight: 900;
 }
 
 .consulta-card-titulo p {
   margin: 2px 0 0;
-  color: #777;
+  color: #777777;
   font-size: 11px;
 }
 
 .consulta-label {
   display: block;
-  color: #222;
+  margin-bottom: 10px;
+  color: #222222;
   font-size: 11px;
   font-weight: 900;
-  margin-bottom: 10px;
 }
 
 .consulta-input-icon {
   height: 42px;
   margin-top: 5px;
-  border: 1px solid #dedede;
-  border-radius: 14px;
   padding: 0 12px;
   display: flex;
   align-items: center;
+  border: 1px solid #dedede;
+  border-radius: 14px;
   background: #fafafa;
 }
 
 .consulta-input-icon svg {
-  color: #df1b24;
   margin-right: 9px;
+  color: #df1b24;
   font-size: 13px;
   flex-shrink: 0;
 }
 
 .consulta-input-icon input {
   flex: 1;
+  min-width: 0;
   border: 0;
   outline: none;
   background: transparent;
   font-size: 12px;
-  min-width: 0;
 }
 
 .consulta-label select {
   width: 100%;
   height: 42px;
   margin-top: 5px;
+  padding: 0 10px;
   border: 1px solid #dedede;
   border-radius: 14px;
-  padding: 0 10px;
   outline: none;
   background: #fafafa;
   font-size: 12px;
@@ -192,27 +192,38 @@
 
 .consulta-acoes-filtros {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1.55fr 0.68fr;
+  gap: 8px;
 }
 
 .limpar-filtros-button,
+.consulta-ver-todos-button,
 .gerar-pdf-button {
   width: 100%;
+  min-width: 0;
   height: 44px;
+  padding: 0 8px;
   border-radius: 14px;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+  cursor: pointer;
 }
 
 .limpar-filtros-button {
   border: 1px solid #ffe600;
-  background: #111;
+  background: #111111;
+  color: #ffe600;
+}
+
+.consulta-ver-todos-button {
+  border: 1px solid #111111;
+  background: #111111;
   color: #ffe600;
 }
 
@@ -222,14 +233,22 @@
   color: #ffffff;
 }
 
+.limpar-filtros-button:active,
+.consulta-ver-todos-button:active:not(:disabled),
+.gerar-pdf-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.consulta-ver-todos-button:hover:not(:disabled) {
+  border-color: #df1b24;
+  background: #df1b24;
+  color: #ffffff;
+}
+
+.consulta-ver-todos-button:disabled,
 .gerar-pdf-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.limpar-filtros-button:active,
-.gerar-pdf-button:active:not(:disabled) {
-  transform: scale(0.98);
 }
 
 .consulta-lista-topo {
@@ -241,7 +260,7 @@
 
 .consulta-lista-topo h2 {
   margin: 0;
-  color: #222;
+  color: #222222;
   font-size: 15px;
   font-weight: 900;
 }
@@ -254,25 +273,25 @@
 
 .consulta-setores-lista {
   max-height: 94px;
+  padding-right: 4px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 7px;
-  padding-right: 4px;
 }
 
 .consulta-setor-item {
+  padding: 9px 11px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fafafa;
   border: 1px solid #eeeeee;
   border-radius: 13px;
-  padding: 9px 11px;
+  background: #fafafa;
 }
 
 .consulta-setor-item span {
-  color: #222;
+  color: #222222;
   font-size: 12px;
   font-weight: 900;
 }
@@ -280,9 +299,9 @@
 .consulta-setor-item strong {
   min-width: 28px;
   height: 26px;
-  background: #111;
-  color: #ffe600;
   border-radius: 999px;
+  background: #111111;
+  color: #ffe600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -291,21 +310,21 @@
 
 .consulta-resultados-scroll {
   max-height: 196px;
+  padding-right: 4px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-right: 4px;
 }
 
 .consulta-material-card {
+  padding: 11px;
   display: grid;
   grid-template-columns: 38px 1fr;
   gap: 10px;
-  background: #fafafa;
   border: 1px solid #eeeeee;
   border-radius: 16px;
-  padding: 11px;
+  background: #fafafa;
 }
 
 .consulta-material-inativo {
@@ -317,7 +336,7 @@
   width: 38px;
   height: 38px;
   border-radius: 14px;
-  background: #111;
+  background: #111111;
   color: #ffe600;
   display: flex;
   align-items: center;
@@ -330,14 +349,14 @@
 
 .consulta-material-info strong {
   display: block;
-  color: #111;
+  color: #111111;
   font-size: 12px;
   font-weight: 900;
 }
 
 .consulta-material-info h3 {
   margin: 2px 0 3px;
-  color: #222;
+  color: #222222;
   font-size: 13px;
   font-weight: 900;
   line-height: 1.25;
@@ -345,7 +364,7 @@
 
 .consulta-material-info p {
   margin: 0 0 7px;
-  color: #666;
+  color: #666666;
   font-size: 11px;
   line-height: 1.3;
 }
@@ -357,20 +376,299 @@
 }
 
 .consulta-material-tags span {
-  background: #111;
-  color: #ffe600;
-  border-radius: 999px;
   padding: 4px 7px;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffe600;
   font-size: 9px;
   font-weight: 900;
+}
+
+.consulta-material-acoes {
+  display: flex;
+  margin-top: 12px;
+}
+
+.consulta-detalhes-button {
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 2px solid #111111;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.consulta-detalhes-button:hover {
+  background: #111111;
+  color: #ffdf00;
 }
 
 .consulta-vazio {
   padding: 16px;
   text-align: center;
-  color: #777;
+  color: #777777;
   font-size: 12px;
   font-weight: 800;
+}
+
+/* Modal de materiais filtrados */
+
+.materiais-filtrados-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.76);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.materiais-filtrados-modal {
+  width: min(720px, 100%);
+  max-height: min(88dvh, 820px);
+  overflow: hidden;
+  border: 2px solid #242424;
+  border-radius: 24px;
+  background: linear-gradient(160deg, #fffdf4 0%, #ffffff 55%, #f7f4ea 100%);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+}
+
+.materiais-filtrados-header {
+  padding: 20px 20px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.materiais-filtrados-header span {
+  display: block;
+  color: #df1b24;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.materiais-filtrados-header h2 {
+  margin: 3px 0;
+  color: #222222;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.materiais-filtrados-header p {
+  margin: 0;
+  color: #666666;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.materiais-filtrados-fechar {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border: 0;
+  border-radius: 14px;
+  background: #111111;
+  color: #ffe600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.materiais-filtrados-acoes {
+  padding: 12px 20px;
+  border-bottom: 1px solid #ececec;
+}
+
+.materiais-filtrados-pdf {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #ffe600;
+  border-radius: 14px;
+  background: #df1b24;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.materiais-filtrados-pdf:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.materiais-filtrados-lista {
+  min-height: 0;
+  padding: 14px 20px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overscroll-behavior: contain;
+}
+
+.materiais-filtrados-item {
+  padding: 13px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid #e7e7e7;
+  border-radius: 17px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+}
+
+.materiais-filtrados-item-inativo {
+  opacity: 0.65;
+  background: #f1f1f1;
+}
+
+.materiais-filtrados-icone {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  background: #111111;
+  color: #ffe600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+.materiais-filtrados-info {
+  min-width: 0;
+}
+
+.materiais-filtrados-info > strong {
+  display: block;
+  color: #111111;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.materiais-filtrados-info h3 {
+  margin: 3px 0 5px;
+  color: #222222;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.materiais-filtrados-info p {
+  margin: 0 0 7px;
+  color: #666666;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.materiais-filtrados-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.materiais-filtrados-tags span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffe600;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.materiais-filtrados-detalhes {
+  min-height: 38px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: 2px solid #111111;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.materiais-filtrados-detalhes:hover {
+  background: #111111;
+  color: #ffe600;
+}
+
+.materiais-filtrados-vazio {
+  padding: 30px 16px;
+  text-align: center;
+  color: #777777;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+@media (max-width: 600px) {
+  .consulta-detalhes-button,
+  .materiais-filtrados-detalhes {
+    width: 100%;
+  }
+
+  .materiais-filtrados-overlay {
+    padding: 0;
+  }
+
+  .materiais-filtrados-modal {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .materiais-filtrados-header {
+    padding: 20px 16px 13px;
+  }
+
+  .materiais-filtrados-header h2 {
+    font-size: 19px;
+  }
+
+  .materiais-filtrados-acoes {
+    padding: 10px 16px;
+  }
+
+  .materiais-filtrados-lista {
+    padding: 12px 16px 18px;
+  }
+
+  .materiais-filtrados-item {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .materiais-filtrados-icone {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 @media (max-width: 430px) {
@@ -379,8 +677,8 @@
     height: 100dvh;
     min-height: 100dvh;
     padding: 0;
-    background: #fffdf4;
     overflow: hidden;
+    background: #fffdf4;
   }
 
   .consulta-phone {
@@ -388,11 +686,11 @@
     height: 100dvh;
     min-height: 100dvh;
     max-height: 100dvh;
-    border-radius: 0;
-    box-shadow: none;
+    padding: 28px 18px 18px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 28px 18px 18px;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .consulta-header {
@@ -443,13 +741,17 @@
   }
 
   .consulta-acoes-filtros {
-    gap: 8px;
+    grid-template-columns: 1fr 1.5fr 0.62fr;
+    gap: 6px;
   }
 
   .limpar-filtros-button,
+  .consulta-ver-todos-button,
   .gerar-pdf-button {
     height: 42px;
-    font-size: 11px;
+    padding-inline: 5px;
+    font-size: 9px;
+    gap: 4px;
   }
 
   .consulta-setores-lista {
@@ -500,6 +802,7 @@
   }
 
   .limpar-filtros-button,
+  .consulta-ver-todos-button,
   .gerar-pdf-button {
     height: 40px;
   }
@@ -510,41 +813,5 @@
 
   .consulta-resultados-scroll {
     max-height: 170px;
-  }
-}
-
-.consulta-material-acoes {
-  display: flex;
-  margin-top: 12px;
-}
-
-.consulta-detalhes-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  min-height: 42px;
-  padding: 10px 16px;
-
-  border: 2px solid #111111;
-  border-radius: 10px;
-
-  background: #ffffff;
-  color: #111111;
-
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.consulta-detalhes-button:hover {
-  background: #111111;
-  color: #ffdf00;
-}
-
-@media (max-width: 600px) {
-  .consulta-detalhes-button {
-    width: 100%;
   }
 }

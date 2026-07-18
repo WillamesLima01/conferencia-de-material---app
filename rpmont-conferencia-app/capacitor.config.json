@@ -1,5 +1,11 @@
 {
   "appId": "br.com.rpmont.conferencia",
   "appName": "RPMont Conferência",
-  "webDir": "dist"
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "cleartext": true
+  }
 }

@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+
 import {
   FaArrowLeft,
   FaBarcode,
@@ -16,6 +22,11 @@ import {
 
 import MaterialDetalhesModal from '../components/MaterialDetalhesModal';
 
+import {
+  leitorNativoDisponivel,
+  lerCodigoNativo,
+} from '../services/scannerService';
+
 import '../styles/ConferenciaMateriais.css';
 
 function ConferenciaMateriais({
@@ -29,11 +40,16 @@ function ConferenciaMateriais({
   onExcluirMaterial,
   onConferirMaterial,
 }) {
-  const [codigoLido, setCodigoLido] = useState('');
-  const [codigoPendente, setCodigoPendente] = useState('');
+  const [codigoLido, setCodigoLido] =
+    useState('');
 
-  const [modalNaoEncontrado, setModalNaoEncontrado] =
-    useState(false);
+  const [codigoPendente, setCodigoPendente] =
+    useState('');
+
+  const [
+    modalNaoEncontrado,
+    setModalNaoEncontrado,
+  ] = useState(false);
 
   const [modalOutroSetor, setModalOutroSetor] =
     useState(null);
@@ -41,18 +57,26 @@ function ConferenciaMateriais({
   const [modalExcluir, setModalExcluir] =
     useState(null);
 
-  const [materialDetalhes, setMaterialDetalhes] =
-    useState(null);
+  const [
+    materialDetalhes,
+    setMaterialDetalhes,
+  ] = useState(null);
 
-  const [mensagem, setMensagem] = useState('');
-  const [conferindoMaterial, setConferindoMaterial] =
-    useState(false);
+  const [mensagem, setMensagem] =
+    useState('');
+
+  const [
+    conferindoMaterial,
+    setConferindoMaterial,
+  ] = useState(false);
 
   const [cameraAberta, setCameraAberta] =
     useState(false);
 
-  const [carregandoCamera, setCarregandoCamera] =
-    useState(false);
+  const [
+    carregandoCamera,
+    setCarregandoCamera,
+  ] = useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -84,41 +108,54 @@ function ConferenciaMateriais({
     normalizarTexto(material?.situacao) !==
     'inativo';
 
-  const materiaisDaConferencia = useMemo(() => {
-    return materiais.filter((material) => {
-      const mesmaUnidade =
-        normalizarTexto(material?.unidade) ===
-        normalizarTexto(usuario?.unidade);
+  const materiaisDaConferencia =
+    useMemo(() => {
+      return materiais.filter((material) => {
+        const mesmaUnidade =
+          normalizarTexto(
+            material?.unidade
+          ) ===
+          normalizarTexto(
+            usuario?.unidade
+          );
 
-      if (
-        !materialEstaAtivo(material) ||
-        !mesmaUnidade
-      ) {
-        return false;
-      }
+        if (
+          !materialEstaAtivo(material) ||
+          !mesmaUnidade
+        ) {
+          return false;
+        }
 
-      if (configuracao?.tipo === 'TODOS') {
-        return true;
-      }
+        if (
+          configuracao?.tipo === 'TODOS'
+        ) {
+          return true;
+        }
 
-      return (
-        configuracao?.tipo === 'SETOR' &&
-        normalizarTexto(material?.setor) ===
-          normalizarTexto(configuracao?.setor)
-      );
-    });
-  }, [
-    materiais,
-    usuario?.unidade,
-    configuracao?.tipo,
-    configuracao?.setor,
-  ]);
+        return (
+          configuracao?.tipo === 'SETOR' &&
+          normalizarTexto(
+            material?.setor
+          ) ===
+            normalizarTexto(
+              configuracao?.setor
+            )
+        );
+      });
+    }, [
+      materiais,
+      usuario?.unidade,
+      configuracao?.tipo,
+      configuracao?.setor,
+    ]);
 
-  const total = materiaisDaConferencia.length;
+  const total =
+    materiaisDaConferencia.length;
 
-  const conferidos = materiaisDaConferencia.filter(
-    materialEstaConferido
-  ).length;
+  const conferidos =
+    materiaisDaConferencia.filter(
+      materialEstaConferido
+    ).length;
 
   const pendentes = total - conferidos;
 
@@ -129,15 +166,20 @@ function ConferenciaMateriais({
   /*
    * Atualização local temporária.
    *
-   * Atualmente utilizada somente no fluxo de mudança
-   * de setor. A conferência normal já é persistida
-   * pelo backend por meio de onConferirMaterial.
+   * Atualmente utilizada somente no fluxo
+   * de mudança de setor.
+   *
+   * A conferência normal já é persistida
+   * pelo backend por meio de
+   * onConferirMaterial.
    */
   const atualizarMaterialNaLista = (
     idMaterial,
     dadosAtualizados
   ) => {
-    if (typeof setMateriais !== 'function') {
+    if (
+      typeof setMateriais !== 'function'
+    ) {
       return;
     }
 
@@ -169,7 +211,7 @@ function ConferenciaMateriais({
 
     if (!codigo) {
       setMensagem(
-        'Informe ou leia um código de barras.'
+        'Informe ou leia um código de barras ou QR Code.'
       );
 
       return;
@@ -188,6 +230,32 @@ function ConferenciaMateriais({
       );
 
     if (materialNaLista) {
+      /*
+       * Impede nova requisição para um material
+       * que já está marcado como conferido.
+       */
+      if (
+        materialEstaConferido(
+          materialNaLista
+        )
+      ) {
+        const identificacaoMaterial =
+          materialNaLista?.nome ||
+          materialNaLista?.descricao ||
+          obterNumeroSerie(
+            materialNaLista
+          );
+
+        setMensagem(
+          `Material já conferido: ${identificacaoMaterial}`
+        );
+
+        setCodigoLido('');
+        setCodigoPendente('');
+
+        return;
+      }
+
       if (
         typeof onConferirMaterial !==
         'function'
@@ -205,7 +273,8 @@ function ConferenciaMateriais({
         /*
          * O App.jsx chama:
          *
-         * PATCH /material-patrimonial/{id}/conferir
+         * PATCH
+         * /material-patrimonial/{id}/conferir
          */
         const materialConferido =
           await onConferirMaterial(
@@ -272,9 +341,9 @@ function ConferenciaMateriais({
     if (streamRef.current) {
       streamRef.current
         .getTracks()
-        .forEach((track) =>
-          track.stop()
-        );
+        .forEach((track) => {
+          track.stop();
+        });
 
       streamRef.current = null;
     }
@@ -290,20 +359,92 @@ function ConferenciaMateriais({
   const processarCodigoCamera = async (
     codigo
   ) => {
-    setCodigoLido(codigo);
+    const codigoTratado =
+      normalizarCodigo(codigo);
+
+    if (!codigoTratado) {
+      setMensagem(
+        'Não foi possível identificar o código.'
+      );
+
+      pararCamera();
+
+      return;
+    }
+
+    setCodigoLido(codigoTratado);
 
     pararCamera();
 
-    await conferirCodigoPorValor(codigo);
+    await conferirCodigoPorValor(
+      codigoTratado
+    );
   };
 
   const abrirLeitorCodigoBarra =
     async () => {
       limparMensagens();
 
-      if (!('BarcodeDetector' in window)) {
+      if (
+        conferindoMaterial ||
+        carregandoCamera
+      ) {
+        return;
+      }
+
+      /*
+       * Aplicativo Android instalado:
+       * utiliza o leitor nativo do Capacitor.
+       */
+      if (leitorNativoDisponivel()) {
+        try {
+          setCarregandoCamera(true);
+
+          const codigo =
+            await lerCodigoNativo();
+
+          if (!codigo) {
+            setMensagem(
+              'Leitura cancelada.'
+            );
+
+            return;
+          }
+
+          setCodigoLido(codigo);
+
+          await conferirCodigoPorValor(
+            codigo
+          );
+        } catch (error) {
+          console.error(
+            'Erro ao abrir leitor nativo:',
+            error
+          );
+
+          setMensagem(
+            error?.message ||
+              'Não foi possível abrir o leitor.'
+          );
+        } finally {
+          setCarregandoCamera(false);
+        }
+
+        return;
+      }
+
+      /*
+       * Navegador:
+       * utiliza BarcodeDetector como
+       * alternativa ao leitor nativo.
+       */
+      if (
+        !(
+          'BarcodeDetector' in window
+        )
+      ) {
         setMensagem(
-          'Leitor de código de barras não disponível neste navegador. No aplicativo Android será utilizado o leitor nativo.'
+          'O leitor não está disponível neste navegador. Utilize o aplicativo Android ou digite o código manualmente.'
         );
 
         return;
@@ -314,7 +455,7 @@ function ConferenciaMateriais({
           ?.getUserMedia
       ) {
         setMensagem(
-          'Câmera não disponível neste dispositivo.'
+          'A câmera não está disponível neste dispositivo.'
         );
 
         return;
@@ -330,75 +471,116 @@ function ConferenciaMateriais({
           await navigator.mediaDevices.getUserMedia(
             {
               video: {
-                facingMode:
-                  'environment',
+                facingMode: {
+                  ideal: 'environment',
+                },
               },
+
               audio: false,
             }
           );
 
         streamRef.current = stream;
 
-        setTimeout(async () => {
-          if (!videoRef.current) {
+        window.setTimeout(async () => {
+          if (
+            !videoRef.current ||
+            !leitorAtivoRef.current
+          ) {
+            pararCamera();
+
             return;
           }
 
-          videoRef.current.srcObject =
-            stream;
+          try {
+            videoRef.current.srcObject =
+              stream;
 
-          await videoRef.current.play();
+            await videoRef.current.play();
 
-          const detector =
-            new window.BarcodeDetector();
+            const detector =
+              new window.BarcodeDetector({
+                formats: [
+                  'qr_code',
+                  'code_128',
+                  'code_39',
+                  'ean_13',
+                  'ean_8',
+                  'upc_a',
+                  'upc_e',
+                ],
+              });
 
-          const detectarCodigo =
-            async () => {
-              if (
-                !leitorAtivoRef.current ||
-                !videoRef.current
-              ) {
-                return;
-              }
-
-              try {
-                const codigos =
-                  await detector.detect(
-                    videoRef.current
-                  );
-
+            const detectarCodigo =
+              async () => {
                 if (
-                  codigos.length > 0
+                  !leitorAtivoRef.current ||
+                  !videoRef.current
                 ) {
-                  const codigoDetectado =
-                    codigos[0].rawValue;
+                  return;
+                }
 
-                  await processarCodigoCamera(
-                    codigoDetectado
+                try {
+                  const codigos =
+                    await detector.detect(
+                      videoRef.current
+                    );
+
+                  const codigoDetectado =
+                    normalizarCodigo(
+                      codigos?.[0]
+                        ?.rawValue
+                    );
+
+                  if (codigoDetectado) {
+                    await processarCodigoCamera(
+                      codigoDetectado
+                    );
+
+                    return;
+                  }
+                } catch (error) {
+                  console.error(
+                    'Erro ao detectar código:',
+                    error
                   );
+
+                  setMensagem(
+                    'Não foi possível ler o código. Tente novamente.'
+                  );
+
+                  pararCamera();
 
                   return;
                 }
-              } catch {
-                setMensagem(
-                  'Não foi possível ler o código. Tente novamente.'
+
+                window.requestAnimationFrame(
+                  detectarCodigo
                 );
+              };
 
-                pararCamera();
+            setCarregandoCamera(false);
 
-                return;
-              }
+            await detectarCodigo();
+          } catch (error) {
+            console.error(
+              'Erro ao iniciar vídeo:',
+              error
+            );
 
-              requestAnimationFrame(
-                detectarCodigo
-              );
-            };
+            setMensagem(
+              'Não foi possível iniciar a visualização da câmera.'
+            );
 
-          setCarregandoCamera(false);
-
-          detectarCodigo();
+            pararCamera();
+          }
         }, 300);
-      } catch {
+      } catch (error) {
+        console.error(
+          'Erro ao abrir câmera:',
+          error
+        );
+
         setMensagem(
           'Não foi possível abrir a câmera. Verifique a permissão.'
         );
@@ -414,9 +596,9 @@ function ConferenciaMateriais({
       if (streamRef.current) {
         streamRef.current
           .getTracks()
-          .forEach((track) =>
-            track.stop()
-          );
+          .forEach((track) => {
+            track.stop();
+          });
 
         streamRef.current = null;
       }
@@ -444,9 +626,14 @@ function ConferenciaMateriais({
     if (!materialEncontrado) {
       setModalNaoEncontrado(false);
 
-      onAbrirCadastro(
-        codigoPendente
-      );
+      if (
+        typeof onAbrirCadastro ===
+        'function'
+      ) {
+        onAbrirCadastro(
+          codigoPendente
+        );
+      }
 
       return;
     }
@@ -486,6 +673,30 @@ function ConferenciaMateriais({
       return;
     }
 
+    if (
+      materialEstaConferido(
+        materialEncontrado
+      )
+    ) {
+      setModalNaoEncontrado(false);
+
+      const identificacaoMaterial =
+        materialEncontrado?.nome ||
+        materialEncontrado?.descricao ||
+        obterNumeroSerie(
+          materialEncontrado
+        );
+
+      setMensagem(
+        `Material já conferido: ${identificacaoMaterial}`
+      );
+
+      setCodigoLido('');
+      setCodigoPendente('');
+
+      return;
+    }
+
     const materialEmOutroSetor =
       configuracao?.tipo === 'SETOR' &&
       normalizarTexto(
@@ -515,17 +726,23 @@ function ConferenciaMateriais({
   const abrirCadastroRapido = () => {
     setModalNaoEncontrado(false);
 
-    onAbrirCadastro(
-      codigoPendente
-    );
+    if (
+      typeof onAbrirCadastro ===
+      'function'
+    ) {
+      onAbrirCadastro(
+        codigoPendente
+      );
+    }
   };
 
   /*
-   * Esta operação ainda altera setor e conferência
-   * somente no estado local.
+   * Esta operação ainda altera setor e
+   * conferência somente no estado local.
    *
-   * Depois deverá ser conectada a um endpoint específico
-   * do backend para transferência de setor.
+   * Depois deverá ser conectada a um
+   * endpoint específico do backend para
+   * transferência de setor.
    */
   const atualizarSetorEConferir = () => {
     if (!modalOutroSetor) {
@@ -653,11 +870,13 @@ function ConferenciaMateriais({
         <section className="contador-grid">
           <div>
             <span>Total</span>
+
             <strong>{total}</strong>
           </div>
 
           <div>
             <span>Conferidos</span>
+
             <strong>
               {conferidos}
             </strong>
@@ -665,6 +884,7 @@ function ConferenciaMateriais({
 
           <div>
             <span>Pendentes</span>
+
             <strong>
               {pendentes}
             </strong>
@@ -694,7 +914,8 @@ function ConferenciaMateriais({
               maxLength={100}
               placeholder="Ex.: 00494550"
               disabled={
-                conferindoMaterial
+                conferindoMaterial ||
+                carregandoCamera
               }
               onChange={(event) => {
                 setCodigoLido(
@@ -707,8 +928,7 @@ function ConferenciaMateriais({
                 event
               ) => {
                 if (
-                  event.key ===
-                  'Enter'
+                  event.key === 'Enter'
                 ) {
                   await conferirCodigo();
                 }
@@ -717,11 +937,10 @@ function ConferenciaMateriais({
 
             <button
               type="button"
-              onClick={
-                conferirCodigo
-              }
+              onClick={conferirCodigo}
               disabled={
-                conferindoMaterial
+                conferindoMaterial ||
+                carregandoCamera
               }
               aria-label="Pesquisar material"
             >
@@ -736,12 +955,15 @@ function ConferenciaMateriais({
               abrirLeitorCodigoBarra
             }
             disabled={
-              conferindoMaterial
+              conferindoMaterial ||
+              carregandoCamera
             }
           >
             <FaCamera />
 
-            Leitor de código de barras
+            {carregandoCamera
+              ? 'Abrindo leitor...'
+              : 'Leitor de código / QR Code'}
           </button>
 
           {conferindoMaterial && (
@@ -780,9 +1002,7 @@ function ConferenciaMateriais({
                 return (
                   <article
                     key={
-                      obterId(
-                        material
-                      ) ??
+                      obterId(material) ??
                       obterNumeroSerie(
                         material
                       )
@@ -820,9 +1040,7 @@ function ConferenciaMateriais({
                           <strong>
                             Marca:
                           </strong>{' '}
-                          {
-                            material.marca
-                          }
+                          {material.marca}
                         </p>
                       )}
 
@@ -859,34 +1077,43 @@ function ConferenciaMateriais({
                           }
                         >
                           <FaEye />
+
                           Ver detalhes
                         </button>
 
-                        <button
-                          type="button"
-                          className="editar-material-button"
-                          onClick={() =>
-                            onEditarMaterial(
-                              material
-                            )
-                          }
-                        >
-                          <FaPenToSquare />
-                          Editar
-                        </button>
+                        {typeof onEditarMaterial ===
+                          'function' && (
+                          <button
+                            type="button"
+                            className="editar-material-button"
+                            onClick={() =>
+                              onEditarMaterial(
+                                material
+                              )
+                            }
+                          >
+                            <FaPenToSquare />
 
-                        <button
-                          type="button"
-                          className="excluir-material-button"
-                          onClick={() =>
-                            abrirModalExcluir(
-                              material
-                            )
-                          }
-                        >
-                          <FaTrashCan />
-                          Inativar
-                        </button>
+                            Editar
+                          </button>
+                        )}
+
+                        {typeof onExcluirMaterial ===
+                          'function' && (
+                          <button
+                            type="button"
+                            className="excluir-material-button"
+                            onClick={() =>
+                              abrirModalExcluir(
+                                material
+                              )
+                            }
+                          >
+                            <FaTrashCan />
+
+                            Inativar
+                          </button>
+                        )}
                       </div>
                     </div>
                   </article>
@@ -905,14 +1132,22 @@ function ConferenciaMateriais({
         </section>
 
         <MaterialDetalhesModal
-          aberto={Boolean(materialDetalhes)}
+          aberto={Boolean(
+            materialDetalhes
+          )}
           material={materialDetalhes}
           onFechar={() =>
             setMaterialDetalhes(null)
           }
           onEditar={(material) => {
             setMaterialDetalhes(null);
-            onEditarMaterial(material);
+
+            if (
+              typeof onEditarMaterial ===
+              'function'
+            ) {
+              onEditarMaterial(material);
+            }
           }}
           podeEditar={
             typeof onEditarMaterial ===
@@ -928,27 +1163,35 @@ function ConferenciaMateriais({
               </div>
 
               <h2>
-                {configuracao?.tipo === 'SETOR'
+                {configuracao?.tipo ===
+                'SETOR'
                   ? `Produto não cadastrado neste setor: ${
-                      configuracao?.setor || 'não informado'
+                      configuracao?.setor ||
+                      'não informado'
                     }`
                   : 'Produto não cadastrado'}
               </h2>
 
               <p>
                 O código{' '}
-                <strong>{codigoPendente}</strong>{' '}
-                {configuracao?.tipo === 'SETOR' ? (
+                <strong>
+                  {codigoPendente}
+                </strong>{' '}
+                {configuracao?.tipo ===
+                'SETOR' ? (
                   <>
-                    não foi encontrado na lista do setor{' '}
+                    não foi encontrado na
+                    lista do setor{' '}
                     <strong>
-                      {configuracao?.setor || 'selecionado'}
+                      {configuracao?.setor ||
+                        'selecionado'}
                     </strong>
                     .
                   </>
                 ) : (
                   <>
-                    não foi encontrado no cadastro de materiais
+                    não foi encontrado no
+                    cadastro de materiais
                     patrimoniais.
                   </>
                 )}
@@ -958,20 +1201,28 @@ function ConferenciaMateriais({
                 <button
                   type="button"
                   className="modal-primary"
-                  onClick={abrirCadastroRapido}
+                  onClick={
+                    abrirCadastroRapido
+                  }
                 >
                   <FaPlus />
+
                   Cadastrar agora
                 </button>
 
-                {configuracao?.tipo === 'SETOR' && (
+                {configuracao?.tipo ===
+                  'SETOR' && (
                   <button
                     type="button"
                     className="modal-secondary"
-                    onClick={verificarEmTodosItens}
+                    onClick={
+                      verificarEmTodosItens
+                    }
                   >
                     <FaMagnifyingGlass />
-                    Verificar em todos os itens
+
+                    Verificar em todos os
+                    itens
                   </button>
                 )}
 
@@ -981,6 +1232,7 @@ function ConferenciaMateriais({
                   onClick={fecharModais}
                 >
                   <FaXmark />
+
                   Fechar
                 </button>
               </div>
@@ -1010,9 +1262,7 @@ function ConferenciaMateriais({
               {modalOutroSetor?.marca && (
                 <p>
                   Marca:{' '}
-                  {
-                    modalOutroSetor.marca
-                  }
+                  {modalOutroSetor.marca}
                 </p>
               )}
 
@@ -1023,9 +1273,7 @@ function ConferenciaMateriais({
                 </span>
 
                 <strong>
-                  {
-                    modalOutroSetor?.setor
-                  }
+                  {modalOutroSetor?.setor}
                 </strong>
 
                 <span>
@@ -1034,9 +1282,7 @@ function ConferenciaMateriais({
                 </span>
 
                 <strong>
-                  {
-                    configuracao?.setor
-                  }
+                  {configuracao?.setor}
                 </strong>
               </div>
 
@@ -1055,9 +1301,7 @@ function ConferenciaMateriais({
                 <button
                   type="button"
                   className="modal-cancel"
-                  onClick={
-                    fecharModais
-                  }
+                  onClick={fecharModais}
                 >
                   Cancelar
                 </button>
@@ -1082,10 +1326,7 @@ function ConferenciaMateriais({
                 das listagens ativas, mas
                 continuará registrado no
                 banco como{' '}
-                <strong>
-                  INATIVO
-                </strong>
-                .
+                <strong>INATIVO</strong>.
               </p>
 
               <div className="divergencia-box">
@@ -1114,9 +1355,7 @@ function ConferenciaMateriais({
                 <span>Descrição</span>
 
                 <strong>
-                  {
-                    modalExcluir?.descricao
-                  }
+                  {modalExcluir?.descricao}
                 </strong>
 
                 <span>Setor</span>
@@ -1128,9 +1367,7 @@ function ConferenciaMateriais({
                 <span>Unidade</span>
 
                 <strong>
-                  {
-                    modalExcluir?.unidade
-                  }
+                  {modalExcluir?.unidade}
                 </strong>
               </div>
 
@@ -1143,6 +1380,7 @@ function ConferenciaMateriais({
                   }
                 >
                   <FaTrashCan />
+
                   Confirmar inativação
                 </button>
 
@@ -1173,8 +1411,9 @@ function ConferenciaMateriais({
 
               <p>
                 Aponte a câmera para o
-                código de barras do
-                material patrimonial.
+                código de barras ou QR
+                Code do material
+                patrimonial.
               </p>
 
               <div className="camera-preview">
@@ -1195,11 +1434,10 @@ function ConferenciaMateriais({
                 <button
                   type="button"
                   className="modal-cancel"
-                  onClick={
-                    pararCamera
-                  }
+                  onClick={pararCamera}
                 >
                   <FaXmark />
+
                   Fechar leitor
                 </button>
               </div>
