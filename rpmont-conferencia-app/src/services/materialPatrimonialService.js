@@ -74,13 +74,8 @@ export async function transferirEConferirMaterial(
     throw new Error('O ID do material é obrigatório.');
   }
 
-  const novoSetorTratado = String(
-    novoSetor ?? ''
-  ).trim();
-
-  const unidadeTratada = String(
-    unidade ?? ''
-  ).trim();
+  const novoSetorTratado = String(novoSetor ?? '').trim();
+  const unidadeTratada = String(unidade ?? '').trim();
 
   if (!novoSetorTratado) {
     throw new Error('O novo setor é obrigatório.');
@@ -115,37 +110,17 @@ export async function inativarMaterial(id) {
 function montarPayloadMaterial(dados) {
   return {
     numeroSerie: String(dados?.numeroSerie ?? '').trim(),
-
-    nome: normalizarCampoOpcional(
-      dados?.nome
-    ),
-
-    marca: normalizarCampoOpcional(
-      dados?.marca
-    ),
-
-    descricao: String(
-      dados?.descricao ?? ''
-    ).trim(),
-
-    observacao: normalizarCampoOpcional(
-      dados?.observacao
-    ),
-
-    setor: String(
-      dados?.setor ?? ''
-    ).trim(),
-
-    conferido: Boolean(
-      dados?.conferido
-    ),
+    nome: normalizarCampoOpcional(dados?.nome),
+    marca: normalizarCampoOpcional(dados?.marca),
+    descricao: String(dados?.descricao ?? '').trim(),
+    observacao: normalizarCampoOpcional(dados?.observacao),
+    setor: String(dados?.setor ?? '').trim(),
+    conferido: Boolean(dados?.conferido),
   };
 }
 
 function normalizarCampoOpcional(valor) {
-  const valorTratado = String(
-    valor ?? ''
-  ).trim();
+  const valorTratado = String(valor ?? '').trim();
 
   return valorTratado || null;
 }
