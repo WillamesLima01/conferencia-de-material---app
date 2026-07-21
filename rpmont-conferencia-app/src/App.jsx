@@ -586,6 +586,45 @@ function App() {
     }
   };
 
+    /*
+   * ============================================
+   * ATUALIZAR MATERIAL APÓS MOVIMENTAÇÃO
+   * ============================================
+   */
+
+  const atualizarMaterialAposMovimentacao = (
+    materialAtualizado
+  ) => {
+    const materialRecebido =
+      materialAtualizado?.data ??
+      materialAtualizado;
+
+    const idMaterialAtualizado =
+      obterIdMaterial(materialRecebido);
+
+    if (
+      !materialRecebido ||
+      idMaterialAtualizado === null ||
+      idMaterialAtualizado === undefined
+    ) {
+      console.error(
+        'Não foi possível atualizar o material na lista:',
+        materialAtualizado
+      );
+
+      return;
+    }
+
+    setMateriais((materiaisAtuais) =>
+      materiaisAtuais.map((material) =>
+        obterIdMaterial(material) ===
+        idMaterialAtualizado
+          ? materialRecebido
+          : material
+      )
+    );
+  };
+
   const excluirMaterial = async (
     materialParaExcluir
   ) => {
@@ -1141,6 +1180,9 @@ function App() {
         onVoltar={voltarDaConsulta}
         onEditarMaterial={
           setMaterialEmEdicao
+        }
+        onMaterialAtualizado={
+          atualizarMaterialAposMovimentacao
         }
       />
     );

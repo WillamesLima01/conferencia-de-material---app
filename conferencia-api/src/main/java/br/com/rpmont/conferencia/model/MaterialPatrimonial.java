@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.model;
 
+import br.com.rpmont.conferencia.enums.SituacaoMaterial;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -57,6 +58,7 @@ public class MaterialPatrimonial implements Serializable {
     @Column(name = "`Conferido`", nullable = false)
     private Boolean conferido;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "`situacao`", nullable = false, length = 30)
-    private String situacao;
+    private SituacaoMaterial situacao;
 }

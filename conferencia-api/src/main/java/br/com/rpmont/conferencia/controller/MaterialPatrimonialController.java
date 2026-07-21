@@ -1,7 +1,12 @@
 package br.com.rpmont.conferencia.controller;
 
+import br.com.rpmont.conferencia.dtos.BaixarMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.DescartarMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.ExtraviarMaterialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
+import br.com.rpmont.conferencia.dtos.ReativarMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.RegistrarFurtoMaterialRequestDTO;
 import br.com.rpmont.conferencia.dtos.TransferirConferirMaterialRequestDTO;
 import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.service.MaterialPatrimonialService;
@@ -169,6 +174,131 @@ public class MaterialPatrimonialController {
 
     /*
      * ==========================================
+     * BAIXAR MATERIAL
+     * ==========================================
+     */
+
+    @PatchMapping("/{id}/baixar")
+    @ResponseStatus(HttpStatus.OK)
+    public MaterialPatrimonialResponseDTO baixar(
+            @PathVariable
+            Long id,
+
+            @Valid
+            @RequestBody
+            BaixarMaterialRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.baixar(
+                id,
+                request,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
+     * DESCARTAR MATERIAL
+     * ==========================================
+     */
+
+    @PatchMapping("/{id}/descartar")
+    @ResponseStatus(HttpStatus.OK)
+    public MaterialPatrimonialResponseDTO descartar(
+            @PathVariable
+            Long id,
+
+            @Valid
+            @RequestBody
+            DescartarMaterialRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.descartar(
+                id,
+                request,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
+     * REGISTRAR EXTRAVIO
+     * ==========================================
+     */
+
+    @PatchMapping("/{id}/extraviar")
+    @ResponseStatus(HttpStatus.OK)
+    public MaterialPatrimonialResponseDTO extraviar(
+            @PathVariable
+            Long id,
+
+            @Valid
+            @RequestBody
+            ExtraviarMaterialRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.extraviar(
+                id,
+                request,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
+     * REGISTRAR FURTO
+     * ==========================================
+     */
+
+    @PatchMapping("/{id}/registrar-furto")
+    @ResponseStatus(HttpStatus.OK)
+    public MaterialPatrimonialResponseDTO registrarFurto(
+            @PathVariable
+            Long id,
+
+            @Valid
+            @RequestBody
+            RegistrarFurtoMaterialRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.registrarFurto(
+                id,
+                request,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
+     * REATIVAR MATERIAL
+     * ==========================================
+     */
+
+    @PatchMapping("/{id}/reativar")
+    @ResponseStatus(HttpStatus.OK)
+    public MaterialPatrimonialResponseDTO reativar(
+            @PathVariable
+            Long id,
+
+            @Valid
+            @RequestBody
+            ReativarMaterialRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.reativar(
+                id,
+                request,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
      * INATIVAR MATERIAL
      * ==========================================
      */
@@ -196,7 +326,8 @@ public class MaterialPatrimonialController {
     private String obterMatriculaUsuario(
             Authentication authentication
     ) {
-        Object principal = authentication.getPrincipal();
+        Object principal =
+                authentication.getPrincipal();
 
         if (principal instanceof Usuario usuario) {
             return usuario.getMatricula();

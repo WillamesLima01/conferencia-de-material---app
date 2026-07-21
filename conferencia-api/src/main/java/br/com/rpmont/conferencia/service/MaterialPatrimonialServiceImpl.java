@@ -1,8 +1,14 @@
 package br.com.rpmont.conferencia.service;
 
+import br.com.rpmont.conferencia.dtos.BaixarMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.DescartarMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.ExtraviarMaterialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialRequestDTO;
 import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
+import br.com.rpmont.conferencia.dtos.ReativarMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.RegistrarFurtoMaterialRequestDTO;
 import br.com.rpmont.conferencia.dtos.TransferirConferirMaterialRequestDTO;
+import br.com.rpmont.conferencia.enums.SituacaoMaterial;
 import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.exception.ConflictException;
 import br.com.rpmont.conferencia.exception.ForbiddenException;
@@ -30,13 +36,11 @@ public class MaterialPatrimonialServiceImpl
 
     private static final String STATUS_LIBERADO = "LIBERADO";
 
-    private static final String SITUACAO_ATIVO = "ATIVO";
-
-    private static final String SITUACAO_INATIVO = "INATIVO";
-
     private final MaterialPatrimonialRepository materialRepository;
 
     private final UsuarioRepository usuarioRepository;
+
+    private final MovimentacaoMaterialService movimentacaoMaterialService;
 
     /*
      * ==========================================
@@ -141,7 +145,7 @@ public class MaterialPatrimonialServiceImpl
         );
 
         material.setSituacao(
-                SITUACAO_ATIVO
+                SituacaoMaterial.ATIVO
         );
 
         MaterialPatrimonial salvo =
@@ -531,6 +535,29 @@ public class MaterialPatrimonialServiceImpl
             );
         }
 
+        String setorOrigem =
+                material.getSetor();
+
+        if (
+                setorOrigem == null ||
+                        setorOrigem.isBlank()
+        ) {
+            throw new ConflictException(
+                    "O material não possui setor de origem cadastrado."
+            );
+        }
+
+        if (
+                setorOrigem.trim()
+                        .equalsIgnoreCase(
+                                novoSetor
+                        )
+        ) {
+            throw new ConflictException(
+                    "O material já está cadastrado no setor informado."
+            );
+        }
+
         material.setSetor(
                 novoSetor
         );
@@ -551,6 +578,498 @@ public class MaterialPatrimonialServiceImpl
                 materialRepository.save(
                         material
                 );
+
+        movimentacaoMaterialService.registrarTransferenciaSetor(
+                atualizado,
+                setorOrigem,
+                novoSetor,
+                usuarioLogado
+        );
+
+        return converterParaResponse(
+                atualizado
+        );
+    }
+
+    /*
+     * ==========================================
+     * BAIXAR MATERIAL
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MaterialPatrimonialResponseDTO baixar(
+            Long id,
+            BaixarMaterialRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados da baixa são obrigatórios."
+            );
+        }
+
+        MaterialPatrimonial material =
+                buscarMaterialPorId(
+                        id
+                );
+
+        validarAcessoUnidade(
+                usuarioLogado,
+                material
+        );
+
+        validarMaterialAtivo(
+                material
+        );
+
+        String motivo =
+                normalizarTextoObrigatorio(
+                        request.motivo(),
+                        "O motivo da baixa é obrigatório."
+                );
+
+        String numeroDocumento =
+                normalizarTextoObrigatorio(
+                        request.numeroDocumento(),
+                        "O número do documento é obrigatório."
+                );
+
+        String observacao =
+                normalizarObservacao(
+                        request.observacao()
+                );
+
+        SituacaoMaterial situacaoAnterior =
+                material.getSituacao();
+
+        material.setSituacao(
+                SituacaoMaterial.BAIXADO
+        );
+
+        material.setConferido(
+                false
+        );
+
+        material.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        material.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        MaterialPatrimonial atualizado =
+                materialRepository.save(
+                        material
+                );
+
+        movimentacaoMaterialService.registrarBaixa(
+                atualizado,
+                situacaoAnterior,
+                motivo,
+                numeroDocumento,
+                observacao,
+                usuarioLogado
+        );
+
+        return converterParaResponse(
+                atualizado
+        );
+    }
+
+    /*
+     * ==========================================
+     * DESCARTAR MATERIAL
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MaterialPatrimonialResponseDTO descartar(
+            Long id,
+            DescartarMaterialRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados do descarte são obrigatórios."
+            );
+        }
+
+        MaterialPatrimonial material =
+                buscarMaterialPorId(
+                        id
+                );
+
+        validarAcessoUnidade(
+                usuarioLogado,
+                material
+        );
+
+        validarMaterialBaixado(
+                material
+        );
+
+        String motivo =
+                normalizarTextoObrigatorio(
+                        request.motivo(),
+                        "O motivo do descarte é obrigatório."
+                );
+
+        String numeroDocumento =
+                normalizarTextoObrigatorio(
+                        request.numeroDocumento(),
+                        "O número do documento é obrigatório."
+                );
+
+        String observacao =
+                normalizarObservacao(
+                        request.observacao()
+                );
+
+        SituacaoMaterial situacaoAnterior =
+                material.getSituacao();
+
+        material.setSituacao(
+                SituacaoMaterial.DESCARTADO
+        );
+
+        material.setConferido(
+                false
+        );
+
+        material.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        material.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        MaterialPatrimonial atualizado =
+                materialRepository.save(
+                        material
+                );
+
+        movimentacaoMaterialService.registrarDescarte(
+                atualizado,
+                situacaoAnterior,
+                motivo,
+                numeroDocumento,
+                observacao,
+                usuarioLogado
+        );
+
+        return converterParaResponse(
+                atualizado
+        );
+    }
+
+    /*
+     * ==========================================
+     * REGISTRAR EXTRAVIO
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MaterialPatrimonialResponseDTO extraviar(
+            Long id,
+            ExtraviarMaterialRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados do extravio são obrigatórios."
+            );
+        }
+
+        MaterialPatrimonial material =
+                buscarMaterialPorId(
+                        id
+                );
+
+        validarAcessoUnidade(
+                usuarioLogado,
+                material
+        );
+
+        validarMaterialAtivo(
+                material
+        );
+
+        String motivo =
+                normalizarTextoObrigatorio(
+                        request.motivo(),
+                        "O motivo do extravio é obrigatório."
+                );
+
+        String numeroDocumento =
+                normalizarTextoObrigatorio(
+                        request.numeroDocumento(),
+                        "O número do documento do extravio é obrigatório."
+                );
+
+        String observacao =
+                normalizarObservacao(
+                        request.observacao()
+                );
+
+        SituacaoMaterial situacaoAnterior =
+                material.getSituacao();
+
+        material.setSituacao(
+                SituacaoMaterial.EXTRAVIADO
+        );
+
+        material.setConferido(
+                false
+        );
+
+        material.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        material.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        MaterialPatrimonial atualizado =
+                materialRepository.save(
+                        material
+                );
+
+        movimentacaoMaterialService.registrarExtravio(
+                atualizado,
+                situacaoAnterior,
+                motivo,
+                numeroDocumento,
+                observacao,
+                usuarioLogado
+        );
+
+        return converterParaResponse(
+                atualizado
+        );
+    }
+
+    /*
+     * ==========================================
+     * REGISTRAR FURTO
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MaterialPatrimonialResponseDTO registrarFurto(
+            Long id,
+            RegistrarFurtoMaterialRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados do furto são obrigatórios."
+            );
+        }
+
+        MaterialPatrimonial material =
+                buscarMaterialPorId(
+                        id
+                );
+
+        validarAcessoUnidade(
+                usuarioLogado,
+                material
+        );
+
+        validarMaterialAtivo(
+                material
+        );
+
+        String motivo =
+                normalizarTextoObrigatorio(
+                        request.motivo(),
+                        "O motivo do registro de furto é obrigatório."
+                );
+
+        String numeroDocumento =
+                normalizarTextoObrigatorio(
+                        request.numeroDocumento(),
+                        "O número do boletim de ocorrência é obrigatório."
+                );
+
+        String observacao =
+                normalizarObservacao(
+                        request.observacao()
+                );
+
+        SituacaoMaterial situacaoAnterior =
+                material.getSituacao();
+
+        material.setSituacao(
+                SituacaoMaterial.FURTADO
+        );
+
+        material.setConferido(
+                false
+        );
+
+        material.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        material.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        MaterialPatrimonial atualizado =
+                materialRepository.save(
+                        material
+                );
+
+        movimentacaoMaterialService.registrarFurto(
+                atualizado,
+                situacaoAnterior,
+                motivo,
+                numeroDocumento,
+                observacao,
+                usuarioLogado
+        );
+
+        return converterParaResponse(
+                atualizado
+        );
+    }
+
+    /*
+     * ==========================================
+     * REATIVAR MATERIAL
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MaterialPatrimonialResponseDTO reativar(
+            Long id,
+            ReativarMaterialRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados da reativação são obrigatórios."
+            );
+        }
+
+        MaterialPatrimonial material =
+                buscarMaterialPorId(
+                        id
+                );
+
+        validarAcessoUnidade(
+                usuarioLogado,
+                material
+        );
+
+        validarMaterialPodeSerReativado(
+                material
+        );
+
+        String motivo =
+                normalizarTextoObrigatorio(
+                        request.motivo(),
+                        "O motivo da reativação é obrigatório."
+                );
+
+        String numeroDocumento =
+                normalizarTextoObrigatorio(
+                        request.numeroDocumento(),
+                        "O número do documento da reativação é obrigatório."
+                );
+
+        String observacao =
+                normalizarObservacao(
+                        request.observacao()
+                );
+
+        SituacaoMaterial situacaoAnterior =
+                material.getSituacao();
+
+        material.setSituacao(
+                SituacaoMaterial.ATIVO
+        );
+
+        material.setConferido(
+                false
+        );
+
+        material.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        material.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        MaterialPatrimonial atualizado =
+                materialRepository.save(
+                        material
+                );
+
+        movimentacaoMaterialService.registrarReativacao(
+                atualizado,
+                situacaoAnterior,
+                motivo,
+                numeroDocumento,
+                observacao,
+                usuarioLogado
+        );
 
         return converterParaResponse(
                 atualizado
@@ -588,18 +1107,33 @@ public class MaterialPatrimonialServiceImpl
                 material
         );
 
-        if (
-                SITUACAO_INATIVO.equalsIgnoreCase(
-                        material.getSituacao()
-                )
-        ) {
+        if (material.getSituacao() == null) {
+            throw new ConflictException(
+                    "O material não possui uma situação válida cadastrada."
+            );
+        }
+
+        if (material.getSituacao() == SituacaoMaterial.INATIVO) {
             throw new ConflictException(
                     "O material já está inativo."
             );
         }
 
+        if (
+                material.getSituacao() == SituacaoMaterial.BAIXADO ||
+                        material.getSituacao() == SituacaoMaterial.DESCARTADO ||
+                        material.getSituacao() == SituacaoMaterial.EXTRAVIADO ||
+                        material.getSituacao() == SituacaoMaterial.FURTADO
+        ) {
+            throw new ConflictException(
+                    "Não é possível inativar um material com situação " +
+                            material.getSituacao().name() +
+                            "."
+            );
+        }
+
         material.setSituacao(
-                SITUACAO_INATIVO
+                SituacaoMaterial.INATIVO
         );
 
         material.setConferido(
@@ -746,14 +1280,65 @@ public class MaterialPatrimonialServiceImpl
     private void validarMaterialAtivo(
             MaterialPatrimonial material
     ) {
+        if (material.getSituacao() == null) {
+            throw new ConflictException(
+                    "O material não possui uma situação válida cadastrada."
+            );
+        }
+
+        if (material.getSituacao() != SituacaoMaterial.ATIVO) {
+            throw new ConflictException(
+                    "Não é possível realizar esta operação porque o material não está ativo. " +
+                            "Situação atual: " +
+                            material.getSituacao().name() +
+                            "."
+            );
+        }
+    }
+
+    private void validarMaterialBaixado(
+            MaterialPatrimonial material
+    ) {
+        if (material.getSituacao() == null) {
+            throw new ConflictException(
+                    "O material não possui uma situação válida cadastrada."
+            );
+        }
+
+        if (material.getSituacao() == SituacaoMaterial.DESCARTADO) {
+            throw new ConflictException(
+                    "O material já está descartado."
+            );
+        }
+
+        if (material.getSituacao() != SituacaoMaterial.BAIXADO) {
+            throw new ConflictException(
+                    "Somente materiais baixados podem ser descartados. " +
+                            "Situação atual: " +
+                            material.getSituacao().name() +
+                            "."
+            );
+        }
+    }
+
+    private void validarMaterialPodeSerReativado(
+            MaterialPatrimonial material
+    ) {
+        if (material.getSituacao() == null) {
+            throw new ConflictException(
+                    "O material não possui uma situação válida cadastrada."
+            );
+        }
+
         if (
-                material.getSituacao() == null ||
-                        !SITUACAO_ATIVO.equalsIgnoreCase(
-                                material.getSituacao()
-                        )
+                material.getSituacao() != SituacaoMaterial.EXTRAVIADO &&
+                        material.getSituacao() != SituacaoMaterial.FURTADO
         ) {
             throw new ConflictException(
-                    "Não é possível alterar um material inativo."
+                    "Somente materiais extraviados ou furtados podem ser reativados. " +
+                            "Situação atual: " +
+                            material.getSituacao().name() +
+                            "."
             );
         }
     }
@@ -836,7 +1421,9 @@ public class MaterialPatrimonialServiceImpl
                 material.getDataModificacao(),
                 material.getUsuarioModificadorId(),
                 material.getConferido(),
-                material.getSituacao()
+                material.getSituacao() != null
+                        ? material.getSituacao().name()
+                        : null
         );
     }
 }
