@@ -68,6 +68,75 @@
   font-weight: 700;
 }
 
+.consulta-mensagem-sucesso {
+  width: min(360px, calc(100vw - 28px));
+  padding: 13px 14px;
+  border: 1px solid #86d99f;
+  border-radius: 14px;
+  background: #e9f8ee;
+  color: #176333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
+}
+
+.consulta-mensagem-sucesso-flutuante {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 6000;
+  transform: translateX(-50%);
+  animation: consulta-mensagem-entrada 0.22s ease-out;
+}
+
+.consulta-mensagem-sucesso > svg {
+  flex-shrink: 0;
+  color: #247a44;
+  font-size: 16px;
+}
+
+.consulta-mensagem-sucesso span {
+  flex: 1;
+  min-width: 0;
+}
+
+.consulta-mensagem-sucesso button {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #176333;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.consulta-mensagem-sucesso button:hover {
+  background: rgba(36, 122, 68, 0.1);
+}
+
+@keyframes consulta-mensagem-entrada {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+
 .consulta-resumo-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -936,7 +1005,7 @@
 .historico-material-icone {
   width: 58px;
   height: 58px;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
   border-radius: 19px;
   background: #111111;
   color: #ffe600;
@@ -950,6 +1019,8 @@
 .movimentacao-material-subtitulo,
 .historico-material-subtitulo {
   display: block;
+  width: 100%;
+  text-align: center;
   color: #df1b24;
   font-size: 11px;
   font-weight: 900;
@@ -959,7 +1030,10 @@
 .material-detalhes-modal h2,
 .movimentacao-material-modal h2,
 .historico-material-modal h2 {
-  margin: 3px 58px 14px 0;
+  width: 100%;
+  margin: 3px 0 14px;
+  padding: 0 52px;
+  text-align: center;
   color: #222222;
   font-size: 23px;
   font-weight: 900;

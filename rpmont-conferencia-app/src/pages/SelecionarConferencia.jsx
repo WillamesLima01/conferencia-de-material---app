@@ -9,6 +9,7 @@ import {
   FaLock,
   FaXmark,
   FaMagnifyingGlassChart,
+  FaClockRotateLeft,
   FaUserGear,
   FaWheatAwn,
   FaRightFromBracket,
@@ -78,6 +79,10 @@ const usuarioEhSetorBaia = (usuario) => {
   return obterSetorUsuario(usuario) === 'BAIA';
 };
 
+const usuarioEhFuncaoFiscalDeDia = (usuario) => {
+  return obterSetorUsuario(usuario) === 'FISCALDEDIA';
+};
+
 const usuarioEhUnidadeEquina = (usuario) => {
   const unidade = obterUnidadeUsuario(usuario);
 
@@ -91,6 +96,7 @@ function SelecionarConferencia({
   onZerarConferencia,
   onAbrirCadastroManual,
   onAbrirConsulta,
+  onAbrirConsultaMovimentacoes,
   onAbrirAdmin,
   onAbrirFenoRacao,
   onAbrirCadastroAlimentacao,
@@ -111,12 +117,21 @@ function SelecionarConferencia({
   const usuarioMaster = usuarioEhAdminMaster(usuario);
   const usuarioEhP4 = usuarioEhSetorP4(usuario);
   const usuarioEhBaia = usuarioEhSetorBaia(usuario);
-  const usuarioEhUnidadeComEquinos = usuarioEhUnidadeEquina(usuario);
+  const usuarioEhFiscalDeDia =
+    usuarioEhFuncaoFiscalDeDia(usuario);
+
+  const usuarioEhUnidadeComEquinos =
+    usuarioEhUnidadeEquina(usuario);
 
   const usuarioPodeAcessarPatrimonio = usuarioEhP4;
 
   const usuarioPodeAcessarFenoRacao =
-    usuarioEhUnidadeComEquinos && (usuarioEhAdmin || usuarioEhBaia);
+    usuarioEhUnidadeComEquinos &&
+    (
+      usuarioEhAdmin ||
+      usuarioEhBaia ||
+      usuarioEhFiscalDeDia
+    );
 
 
   useEffect(() => {
@@ -268,6 +283,24 @@ function SelecionarConferencia({
     window.alert('A função de consulta não foi configurada no App.jsx.');
   };
 
+  const abrirConsultaMovimentacoesComPermissao = () => {
+    if (!usuarioPodeAcessarPatrimonio) {
+      window.alert(
+        'Acesso negado. A consulta de movimentações patrimoniais é permitida somente para usuários do setor P4.'
+      );
+      return;
+    }
+
+    if (typeof onAbrirConsultaMovimentacoes === 'function') {
+      onAbrirConsultaMovimentacoes();
+      return;
+    }
+
+    window.alert(
+      'A função de consulta de movimentações não foi configurada no App.jsx.'
+    );
+  };
+
   const abrirAdministracao = () => {
     if (!usuarioEhAdmin) {
       window.alert('Acesso negado. Apenas administradores podem acessar esta área.');
@@ -285,7 +318,7 @@ function SelecionarConferencia({
   const abrirFenoRacao = () => {
     if (!usuarioPodeAcessarFenoRacao) {
       window.alert(
-        'Você não tem permissão para acessar Feno e Ração. Este módulo é exclusivo do RPMont e 3º EPMont.'
+        'Você não tem permissão para acessar Feno e Ração. Para usuário comum, o acesso é permitido somente para Baia ou Fiscal-de-dia no RPMont ou 3º EPMont.'
       );
       return;
     }
@@ -302,7 +335,10 @@ function SelecionarConferencia({
 
     if (
       !usuarioEhAdmin &&
-      usuarioEhBaia &&
+      (
+        usuarioEhBaia ||
+        usuarioEhFiscalDeDia
+      ) &&
       typeof onAbrirSaidaFenoRacao === 'function'
     ) {
       onAbrirSaidaFenoRacao();
@@ -405,7 +441,7 @@ function SelecionarConferencia({
             </div>
 
             <div>
-              <span>Setor</span>
+              <span>Setor/Função</span>
               <strong>{usuario?.setor || usuario?.SETOR}</strong>
             </div>
 
@@ -457,6 +493,14 @@ function SelecionarConferencia({
                     <FaMagnifyingGlassChart />
                     Filtros avançados
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={abrirConsultaMovimentacoesComPermissao}
+                  >
+                    <FaClockRotateLeft />
+                    Movimentações patrimoniais
+                  </button>
                 </>
               )}
 
@@ -486,7 +530,9 @@ function SelecionarConferencia({
           </section>
         )}
 
-        {!usuarioEhAdmin && usuarioEhBaia && usuarioPodeAcessarFenoRacao && (
+        {!usuarioEhAdmin &&
+          (usuarioEhBaia || usuarioEhFiscalDeDia) &&
+          usuarioPodeAcessarFenoRacao && (
           <section className="admin-card admin-card-duplo">
             <div className="admin-card-texto">
               <span>Alimentação equina</span>
@@ -657,8 +703,8 @@ function SelecionarConferencia({
             <p>
               A conferência patrimonial é exclusiva do setor P4. O módulo de
               Feno e Ração é exclusivo do RPMont e 3º EPMont, sendo permitido
-              apenas para administradores dessas unidades ou usuários do setor
-              Baia dessas unidades.
+              apenas para administradores dessas unidades ou usuários comuns
+              cadastrados como Baia ou Fiscal-de-dia nessas unidades.
             </p>
           </section>
         )}

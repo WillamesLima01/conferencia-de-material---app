@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.service;
 
+import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialFiltroDTO;
 import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialResponseDTO;
 import br.com.rpmont.conferencia.enums.SituacaoMaterial;
 import br.com.rpmont.conferencia.model.MaterialPatrimonial;
@@ -63,6 +64,11 @@ public interface MovimentacaoMaterialService {
 
     List<MovimentacaoMaterialResponseDTO> listarHistoricoPorMaterial(
             Long materialId,
+            String matriculaUsuario
+    );
+
+    List<MovimentacaoMaterialResponseDTO> listarMovimentacoes(
+            MovimentacaoMaterialFiltroDTO filtro,
             String matriculaUsuario
     );
 }

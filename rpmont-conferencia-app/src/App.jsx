@@ -6,6 +6,7 @@ import ConferenciaMateriais from './pages/ConferenciaMateriais';
 import CadastroMaterial from './pages/CadastroMaterial';
 import EditarMaterial from './pages/EditarMaterial';
 import ConsultaMateriais from './pages/ConsultaMateriais';
+import ConsultaMovimentacoes from './pages/ConsultaMovimentacoes';
 import AdminPainel from './pages/AdminPainel';
 import CadastroFenoRacao from './pages/CadastroFenoRacao';
 import SaidaFenoRacao from './pages/SaidaFenoRacao';
@@ -42,10 +43,17 @@ function App() {
   ] = useState(null);
 
   const [materiais, setMateriais] = useState([]);
-  const [carregandoMateriais, setCarregandoMateriais] = useState(false);
+  const [carregandoMateriais, setCarregandoMateriais] =
+    useState(false);
   const [erroMateriais, setErroMateriais] = useState('');
 
   const [abrirConsulta, setAbrirConsulta] = useState(false);
+
+  const [
+    abrirConsultaMovimentacoes,
+    setAbrirConsultaMovimentacoes,
+  ] = useState(false);
+
   const [abrirAdmin, setAbrirAdmin] = useState(false);
 
   const [
@@ -99,7 +107,6 @@ function App() {
       ) === 'true'
     );
   });
-
 
   useEffect(() => {
     if (abrirRecuperarSenha) {
@@ -193,6 +200,13 @@ function App() {
     return obterSetorUsuario(usuario) === 'BAIA';
   };
 
+  const usuarioEhFiscalDeDia = (usuario) => {
+    return (
+      obterSetorUsuario(usuario) ===
+      'FISCALDEDIA'
+    );
+  };
+
   const usuarioEhUnidadeEquina = (usuario) => {
     const unidade = obterUnidadeUsuario(usuario);
 
@@ -210,7 +224,8 @@ function App() {
 
     return (
       usuarioEhAdmin(usuario) ||
-      usuarioEhBaia(usuario)
+      usuarioEhBaia(usuario) ||
+      usuarioEhFiscalDeDia(usuario)
     );
   };
 
@@ -427,6 +442,18 @@ function App() {
     );
 
     console.log(
+      'É BAIA?',
+      usuarioEhBaia(usuarioNormalizado)
+    );
+
+    console.log(
+      'É FISCAL-DE-DIA?',
+      usuarioEhFiscalDeDia(
+        usuarioNormalizado
+      )
+    );
+
+    console.log(
       'UNIDADE:',
       usuarioNormalizado.unidade
     );
@@ -447,6 +474,7 @@ function App() {
   const fecharTelasSecundarias = () => {
     setConfiguracaoConferencia(null);
     setAbrirConsulta(false);
+    setAbrirConsultaMovimentacoes(false);
     setAbrirAdmin(false);
     setAbrirCadastroAlimentacao(false);
     setAbrirSaidaFenoRacao(false);
@@ -479,11 +507,6 @@ function App() {
       return;
     }
 
-    /*
-     * Esta ação ainda é apenas local.
-     * Quando criarmos o endpoint de zerar conferência no backend,
-     * este trecho deverá chamar a API.
-     */
     setMateriais((materiaisAtuais) =>
       materiaisAtuais.map((material) =>
         material.unidade === usuario.unidade &&
@@ -585,12 +608,6 @@ function App() {
       window.alert(obterMensagemErro(error));
     }
   };
-
-    /*
-   * ============================================
-   * ATUALIZAR MATERIAL APÓS MOVIMENTAÇÃO
-   * ============================================
-   */
 
   const atualizarMaterialAposMovimentacao = (
     materialAtualizado
@@ -805,6 +822,24 @@ function App() {
     setAbrirConsulta(true);
   };
 
+  const abrirConsultaMovimentacoesComPermissao =
+    () => {
+      if (
+        !usuarioPodeAcessarPatrimonio(
+          usuarioLogado
+        )
+      ) {
+        window.alert(
+          'Acesso negado. A consulta de movimentações patrimoniais é permitida somente para usuários do setor P4.'
+        );
+
+        return;
+      }
+
+      fecharTelasSecundarias();
+      setAbrirConsultaMovimentacoes(true);
+    };
+
   const abrirModuloFenoRacao = () => {
     fecharTelasSecundarias();
 
@@ -819,7 +854,7 @@ function App() {
     }
 
     window.alert(
-      'Você não tem permissão para acessar Feno e Ração. Este módulo é exclusivo do RPMont e 3º EPMont.'
+      'Você não tem permissão para acessar Feno e Ração. Para usuário comum, o acesso é permitido somente aos setores/funções Baia e Fiscal-de-dia do RPMont ou 3º EPMont.'
     );
   };
 
@@ -943,6 +978,10 @@ function App() {
     setAbrirConsulta(false);
   };
 
+  const voltarDaConsultaMovimentacoes = () => {
+    setAbrirConsultaMovimentacoes(false);
+  };
+
   const voltarDoAdmin = () => {
     setAbrirAdmin(false);
   };
@@ -950,12 +989,6 @@ function App() {
   const voltarDaConferencia = () => {
     setConfiguracaoConferencia(null);
   };
-
-  /*
-   * ============================================
-   * RECUPERAÇÃO DE SENHA
-   * ============================================
-   */
 
   if (abrirRecuperarSenha) {
     return (
@@ -971,12 +1004,6 @@ function App() {
     );
   }
 
-  /*
-   * ============================================
-   * SOLICITAÇÃO DE ACESSO
-   * ============================================
-   */
-
   if (abrirSolicitarAcesso) {
     return (
       <SolicitarAcesso
@@ -986,12 +1013,6 @@ function App() {
       />
     );
   }
-
-  /*
-   * ============================================
-   * LOGIN
-   * ============================================
-   */
 
   if (!usuarioLogado) {
     return (
@@ -1089,6 +1110,7 @@ function App() {
     (
       configuracaoConferencia ||
       abrirConsulta ||
+      abrirConsultaMovimentacoes ||
       cadastroPendente ||
       materialEmEdicao
     )
@@ -1172,6 +1194,17 @@ function App() {
     );
   }
 
+  if (abrirConsultaMovimentacoes) {
+    return (
+      <ConsultaMovimentacoes
+        usuario={usuarioLogado}
+        onVoltar={
+          voltarDaConsultaMovimentacoes
+        }
+      />
+    );
+  }
+
   if (abrirConsulta) {
     return (
       <ConsultaMateriais
@@ -1205,6 +1238,9 @@ function App() {
           }
           onAbrirConsulta={
             abrirConsultaComPermissao
+          }
+          onAbrirConsultaMovimentacoes={
+            abrirConsultaMovimentacoesComPermissao
           }
           onAbrirAdmin={() =>
             setAbrirAdmin(true)

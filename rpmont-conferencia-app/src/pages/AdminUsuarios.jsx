@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FaArrowLeft,
   FaBuilding,
@@ -21,8 +21,13 @@ import {
   listarUsuarios,
 } from '../services/usuarioService';
 
-const STORAGE_KEY_UNIDADES = 'unidades';
-const STORAGE_KEY_SETORES = 'setores';
+import {
+  listarUnidadesAtivas,
+} from '../services/unidadeService';
+
+import {
+  listarSetoresAtivos,
+} from '../services/setorService';
 
 const STATUS_ACESSO = {
   PENDENTE: 'PENDENTE',
@@ -34,36 +39,6 @@ const NIVEIS_USUARIO = {
   ADMIN_MASTER: '1',
   ADMIN: '2',
   USUARIO_COMUM: '3',
-};
-
-const gerarId = () => {
-  if (window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-
-  return String(Date.now() + Math.random());
-};
-
-const dataAtual = () => {
-  return new Date().toISOString().slice(0, 10);
-};
-
-const dataHoraAtual = () => {
-  return new Date().toISOString();
-};
-
-const carregarStorage = (chave) => {
-  const dadosSalvos = localStorage.getItem(chave);
-
-  if (!dadosSalvos) return [];
-
-  try {
-    const dadosConvertidos = JSON.parse(dadosSalvos);
-
-    return Array.isArray(dadosConvertidos) ? dadosConvertidos : [];
-  } catch {
-    return [];
-  }
 };
 
 const limparNumeros = (valor) => {
@@ -187,14 +162,45 @@ const converterNivelParaSalvar = (nivel) => {
   return 3;
 };
 
-function AdminUsuarios({ usuario, onVoltar }) {
-  const [unidades] = useState(() =>
-    carregarStorage(STORAGE_KEY_UNIDADES)
-  );
 
-  const [setores] = useState(() =>
-    carregarStorage(STORAGE_KEY_SETORES)
-  );
+const normalizarLista = (resposta) => {
+  if (Array.isArray(resposta)) {
+    return resposta;
+  }
+
+  if (Array.isArray(resposta?.data)) {
+    return resposta.data;
+  }
+
+  return [];
+};
+
+const obterValorUnidade = (unidade) => {
+  return String(
+    unidade?.sigla ??
+      unidade?.nome ??
+      ''
+  ).trim();
+};
+
+const obterRotuloUnidade = (unidade) => {
+  return String(
+    unidade?.sigla ??
+      unidade?.nome ??
+      'Unidade'
+  ).trim();
+};
+
+function AdminUsuarios({ usuario, onVoltar }) {
+  const formularioUsuarioRef = useRef(null);
+
+  const [unidades, setUnidades] = useState([]);
+  const [setores, setSetores] = useState([]);
+
+  const [
+    carregandoLocalizacoes,
+    setCarregandoLocalizacoes,
+  ] = useState(true);
 
   const [usuarios, setUsuarios] = useState([]);
   const [carregandoUsuarios, setCarregandoUsuarios] =
@@ -244,6 +250,72 @@ function AdminUsuarios({ usuario, onVoltar }) {
     : unidadeSelecionada || unidadeAdmin;
 
   useEffect(() => {
+    let componenteAtivo = true;
+
+    const carregarUnidadesESetores = async () => {
+      try {
+        setCarregandoLocalizacoes(true);
+
+        const [
+          respostaUnidades,
+          respostaSetores,
+        ] = await Promise.all([
+          listarUnidadesAtivas(),
+          listarSetoresAtivos(),
+        ]);
+
+        if (!componenteAtivo) {
+          return;
+        }
+
+        const unidadesRecebidas =
+          normalizarLista(respostaUnidades);
+
+        const setoresRecebidos =
+          normalizarLista(respostaSetores);
+
+        setUnidades(
+          unidadesRecebidas.sort((a, b) =>
+            obterRotuloUnidade(a).localeCompare(
+              obterRotuloUnidade(b),
+              'pt-BR'
+            )
+          )
+        );
+
+        setSetores(
+          setoresRecebidos.sort((a, b) =>
+            String(a?.nome || '').localeCompare(
+              String(b?.nome || ''),
+              'pt-BR'
+            )
+          )
+        );
+      } catch (erro) {
+        if (componenteAtivo) {
+          setUnidades([]);
+          setSetores([]);
+
+          setMensagem(
+            erro?.message ||
+              'Não foi possível carregar as unidades e os setores.'
+          );
+        }
+      } finally {
+        if (componenteAtivo) {
+          setCarregandoLocalizacoes(false);
+        }
+      }
+    };
+
+    carregarUnidadesESetores();
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const carregarUsuariosBackend = async () => {
       try {
         setCarregandoUsuarios(true);
@@ -273,11 +345,23 @@ function AdminUsuarios({ usuario, onVoltar }) {
       return unidades;
     }
 
-    return unidades.filter(
-      (unidade) =>
-        normalizarTexto(unidade.nome) ===
-        normalizarTexto(unidadeAdmin)
-    );
+    const unidadeAdminNormalizada =
+      normalizarTexto(unidadeAdmin);
+
+    return unidades.filter((unidade) => {
+      const nome = normalizarTexto(
+        unidade?.nome
+      );
+
+      const sigla = normalizarTexto(
+        unidade?.sigla
+      );
+
+      return (
+        nome === unidadeAdminNormalizada ||
+        sigla === unidadeAdminNormalizada
+      );
+    });
   }, [
     unidades,
     unidadeAdmin,
@@ -289,17 +373,29 @@ function AdminUsuarios({ usuario, onVoltar }) {
       return [];
     }
 
+    const unidadeNormalizada =
+      normalizarTexto(unidadeFormulario);
+
     return setores.filter((setor) => {
-      const unidadeDoSetor =
-        setor.unidadeNome ||
-        setor.UNIDADE ||
-        setor.unidade ||
-        setor.nomeUnidade ||
-        '';
+      const unidadeNome =
+        normalizarTexto(
+          setor?.unidadeNome ??
+            setor?.unidade?.nome ??
+            setor?.nomeUnidade ??
+            ''
+        );
+
+      const unidadeSigla =
+        normalizarTexto(
+          setor?.unidadeSigla ??
+            setor?.unidade?.sigla ??
+            setor?.UNIDADE ??
+            ''
+        );
 
       return (
-        normalizarTexto(unidadeDoSetor) ===
-        normalizarTexto(unidadeFormulario)
+        unidadeNome === unidadeNormalizada ||
+        unidadeSigla === unidadeNormalizada
       );
     });
   }, [setores, unidadeFormulario]);
@@ -781,6 +877,15 @@ function AdminUsuarios({ usuario, onVoltar }) {
         item.setor ||
         ''
     );
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        formularioUsuarioRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      });
+    });
   };
 
   const handleExcluir = (item) => {
@@ -1093,7 +1198,10 @@ function AdminUsuarios({ usuario, onVoltar }) {
           </div>
         )}
 
-        <section className="admin-usuarios-card">
+        <section
+          ref={formularioUsuarioRef}
+          className="admin-usuarios-card"
+        >
           <h2>
             {usuarioEditando
               ? 'Editar Usuário'
@@ -1205,7 +1313,10 @@ function AdminUsuarios({ usuario, onVoltar }) {
               <select
                 id="unidade"
                 value={unidadeFormulario}
-                disabled={!adminLogadoEhMaster}
+                disabled={
+                  !adminLogadoEhMaster ||
+                  carregandoLocalizacoes
+                }
                 onChange={(event) => {
                   setUnidadeSelecionada(
                     event.target.value
@@ -1215,21 +1326,33 @@ function AdminUsuarios({ usuario, onVoltar }) {
                 }}
               >
                 <option value="">
-                  {adminLogadoEhMaster
-                    ? 'Selecione uma unidade'
-                    : unidadeAdmin ||
-                      'Unidade do administrador'}
+                  {carregandoLocalizacoes
+                    ? 'Carregando unidades...'
+                    : adminLogadoEhMaster
+                      ? 'Selecione uma unidade'
+                      : unidadeAdmin ||
+                        'Unidade do administrador'}
                 </option>
 
                 {unidadesDisponiveis.map(
-                  (unidade) => (
-                    <option
-                      key={unidade.id}
-                      value={unidade.nome}
-                    >
-                      {unidade.nome}
-                    </option>
-                  )
+                  (unidade) => {
+                    const valor =
+                      obterValorUnidade(unidade);
+
+                    return (
+                      <option
+                        key={
+                          unidade.id ??
+                          valor
+                        }
+                        value={valor}
+                      >
+                        {obterRotuloUnidade(
+                          unidade
+                        )}
+                      </option>
+                    );
+                  }
                 )}
               </select>
 
@@ -1253,7 +1376,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
             <div className="admin-usuarios-form-group">
               <label htmlFor="setor">
-                Setor
+                Setor/Função
               </label>
 
               <select
@@ -1264,12 +1387,17 @@ function AdminUsuarios({ usuario, onVoltar }) {
                     event.target.value
                   )
                 }
-                disabled={!unidadeFormulario}
+                disabled={
+                  !unidadeFormulario ||
+                  carregandoLocalizacoes
+                }
               >
                 <option value="">
-                  {unidadeFormulario
-                    ? 'Selecione um setor'
-                    : 'Selecione uma unidade primeiro'}
+                  {carregandoLocalizacoes
+                    ? 'Carregando setores...'
+                    : unidadeFormulario
+                      ? 'Selecione um setor'
+                      : 'Selecione uma unidade primeiro'}
                 </option>
 
                 {setoresDaUnidade.map(

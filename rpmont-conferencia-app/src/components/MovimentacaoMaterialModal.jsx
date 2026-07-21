@@ -57,6 +57,8 @@ function MovimentacaoMaterialFormulario({
   const [numeroDocumento, setNumeroDocumento] =
     useState('');
   const [observacao, setObservacao] = useState('');
+  const [erroValidacao, setErroValidacao] =
+    useState('');
 
   const obterNumeroSerie = () =>
     material?.numeroSerie ??
@@ -86,18 +88,20 @@ function MovimentacaoMaterialFormulario({
       observacao.trim();
 
     if (!motivoTratado) {
-      window.alert(
+      setErroValidacao(
         configuracao.mensagemMotivoObrigatorio
       );
       return;
     }
 
     if (!documentoTratado) {
-      window.alert(
+      setErroValidacao(
         configuracao.mensagemDocumentoObrigatorio
       );
       return;
     }
+
+    setErroValidacao('');
 
     if (typeof onConfirmar !== 'function') {
       return;
@@ -197,10 +201,13 @@ function MovimentacaoMaterialFormulario({
               maxLength={300}
               rows={3}
               disabled={processando}
-              required
-              onChange={(event) =>
-                setMotivo(event.target.value)
-              }
+              onChange={(event) => {
+                setMotivo(event.target.value);
+
+                if (erroValidacao) {
+                  setErroValidacao('');
+                }
+              }}
             />
 
             <small>{motivo.length}/300</small>
@@ -217,12 +224,15 @@ function MovimentacaoMaterialFormulario({
               }
               maxLength={150}
               disabled={processando}
-              required
-              onChange={(event) =>
+              onChange={(event) => {
                 setNumeroDocumento(
                   event.target.value
-                )
-              }
+                );
+
+                if (erroValidacao) {
+                  setErroValidacao('');
+                }
+              }}
             />
 
             <small>
@@ -249,12 +259,13 @@ function MovimentacaoMaterialFormulario({
             </small>
           </label>
 
-          {erro && (
+          {(erroValidacao || erro) && (
             <div
               className="movimentacao-material-erro"
               role="alert"
+              aria-live="assertive"
             >
-              {erro}
+              {erroValidacao || erro}
             </div>
           )}
 

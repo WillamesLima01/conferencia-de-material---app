@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.service;
 
+import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialFiltroDTO;
 import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialResponseDTO;
 import br.com.rpmont.conferencia.enums.SituacaoMaterial;
 import br.com.rpmont.conferencia.enums.TipoMovimentacaoMaterial;
@@ -11,11 +12,14 @@ import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.repository.MaterialPatrimonialRepository;
 import br.com.rpmont.conferencia.repository.MovimentacaoMaterialRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
+import static br.com.rpmont.conferencia.specification.MovimentacaoMaterialSpecification.comFiltros;
 
 @Service
 @RequiredArgsConstructor
@@ -479,6 +483,77 @@ public class MovimentacaoMaterialServiceImpl
 
     /*
      * ==========================================
+     * LISTAR MOVIMENTAÇÕES COM FILTROS
+     * ==========================================
+     */
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MovimentacaoMaterialResponseDTO> listarMovimentacoes(
+            MovimentacaoMaterialFiltroDTO filtro,
+            String matriculaUsuario
+    ) {
+        if (
+                matriculaUsuario == null ||
+                        matriculaUsuario.isBlank()
+        ) {
+            throw new BusinessException(
+                    "Usuário autenticado não identificado."
+            );
+        }
+
+        validarPeriodo(
+                filtro
+        );
+
+        Sort ordenacao = Sort.by(
+                Sort.Direction.DESC,
+                "dataMovimentacao"
+        );
+
+        return movimentacaoRepository
+                .findAll(
+                        comFiltros(filtro),
+                        ordenacao
+                )
+                .stream()
+                .map(
+                        this::converterParaResponse
+                )
+                .toList();
+    }
+
+    /*
+     * ==========================================
+     * VALIDAR PERÍODO DA CONSULTA
+     * ==========================================
+     */
+
+    private void validarPeriodo(
+            MovimentacaoMaterialFiltroDTO filtro
+    ) {
+        if (
+                filtro == null ||
+                        filtro.dataInicial() == null ||
+                        filtro.dataFinal() == null
+        ) {
+            return;
+        }
+
+        if (
+                filtro.dataInicial()
+                        .isAfter(
+                                filtro.dataFinal()
+                        )
+        ) {
+            throw new BusinessException(
+                    "A data inicial não pode ser posterior à data final."
+            );
+        }
+    }
+
+    /*
+     * ==========================================
      * CRIAR MOVIMENTAÇÃO DE SITUAÇÃO
      * ==========================================
      */
@@ -635,9 +710,32 @@ public class MovimentacaoMaterialServiceImpl
     private MovimentacaoMaterialResponseDTO converterParaResponse(
             MovimentacaoMaterial movimentacao
     ) {
+        MaterialPatrimonial material =
+                movimentacao.getMaterial();
+
+        Usuario usuario =
+                movimentacao.getUsuario();
+
         return new MovimentacaoMaterialResponseDTO(
                 movimentacao.getId(),
                 movimentacao.getMaterialId(),
+
+                material != null
+                        ? material.getNumeroSerie()
+                        : null,
+
+                material != null
+                        ? material.getNome()
+                        : null,
+
+                material != null
+                        ? material.getMarca()
+                        : null,
+
+                material != null
+                        ? material.getDescricao()
+                        : null,
+
                 movimentacao.getTipoMovimentacao(),
                 movimentacao.getSetorOrigem(),
                 movimentacao.getSetorDestino(),
@@ -649,7 +747,40 @@ public class MovimentacaoMaterialServiceImpl
                 movimentacao.getObservacao(),
                 movimentacao.getNumeroDocumento(),
                 movimentacao.getUsuarioId(),
+
+                usuario != null
+                        ? usuario.getMatricula()
+                        : null,
+
+                obterNomeUsuario(
+                        usuario
+                ),
+
                 movimentacao.getDataMovimentacao()
         );
+    }
+
+    private String obterNomeUsuario(
+            Usuario usuario
+    ) {
+        if (usuario == null) {
+            return null;
+        }
+
+        if (
+                usuario.getNomeCompleto() != null &&
+                        !usuario.getNomeCompleto().isBlank()
+        ) {
+            return usuario.getNomeCompleto().trim();
+        }
+
+        if (
+                usuario.getNome() != null &&
+                        !usuario.getNome().isBlank()
+        ) {
+            return usuario.getNome().trim();
+        }
+
+        return null;
     }
 }

@@ -1,7 +1,8 @@
 import api from './api';
 
 const BASE_URL = '/material-patrimonial';
-const MOVIMENTACAO_BASE_URL = '/movimentacao-material';
+const MOVIMENTACAO_BASE_URL =
+  '/movimentacao-material';
 
 export async function listarMateriais() {
   return api(BASE_URL, {
@@ -17,15 +18,23 @@ export async function buscarMaterialPorId(id) {
   });
 }
 
-export async function buscarMaterialPorNumeroSerie(numeroSerie) {
-  const numeroSerieTratado = String(numeroSerie ?? '').trim();
+export async function buscarMaterialPorNumeroSerie(
+  numeroSerie
+) {
+  const numeroSerieTratado = String(
+    numeroSerie ?? ''
+  ).trim();
 
   if (!numeroSerieTratado) {
-    throw new Error('O número de série é obrigatório.');
+    throw new Error(
+      'O número de série é obrigatório.'
+    );
   }
 
   return api(
-    `${BASE_URL}/numero-serie/${encodeURIComponent(numeroSerieTratado)}`,
+    `${BASE_URL}/numero-serie/${encodeURIComponent(
+      numeroSerieTratado
+    )}`,
     {
       method: 'GET',
     }
@@ -41,7 +50,10 @@ export async function cadastrarMaterial(dados) {
   });
 }
 
-export async function atualizarMaterial(id, dados) {
+export async function atualizarMaterial(
+  id,
+  dados
+) {
   validarIdMaterial(id);
 
   const payload = montarPayloadMaterial(dados);
@@ -67,15 +79,24 @@ export async function transferirEConferirMaterial(
 ) {
   validarIdMaterial(id);
 
-  const novoSetorTratado = String(novoSetor ?? '').trim();
-  const unidadeTratada = String(unidade ?? '').trim();
+  const novoSetorTratado = String(
+    novoSetor ?? ''
+  ).trim();
+
+  const unidadeTratada = String(
+    unidade ?? ''
+  ).trim();
 
   if (!novoSetorTratado) {
-    throw new Error('O novo setor é obrigatório.');
+    throw new Error(
+      'O novo setor é obrigatório.'
+    );
   }
 
   if (!unidadeTratada) {
-    throw new Error('A unidade é obrigatória.');
+    throw new Error(
+      'A unidade é obrigatória.'
+    );
   }
 
   return api(
@@ -90,7 +111,10 @@ export async function transferirEConferirMaterial(
   );
 }
 
-export async function baixarMaterial(id, dados) {
+export async function baixarMaterial(
+  id,
+  dados
+) {
   validarIdMaterial(id);
 
   const payload = montarPayloadMovimentacao(
@@ -105,7 +129,10 @@ export async function baixarMaterial(id, dados) {
   });
 }
 
-export async function descartarMaterial(id, dados) {
+export async function descartarMaterial(
+  id,
+  dados
+) {
   validarIdMaterial(id);
 
   const payload = montarPayloadMovimentacao(
@@ -120,7 +147,10 @@ export async function descartarMaterial(id, dados) {
   });
 }
 
-export async function extraviarMaterial(id, dados) {
+export async function extraviarMaterial(
+  id,
+  dados
+) {
   validarIdMaterial(id);
 
   const payload = montarPayloadMovimentacao(
@@ -135,7 +165,10 @@ export async function extraviarMaterial(id, dados) {
   });
 }
 
-export async function registrarFurtoMaterial(id, dados) {
+export async function registrarFurtoMaterial(
+  id,
+  dados
+) {
   validarIdMaterial(id);
 
   const payload = montarPayloadMovimentacao(
@@ -144,13 +177,19 @@ export async function registrarFurtoMaterial(id, dados) {
     'O número do boletim de ocorrência é obrigatório.'
   );
 
-  return api(`${BASE_URL}/${id}/registrar-furto`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
+  return api(
+    `${BASE_URL}/${id}/registrar-furto`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
-export async function reativarMaterial(id, dados) {
+export async function reativarMaterial(
+  id,
+  dados
+) {
   validarIdMaterial(id);
 
   const payload = montarPayloadMovimentacao(
@@ -173,7 +212,9 @@ export async function inativarMaterial(id) {
   });
 }
 
-export async function listarHistoricoMaterial(id) {
+export async function listarHistoricoMaterial(
+  id
+) {
   validarIdMaterial(id);
 
   return api(
@@ -184,15 +225,140 @@ export async function listarHistoricoMaterial(id) {
   );
 }
 
+export async function listarMovimentacoesMaterial(
+  filtros = {}
+) {
+  validarPeriodoMovimentacao(
+    filtros?.dataInicial,
+    filtros?.dataFinal
+  );
+
+  const parametros = new URLSearchParams();
+
+  adicionarParametro(
+    parametros,
+    'dataInicial',
+    filtros?.dataInicial
+  );
+
+  adicionarParametro(
+    parametros,
+    'dataFinal',
+    filtros?.dataFinal
+  );
+
+  adicionarParametro(
+    parametros,
+    'tipoMovimentacao',
+    filtros?.tipoMovimentacao
+  );
+
+  adicionarParametro(
+    parametros,
+    'materialId',
+    filtros?.materialId
+  );
+
+  adicionarParametro(
+    parametros,
+    'numeroSerie',
+    filtros?.numeroSerie
+  );
+
+  adicionarParametro(
+    parametros,
+    'nome',
+    filtros?.nome
+  );
+
+  adicionarParametro(
+    parametros,
+    'marca',
+    filtros?.marca
+  );
+
+  adicionarParametro(
+    parametros,
+    'descricao',
+    filtros?.descricao
+  );
+
+  adicionarParametro(
+    parametros,
+    'setor',
+    filtros?.setor
+  );
+
+  adicionarParametro(
+    parametros,
+    'unidade',
+    filtros?.unidade
+  );
+
+  adicionarParametro(
+    parametros,
+    'numeroDocumento',
+    filtros?.numeroDocumento
+  );
+
+  adicionarParametro(
+    parametros,
+    'usuarioId',
+    filtros?.usuarioId
+  );
+
+  adicionarParametro(
+    parametros,
+    'situacaoAnterior',
+    filtros?.situacaoAnterior
+  );
+
+  adicionarParametro(
+    parametros,
+    'situacaoNova',
+    filtros?.situacaoNova
+  );
+
+  const queryString = parametros.toString();
+
+  const url = queryString
+    ? `${MOVIMENTACAO_BASE_URL}?${queryString}`
+    : MOVIMENTACAO_BASE_URL;
+
+  return api(url, {
+    method: 'GET',
+  });
+}
+
 function montarPayloadMaterial(dados) {
   return {
-    numeroSerie: String(dados?.numeroSerie ?? '').trim(),
-    nome: normalizarCampoOpcional(dados?.nome),
-    marca: normalizarCampoOpcional(dados?.marca),
-    descricao: String(dados?.descricao ?? '').trim(),
-    observacao: normalizarCampoOpcional(dados?.observacao),
-    setor: String(dados?.setor ?? '').trim(),
-    conferido: Boolean(dados?.conferido),
+    numeroSerie: String(
+      dados?.numeroSerie ?? ''
+    ).trim(),
+
+    nome: normalizarCampoOpcional(
+      dados?.nome
+    ),
+
+    marca: normalizarCampoOpcional(
+      dados?.marca
+    ),
+
+    descricao: String(
+      dados?.descricao ?? ''
+    ).trim(),
+
+    observacao: normalizarCampoOpcional(
+      dados?.observacao
+    ),
+
+    setor: String(
+      dados?.setor ?? ''
+    ).trim(),
+
+    conferido: Boolean(
+      dados?.conferido
+    ),
   };
 }
 
@@ -201,22 +367,30 @@ function montarPayloadMovimentacao(
   mensagemMotivo,
   mensagemDocumento
 ) {
-  const motivo = String(dados?.motivo ?? '').trim();
+  const motivo = String(
+    dados?.motivo ?? ''
+  ).trim();
+
   const numeroDocumento = String(
     dados?.numeroDocumento ?? ''
   ).trim();
 
   if (!motivo) {
-    throw new Error(mensagemMotivo);
+    throw new Error(
+      mensagemMotivo
+    );
   }
 
   if (!numeroDocumento) {
-    throw new Error(mensagemDocumento);
+    throw new Error(
+      mensagemDocumento
+    );
   }
 
   return {
     motivo,
     numeroDocumento,
+
     observacao: normalizarCampoOpcional(
       dados?.observacao
     ),
@@ -224,15 +398,60 @@ function montarPayloadMovimentacao(
 }
 
 function validarIdMaterial(id) {
-  if (id === null || id === undefined) {
+  if (
+    id === null ||
+    id === undefined ||
+    String(id).trim() === ''
+  ) {
     throw new Error(
       'O ID do material é obrigatório.'
     );
   }
 }
 
+function validarPeriodoMovimentacao(
+  dataInicial,
+  dataFinal
+) {
+  const inicio = normalizarCampoOpcional(
+    dataInicial
+  );
+
+  const fim = normalizarCampoOpcional(
+    dataFinal
+  );
+
+  if (!inicio || !fim) {
+    return;
+  }
+
+  if (inicio > fim) {
+    throw new Error(
+      'A data inicial não pode ser posterior à data final.'
+    );
+  }
+}
+
+function adicionarParametro(
+  parametros,
+  nome,
+  valor
+) {
+  const valorTratado =
+    normalizarCampoOpcional(valor);
+
+  if (valorTratado !== null) {
+    parametros.append(
+      nome,
+      valorTratado
+    );
+  }
+}
+
 function normalizarCampoOpcional(valor) {
-  const valorTratado = String(valor ?? '').trim();
+  const valorTratado = String(
+    valor ?? ''
+  ).trim();
 
   return valorTratado || null;
 }

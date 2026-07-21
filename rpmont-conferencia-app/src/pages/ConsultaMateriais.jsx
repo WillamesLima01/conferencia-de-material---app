@@ -77,6 +77,11 @@ function ConsultaMateriais({
   ] = useState('');
 
   const [
+    sucessoMovimentacao,
+    setSucessoMovimentacao,
+  ] = useState('');
+
+  const [
     materialHistorico,
     setMaterialHistorico,
   ] = useState(null);
@@ -157,6 +162,21 @@ function ConsultaMateriais({
       componenteAtivo = false;
     };
   }, []);
+
+
+  useEffect(() => {
+    if (!sucessoMovimentacao) {
+      return undefined;
+    }
+
+    const temporizador = window.setTimeout(() => {
+      setSucessoMovimentacao('');
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(temporizador);
+    };
+  }, [sucessoMovimentacao]);
 
   const setoresDaUnidade = useMemo(() => {
     const unidadeUsuario =
@@ -440,6 +460,7 @@ function ConsultaMateriais({
   ) => {
     setMaterialDetalhes(null);
     setErroMovimentacao('');
+    setSucessoMovimentacao('');
     setMaterialMovimentacao(material);
     setTipoMovimentacao(tipo);
   };
@@ -534,8 +555,7 @@ function ConsultaMateriais({
       setMaterialMovimentacao(null);
       setTipoMovimentacao(null);
       setErroMovimentacao('');
-
-      window.alert(
+      setSucessoMovimentacao(
         'Movimentação registrada com sucesso.'
       );
     } catch (erro) {
@@ -649,6 +669,30 @@ function ConsultaMateriais({
             </p>
           </div>
         </header>
+
+        {sucessoMovimentacao && (
+          <div
+            className="consulta-mensagem-sucesso consulta-mensagem-sucesso-flutuante"
+            role="status"
+            aria-live="polite"
+          >
+            <FaCheck />
+
+            <span>
+              {sucessoMovimentacao}
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSucessoMovimentacao('')
+              }
+              aria-label="Fechar mensagem de sucesso"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <section className="consulta-resumo-grid">
           <div>

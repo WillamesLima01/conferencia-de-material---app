@@ -11,6 +11,14 @@ public record MovimentacaoMaterialResponseDTO(
 
         Long materialId,
 
+        String numeroSerie,
+
+        String nomeMaterial,
+
+        String marcaMaterial,
+
+        String descricaoMaterial,
+
         TipoMovimentacaoMaterial tipoMovimentacao,
 
         String setorOrigem,
@@ -32,6 +40,10 @@ public record MovimentacaoMaterialResponseDTO(
         String numeroDocumento,
 
         Long usuarioId,
+
+        String matriculaUsuario,
+
+        String nomeUsuario,
 
         LocalDateTime dataMovimentacao
 
