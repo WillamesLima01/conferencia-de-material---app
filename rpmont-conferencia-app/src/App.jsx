@@ -22,6 +22,7 @@ import {
   conferirMaterial,
   inativarMaterial,
   listarMateriais,
+  zerarConferencia,
 } from './services/materialPatrimonialService';
 
 import './App.css';
@@ -239,7 +240,8 @@ function App() {
   };
 
   const carregarMateriais = async (
-    usuario
+    usuario,
+    exibirCarregamento = true
   ) => {
     if (
       !usuario ||
@@ -247,11 +249,19 @@ function App() {
     ) {
       setMateriais([]);
       setErroMateriais('');
+
+      if (exibirCarregamento) {
+        setCarregandoMateriais(false);
+      }
+
       return;
     }
 
     try {
-      setCarregandoMateriais(true);
+      if (exibirCarregamento) {
+        setCarregandoMateriais(true);
+      }
+
       setErroMateriais('');
 
       const materiaisRecebidos =
@@ -268,12 +278,19 @@ function App() {
         error
       );
 
-      setMateriais([]);
       setErroMateriais(
         obterMensagemErro(error)
       );
+
+      if (exibirCarregamento) {
+        setMateriais([]);
+      }
+
+      throw error;
     } finally {
-      setCarregandoMateriais(false);
+      if (exibirCarregamento) {
+        setCarregandoMateriais(false);
+      }
     }
   };
 
@@ -498,26 +515,89 @@ function App() {
     fecharTelasSecundarias();
   };
 
-  const zerarConferenciaDaUnidade = (usuario) => {
+  const zerarConferenciaPatrimonial = async ({
+    usuario,
+    senha,
+    tipo,
+    setor,
+  }) => {
     if (!usuarioPodeAcessarPatrimonio(usuario)) {
-      window.alert(
+      throw new Error(
         'Acesso negado. Somente usuários do setor P4 podem zerar a conferência patrimonial.'
       );
-
-      return;
     }
-
-    setMateriais((materiaisAtuais) =>
-      materiaisAtuais.map((material) =>
-        material.unidade === usuario.unidade &&
-        material.situacao !== 'INATIVO'
-          ? {
-              ...material,
-              conferido: false,
-            }
-          : material
-      )
-    );
+  
+    if (!usuarioEhAdmin(usuario)) {
+      throw new Error(
+        'Acesso negado. Somente administradores podem zerar a conferência.'
+      );
+    }
+  
+    const senhaTratada = String(
+      senha ?? ''
+    ).trim();
+  
+    const tipoTratado = String(
+      tipo ?? ''
+    )
+      .trim()
+      .toUpperCase();
+  
+    const setorTratado = String(
+      setor ?? ''
+    ).trim();
+  
+    if (!senhaTratada) {
+      throw new Error(
+        'Digite a senha do administrador.'
+      );
+    }
+  
+    if (
+      tipoTratado !== 'TODOS' &&
+      tipoTratado !== 'SETOR'
+    ) {
+      throw new Error(
+        'O tipo de zeramento é inválido.'
+      );
+    }
+  
+    if (
+      tipoTratado === 'SETOR' &&
+      !setorTratado
+    ) {
+      throw new Error(
+        'O setor da conferência não foi identificado.'
+      );
+    }
+  
+    try {
+      const quantidadeZerada =
+        await zerarConferencia({
+          senha: senhaTratada,
+          tipo: tipoTratado,
+          setor:
+            tipoTratado === 'SETOR'
+              ? setorTratado
+              : null,
+        });
+  
+      await carregarMateriais(
+        usuario,
+        false
+      );
+  
+      return quantidadeZerada;
+    } catch (error) {
+      console.error(
+        'Erro ao zerar conferência:',
+        error
+      );
+  
+      throw new Error(
+        obterMensagemErro(error)
+      );
+    }
   };
 
   const salvarMaterialCadastrado = async (
@@ -1230,9 +1310,6 @@ function App() {
           onIniciarConferencia={
             iniciarConferenciaComPermissao
           }
-          onZerarConferencia={
-            zerarConferenciaDaUnidade
-          }
           onAbrirCadastroManual={
             abrirTelaCadastroManual
           }
@@ -1366,6 +1443,9 @@ function App() {
       onExcluirMaterial={excluirMaterial}
       onConferirMaterial={
         conferirMaterialPatrimonial
+      }
+      onZerarConferencia={
+        zerarConferenciaPatrimonial
       }
     />
   );

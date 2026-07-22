@@ -72,6 +72,66 @@ export async function conferirMaterial(id) {
   });
 }
 
+export async function zerarConferencia(
+  dados = {}
+) {
+  const senhaTratada = String(
+    dados?.senha ?? ''
+  ).trim();
+
+  const tipoTratado = String(
+    dados?.tipo ?? ''
+  )
+    .trim()
+    .toUpperCase();
+
+  const setorTratado = String(
+    dados?.setor ?? ''
+  ).trim();
+
+  if (!senhaTratada) {
+    throw new Error(
+      'A senha do administrador é obrigatória.'
+    );
+  }
+
+  if (
+    tipoTratado !== 'TODOS' &&
+    tipoTratado !== 'SETOR'
+  ) {
+    throw new Error(
+      'O tipo de zeramento é inválido.'
+    );
+  }
+
+  if (
+    tipoTratado === 'SETOR' &&
+    !setorTratado
+  ) {
+    throw new Error(
+      'O setor é obrigatório para o zeramento por setor.'
+    );
+  }
+
+  const payload = {
+    senha: senhaTratada,
+    tipo: tipoTratado,
+
+    setor:
+      tipoTratado === 'SETOR'
+        ? setorTratado
+        : null,
+  };
+
+  return api(
+    `${BASE_URL}/zerar-conferencia`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
 export async function transferirEConferirMaterial(
   id,
   novoSetor,

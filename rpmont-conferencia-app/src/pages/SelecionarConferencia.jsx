@@ -5,9 +5,6 @@ import {
   FaChevronRight,
   FaCheck,
   FaArrowLeft,
-  FaRotateRight,
-  FaLock,
-  FaXmark,
   FaMagnifyingGlassChart,
   FaClockRotateLeft,
   FaUserGear,
@@ -93,7 +90,6 @@ function SelecionarConferencia({
   usuario,
   onSair,
   onIniciarConferencia,
-  onZerarConferencia,
   onAbrirCadastroManual,
   onAbrirConsulta,
   onAbrirConsultaMovimentacoes,
@@ -108,10 +104,6 @@ function SelecionarConferencia({
   const [setoresCadastrados, setSetoresCadastrados] = useState([]);
   const [carregandoSetores, setCarregandoSetores] = useState(true);
   const [erroSetores, setErroSetores] = useState('');
-
-  const [modalZerar, setModalZerar] = useState(false);
-  const [senhaAdmin, setSenhaAdmin] = useState('');
-  const [mensagemZerar, setMensagemZerar] = useState('');
 
   const usuarioEhAdmin = usuarioEhAdminSistema(usuario);
   const usuarioMaster = usuarioEhAdminMaster(usuario);
@@ -348,48 +340,6 @@ function SelecionarConferencia({
     window.alert('A função de Feno e Ração não foi configurada no App.jsx.');
   };
 
-  const abrirModalZerar = () => {
-    if (!usuarioPodeAcessarPatrimonio) {
-      window.alert(
-        'Acesso negado. O zeramento da conferência patrimonial é permitido somente para usuários do setor P4.'
-      );
-      return;
-    }
-
-    setSenhaAdmin('');
-    setMensagemZerar('');
-    setModalZerar(true);
-  };
-
-  const fecharModalZerar = () => {
-    setSenhaAdmin('');
-    setMensagemZerar('');
-    setModalZerar(false);
-  };
-
-  const confirmarZeramento = () => {
-    if (!usuarioPodeAcessarPatrimonio) {
-      setMensagemZerar(
-        'Acesso negado. Somente usuários do setor P4 podem zerar a conferência.'
-      );
-      return;
-    }
-
-    if (senhaAdmin !== '123456') {
-      setMensagemZerar('Senha de administrador incorreta.');
-      return;
-    }
-
-    if (typeof onZerarConferencia === 'function') {
-      onZerarConferencia(usuario);
-    }
-
-    setMensagemZerar('Conferência zerada com sucesso.');
-
-    window.setTimeout(() => {
-      fecharModalZerar();
-    }, 900);
-  };
 
   return (
     <main className="selecao-page">
@@ -469,7 +419,7 @@ function SelecionarConferencia({
                 {usuarioEhP4
                   ? `Gerencie materiais patrimoniais, administração${
                       usuarioPodeAcessarFenoRacao ? ', feno e ração' : ''
-                    } ou reinicie a conferência da unidade ${
+                    } da unidade ${
                       usuario?.unidade || usuario?.UNIDADE
                     }.`
                   : usuarioPodeAcessarFenoRacao
@@ -517,13 +467,6 @@ function SelecionarConferencia({
                 >
                   <FaWheatAwn />
                   Feno e Ração
-                </button>
-              )}
-
-              {usuarioPodeAcessarPatrimonio && (
-                <button type="button" onClick={abrirModalZerar}>
-                  <FaRotateRight />
-                  Zerar conferência
                 </button>
               )}
             </div>
@@ -709,73 +652,6 @@ function SelecionarConferencia({
           </section>
         )}
 
-        {modalZerar && usuarioPodeAcessarPatrimonio && (
-          <div className="modal-zerar-overlay">
-            <div className="modal-zerar-card">
-              <button
-                type="button"
-                className="fechar-modal-zerar"
-                onClick={fecharModalZerar}
-              >
-                <FaXmark />
-              </button>
-
-              <div className="modal-zerar-icon">
-                <FaLock />
-              </div>
-
-              <h2>Zerar conferência?</h2>
-
-              <p>
-                Esta ação marcará todos os materiais da unidade{' '}
-                <strong>{usuario?.unidade || usuario?.UNIDADE}</strong> como{' '}
-                <strong>não conferidos</strong>.
-              </p>
-
-              <label>
-                Senha de administrador
-
-                <input
-                  type="password"
-                  value={senhaAdmin}
-                  placeholder="Digite a senha"
-                  onChange={(event) => {
-                    setSenhaAdmin(event.target.value);
-                    setMensagemZerar('');
-                  }}
-                />
-              </label>
-
-              {mensagemZerar && (
-                <div
-                  className={
-                    mensagemZerar.includes('sucesso')
-                      ? 'mensagem-zerar sucesso'
-                      : 'mensagem-zerar erro'
-                  }
-                >
-                  {mensagemZerar}
-                </div>
-              )}
-
-              <button
-                type="button"
-                className="confirmar-zerar-button"
-                onClick={confirmarZeramento}
-              >
-                Confirmar zeramento
-              </button>
-
-              <button
-                type="button"
-                className="cancelar-zerar-button"
-                onClick={fecharModalZerar}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
       </section>
     </main>
   );

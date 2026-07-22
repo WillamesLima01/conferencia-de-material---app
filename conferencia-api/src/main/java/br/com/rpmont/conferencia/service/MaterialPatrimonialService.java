@@ -1,13 +1,6 @@
 package br.com.rpmont.conferencia.service;
 
-import br.com.rpmont.conferencia.dtos.BaixarMaterialRequestDTO;
-import br.com.rpmont.conferencia.dtos.DescartarMaterialRequestDTO;
-import br.com.rpmont.conferencia.dtos.ExtraviarMaterialRequestDTO;
-import br.com.rpmont.conferencia.dtos.MaterialPatrimonialRequestDTO;
-import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
-import br.com.rpmont.conferencia.dtos.ReativarMaterialRequestDTO;
-import br.com.rpmont.conferencia.dtos.RegistrarFurtoMaterialRequestDTO;
-import br.com.rpmont.conferencia.dtos.TransferirConferirMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.*;
 
 import java.util.List;
 
@@ -81,6 +74,11 @@ public interface MaterialPatrimonialService {
 
     MaterialPatrimonialResponseDTO inativar(
             Long id,
+            String matriculaUsuario
+    );
+
+    Integer zerarConferencia(
+            ZerarConferenciaRequestDTO request,
             String matriculaUsuario
     );
 }

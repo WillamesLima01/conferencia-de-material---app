@@ -8,6 +8,7 @@ import br.com.rpmont.conferencia.dtos.MaterialPatrimonialResponseDTO;
 import br.com.rpmont.conferencia.dtos.ReativarMaterialRequestDTO;
 import br.com.rpmont.conferencia.dtos.RegistrarFurtoMaterialRequestDTO;
 import br.com.rpmont.conferencia.dtos.TransferirConferirMaterialRequestDTO;
+import br.com.rpmont.conferencia.dtos.ZerarConferenciaRequestDTO;
 import br.com.rpmont.conferencia.enums.SituacaoMaterial;
 import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.exception.ConflictException;
@@ -18,6 +19,7 @@ import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.repository.MaterialPatrimonialRepository;
 import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,8 @@ public class MaterialPatrimonialServiceImpl
 
     private static final int NIVEL_ADMIN_MASTER = 1;
 
+    private static final int NIVEL_ADMIN = 2;
+
     private static final String SETOR_P4 = "P4";
 
     private static final String STATUS_LIBERADO = "LIBERADO";
@@ -39,6 +43,8 @@ public class MaterialPatrimonialServiceImpl
     private final MaterialPatrimonialRepository materialRepository;
 
     private final UsuarioRepository usuarioRepository;
+
+    private final PasswordEncoder passwordEncoder;
 
     private final MovimentacaoMaterialService movimentacaoMaterialService;
 
@@ -1160,6 +1166,114 @@ public class MaterialPatrimonialServiceImpl
 
     /*
      * ==========================================
+     * ZERAR CONFERÊNCIA DA UNIDADE
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public Integer zerarConferencia(
+            ZerarConferenciaRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        validarUsuarioAdministrador(
+                usuarioLogado
+        );
+
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados do zeramento são obrigatórios."
+            );
+        }
+
+        String senha =
+                normalizarTextoObrigatorio(
+                        request.senha(),
+                        "A senha do administrador é obrigatória."
+                );
+
+        String tipo =
+                normalizarTextoObrigatorio(
+                        request.tipo(),
+                        "O tipo de zeramento é obrigatório."
+                ).toUpperCase();
+
+        if (
+                !"TODOS".equals(tipo) &&
+                        !"SETOR".equals(tipo)
+        ) {
+            throw new BusinessException(
+                    "O tipo de zeramento deve ser TODOS ou SETOR."
+            );
+        }
+
+        if (
+                usuarioLogado.getSenha() == null ||
+                        usuarioLogado.getSenha().isBlank()
+        ) {
+            throw new BusinessException(
+                    "O usuário autenticado não possui senha cadastrada."
+            );
+        }
+
+        boolean senhaCorreta =
+                passwordEncoder.matches(
+                        senha,
+                        usuarioLogado.getSenha()
+                );
+
+        if (!senhaCorreta) {
+            throw new ForbiddenException(
+                    "Senha de administrador incorreta."
+            );
+        }
+
+        String unidadeUsuario =
+                normalizarTextoObrigatorio(
+                        usuarioLogado.getUnidade(),
+                        "O usuário autenticado não possui unidade cadastrada."
+                );
+
+        LocalDateTime dataModificacao =
+                LocalDateTime.now();
+
+        if ("TODOS".equals(tipo)) {
+            return materialRepository
+                    .zerarConferenciaDaUnidade(
+                            unidadeUsuario,
+                            SituacaoMaterial.ATIVO,
+                            dataModificacao,
+                            usuarioLogado.getId()
+                    );
+        }
+
+        String setor =
+                normalizarTextoObrigatorio(
+                        request.setor(),
+                        "O setor é obrigatório para o zeramento por setor."
+                );
+
+        return materialRepository
+                .zerarConferenciaDaUnidadeESetor(
+                        unidadeUsuario,
+                        setor,
+                        SituacaoMaterial.ATIVO,
+                        dataModificacao,
+                        usuarioLogado.getId()
+                );
+    }
+
+    /*
+     * ==========================================
      * USUÁRIO AUTENTICADO
      * ==========================================
      */
@@ -1226,6 +1340,28 @@ public class MaterialPatrimonialServiceImpl
         ) {
             throw new ForbiddenException(
                     "Acesso permitido somente para usuários do setor P4."
+            );
+        }
+    }
+
+    private void validarUsuarioAdministrador(
+            Usuario usuario
+    ) {
+        if (usuario.getNivel() == null) {
+            throw new ForbiddenException(
+                    "O usuário não possui nível de acesso cadastrado."
+            );
+        }
+
+        int nivelUsuario =
+                usuario.getNivel();
+
+        if (
+                nivelUsuario != NIVEL_ADMIN_MASTER &&
+                        nivelUsuario != NIVEL_ADMIN
+        ) {
+            throw new ForbiddenException(
+                    "Somente administradores podem zerar a conferência."
             );
         }
     }

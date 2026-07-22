@@ -119,7 +119,7 @@ public class SecurityConfig {
                         "http://localhost",
                         "https://localhost",
                         "http://localhost:5173",
-                        "http://192.168.0.14:5173"
+                        "http://192.168.0.15:5173"
                 )
         );
 

@@ -15,6 +15,8 @@ import {
   FaMagnifyingGlass,
   FaPenToSquare,
   FaPlus,
+  FaRotateRight,
+  FaLock,
   FaTrashCan,
   FaTriangleExclamation,
   FaXmark,
@@ -43,6 +45,7 @@ function ConferenciaMateriais({
   onEditarMaterial,
   onExcluirMaterial,
   onConferirMaterial,
+  onZerarConferencia,
 }) {
   const [codigoLido, setCodigoLido] =
     useState('');
@@ -68,6 +71,20 @@ function ConferenciaMateriais({
 
   const [mensagem, setMensagem] =
     useState('');
+
+  const [modalZerar, setModalZerar] =
+    useState(false);
+
+  const [senhaAdmin, setSenhaAdmin] =
+    useState('');
+
+  const [mensagemZerar, setMensagemZerar] =
+    useState('');
+
+  const [
+    zerandoConferencia,
+    setZerandoConferencia,
+  ] = useState(false);
 
   const [
     conferindoMaterial,
@@ -172,6 +189,35 @@ function ConferenciaMateriais({
     ).length;
 
   const pendentes = total - conferidos;
+
+  const nivelUsuario = Number(
+    usuario?.nivel ??
+      usuario?.NIVEL ??
+      usuario?.nivelAcesso ??
+      usuario?.NIVEL_ACESSO ??
+      3
+  );
+
+  const usuarioEhAdministrador =
+    nivelUsuario === 1 ||
+    nivelUsuario === 2;
+
+  const zeramentoPorSetor =
+    configuracao?.tipo === 'SETOR';
+
+  const descricaoEscopoZeramento =
+    zeramentoPorSetor
+      ? `setor ${
+          configuracao?.setor ||
+          'não informado'
+        } da unidade ${
+          usuario?.unidade ||
+          'não informada'
+        }`
+      : `unidade ${
+          usuario?.unidade ||
+          'não informada'
+        }`;
 
   const limparMensagens = () => {
     setMensagem('');
@@ -897,6 +943,127 @@ function ConferenciaMateriais({
 
   /*
    * ==========================================
+   * ZERAR CONFERÊNCIA
+   * ==========================================
+   */
+
+  const abrirModalZerar = () => {
+    if (!usuarioEhAdministrador) {
+      setMensagem(
+        'Apenas administradores podem zerar a conferência.'
+      );
+
+      return;
+    }
+
+    setSenhaAdmin('');
+    setMensagemZerar('');
+    setModalZerar(true);
+  };
+
+  const fecharModalZerar = () => {
+    if (zerandoConferencia) {
+      return;
+    }
+
+    setSenhaAdmin('');
+    setMensagemZerar('');
+    setModalZerar(false);
+  };
+
+  const confirmarZeramento = async () => {
+    if (zerandoConferencia) {
+      return;
+    }
+
+    const senhaTratada =
+      String(senhaAdmin ?? '').trim();
+
+    if (!senhaTratada) {
+      setMensagemZerar(
+        'Digite a senha do administrador.'
+      );
+
+      return;
+    }
+
+    if (
+      typeof onZerarConferencia !==
+      'function'
+    ) {
+      setMensagemZerar(
+        'O serviço de zeramento não está disponível.'
+      );
+
+      return;
+    }
+
+    try {
+      setZerandoConferencia(true);
+      setMensagemZerar(
+        'Zerando conferência...'
+      );
+
+      const resultado =
+        await onZerarConferencia({
+          usuario,
+          senha: senhaTratada,
+          tipo: zeramentoPorSetor
+            ? 'SETOR'
+            : 'TODOS',
+          setor: zeramentoPorSetor
+            ? configuracao?.setor
+            : null,
+        });
+
+      const quantidadeZerada =
+        typeof resultado === 'number'
+          ? resultado
+          : Number(
+              resultado?.quantidadeZerada ??
+                resultado?.quantidade ??
+                resultado?.data ??
+                0
+            );
+
+      setMensagemZerar(
+        'Conferência zerada com sucesso.'
+      );
+
+      setMensagem(
+        `${
+          quantidadeZerada > 0
+            ? `${quantidadeZerada} material(is)`
+            : 'A conferência'
+        } da ${descricaoEscopoZeramento} ${
+          quantidadeZerada > 0
+            ? 'foi(ram)'
+            : 'foi'
+        } zerada com sucesso.`
+      );
+
+      window.setTimeout(() => {
+        setModalZerar(false);
+        setSenhaAdmin('');
+        setMensagemZerar('');
+      }, 900);
+    } catch (error) {
+      console.error(
+        'Erro ao zerar conferência:',
+        error
+      );
+
+      setMensagemZerar(
+        error?.message ||
+          'Não foi possível zerar a conferência.'
+      );
+    } finally {
+      setZerandoConferencia(false);
+    }
+  };
+
+  /*
+   * ==========================================
    * INATIVAR MATERIAL
    * ==========================================
    */
@@ -1013,6 +1180,26 @@ function ConferenciaMateriais({
             </strong>
           </div>
         </section>
+
+        {usuarioEhAdministrador &&
+          typeof onZerarConferencia ===
+            'function' && (
+          <button
+            type="button"
+            className="leitor-codigo-button zerar-conferencia-button"
+            onClick={abrirModalZerar}
+            disabled={zerandoConferencia}
+          >
+            <FaRotateRight />
+
+            {zeramentoPorSetor
+              ? `Zerar conferência do setor ${
+                  configuracao?.setor ||
+                  ''
+                }`
+              : 'Zerar conferência da unidade'}
+          </button>
+        )}
 
         <section className="scanner-card">
           <div className="scanner-titulo">
@@ -1573,6 +1760,122 @@ function ConferenciaMateriais({
                     fecharModalExcluir
                   }
                 >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {modalZerar && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <div className="modal-icon alerta">
+                <FaLock />
+              </div>
+
+              <h2>
+                {zeramentoPorSetor
+                  ? `Zerar o setor ${
+                      configuracao?.setor ||
+                      'selecionado'
+                    }?`
+                  : 'Zerar toda a unidade?'}
+              </h2>
+
+              <p>
+                Esta ação marcará como não
+                conferidos somente os
+                materiais ativos da{' '}
+                <strong>
+                  {descricaoEscopoZeramento}
+                </strong>
+                .
+              </p>
+
+              {zeramentoPorSetor && (
+                <div className="divergencia-box">
+                  <span>Unidade</span>
+
+                  <strong>
+                    {usuario?.unidade ||
+                      'Não informada'}
+                  </strong>
+
+                  <span>Setor</span>
+
+                  <strong>
+                    {configuracao?.setor ||
+                      'Não informado'}
+                  </strong>
+                </div>
+              )}
+
+              <label>
+                Senha do administrador
+
+                <input
+                  type="password"
+                  value={senhaAdmin}
+                  placeholder="Digite sua senha"
+                  disabled={
+                    zerandoConferencia
+                  }
+                  onChange={(event) => {
+                    setSenhaAdmin(
+                      event.target.value
+                    );
+
+                    setMensagemZerar('');
+                  }}
+                  onKeyDown={async (
+                    event
+                  ) => {
+                    if (
+                      event.key === 'Enter'
+                    ) {
+                      await confirmarZeramento();
+                    }
+                  }}
+                />
+              </label>
+
+              {mensagemZerar && (
+                <div className="mensagem-conferencia">
+                  {mensagemZerar}
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-primary"
+                  onClick={
+                    confirmarZeramento
+                  }
+                  disabled={
+                    zerandoConferencia
+                  }
+                >
+                  <FaRotateRight />
+
+                  {zerandoConferencia
+                    ? 'Zerando...'
+                    : 'Confirmar zeramento'}
+                </button>
+
+                <button
+                  type="button"
+                  className="modal-cancel"
+                  onClick={
+                    fecharModalZerar
+                  }
+                  disabled={
+                    zerandoConferencia
+                  }
+                >
+                  <FaXmark />
+
                   Cancelar
                 </button>
               </div>

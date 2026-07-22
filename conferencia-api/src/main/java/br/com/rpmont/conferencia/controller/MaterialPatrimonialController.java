@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import br.com.rpmont.conferencia.dtos.ZerarConferenciaRequestDTO;
 
 import java.util.List;
 
@@ -313,6 +314,27 @@ public class MaterialPatrimonialController {
     ) {
         return materialPatrimonialService.inativar(
                 id,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
+     * ZERAR CONFERÊNCIA DA UNIDADE
+     * ==========================================
+     */
+
+    @PatchMapping("/zerar-conferencia")
+    @ResponseStatus(HttpStatus.OK)
+    public Integer zerarConferencia(
+            @Valid
+            @RequestBody
+            ZerarConferenciaRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.zerarConferencia(
+                request,
                 obterMatriculaUsuario(authentication)
         );
     }
