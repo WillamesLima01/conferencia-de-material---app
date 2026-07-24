@@ -25,6 +25,12 @@ const STORAGE_KEY_SOLICITACOES_TRANSFERENCIA =
 
 const UNIDADES_PADRAO = ['RPMont', '3º EPMont'];
 
+const NIVEIS_USUARIO = {
+  ADMIN_MASTER: 1,
+  ADMIN: 2,
+  USUARIO_COMUM: 3,
+};
+
 const PRODUTOS = [
   {
     valor: 'TODOS',
@@ -138,12 +144,14 @@ const obterUnidadeUsuario = (usuario) => {
   return usuario?.unidade || usuario?.UNIDADE || usuario?.Unidade || 'RPMont';
 };
 
-const obterSetorUsuario = (usuario) => {
-  return usuario?.setor || usuario?.SETOR || usuario?.Setor || '';
-};
-
 const obterNivelUsuario = (usuario) => {
-  const nivel = usuario?.NIVEL ?? usuario?.nivel ?? usuario?.Nivel ?? 2;
+  const nivel =
+    usuario?.nivel ??
+    usuario?.NIVEL ??
+    usuario?.Nivel ??
+    usuario?.nivelAcesso ??
+    usuario?.NIVEL_ACESSO ??
+    NIVEIS_USUARIO.USUARIO_COMUM;
 
   return Number(nivel);
 };
@@ -217,7 +225,8 @@ const obterDataTransferencia = (transferencia) => {
 
 const obterQuantidadeTransferencia = (transferencia) => {
   return Number(
-    transferencia?.quantidadeAprovada ??
+    transferencia?.quantidadeTransferida ??
+      transferencia?.quantidadeAprovada ??
       transferencia?.quantidadeSolicitada ??
       transferencia?.quantidade ??
       0
@@ -258,7 +267,8 @@ const transferenciaEstaAprovada = (transferencia) => {
     status === 'APROVADA' ||
     status === 'APROVADO' ||
     status === 'CONCLUIDA' ||
-    status === 'CONCLUIDO'
+    status === 'CONCLUIDO' ||
+    status === 'TRANSFERIDA'
   );
 };
 
@@ -300,18 +310,12 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   const [transferencias] = useState(() => carregarTransferenciasStorage());
 
   const unidadeUsuario = obterUnidadeUsuario(usuario);
-  const setorUsuario = obterSetorUsuario(usuario);
   const nivelUsuario = obterNivelUsuario(usuario);
 
-  const usuarioAdminMaster = nivelUsuario === 0;
+  const usuarioAdminMaster =
+    nivelUsuario === NIVEIS_USUARIO.ADMIN_MASTER;
 
-  const usuarioAdminP4RPMont =
-    nivelUsuario === 1 &&
-    normalizarTexto(setorUsuario) === 'P4' &&
-    unidadesSaoIguais(unidadeUsuario, 'RPMont');
-
-  const podeSelecionarUnidadeRelatorio =
-    usuarioAdminMaster || usuarioAdminP4RPMont;
+  const podeSelecionarUnidadeRelatorio = usuarioAdminMaster;
 
   const [dataInicial, setDataInicial] = useState(primeiroDiaDoMes());
   const [dataFinal, setDataFinal] = useState(dataHoje());

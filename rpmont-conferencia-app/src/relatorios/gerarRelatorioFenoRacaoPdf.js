@@ -66,7 +66,8 @@ const obterDataTransferencia = (transferencia) => {
 
 const obterQuantidadeTransferencia = (transferencia) => {
   return Number(
-    transferencia?.quantidadeAprovada ??
+    transferencia?.quantidadeTransferida ??
+      transferencia?.quantidadeAprovada ??
       transferencia?.quantidadeSolicitada ??
       transferencia?.quantidade ??
       0
