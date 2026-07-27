@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   FaArrowLeft,
   FaBoxesStacked,
@@ -41,12 +41,20 @@ const PRODUTOS = [
     nome: 'Feno',
   },
   {
-    valor: 'RACAO_ADULTO',
-    nome: 'Ração Adulto',
+    valor: 'RACAO_ADULTO_PREMIUM',
+    nome: 'Ração Adulto Premium',
   },
   {
-    valor: 'RACAO_POTRO',
-    nome: 'Ração Potro',
+    valor: 'RACAO_ADULTO_MANUTENCAO',
+    nome: 'Ração Adulto Manutenção',
+  },
+  {
+    valor: 'RACAO_POTRO_PREMIUM',
+    nome: 'Ração Potro Premium',
+  },
+  {
+    valor: 'RACAO_POTRO_MANUTENCAO',
+    nome: 'Ração Potro Manutenção',
   },
 ];
 
@@ -118,8 +126,22 @@ const formatarData = (valor) => {
 
 const obterNomeProduto = (tipo) => {
   if (tipo === 'FENO') return 'Feno';
-  if (tipo === 'RACAO_ADULTO') return 'Ração Adulto';
-  if (tipo === 'RACAO_POTRO') return 'Ração Potro';
+
+  if (tipo === 'RACAO_ADULTO_PREMIUM') {
+    return 'Ração Adulto Premium';
+  }
+
+  if (tipo === 'RACAO_ADULTO_MANUTENCAO') {
+    return 'Ração Adulto Manutenção';
+  }
+
+  if (tipo === 'RACAO_POTRO_PREMIUM') {
+    return 'Ração Potro Premium';
+  }
+
+  if (tipo === 'RACAO_POTRO_MANUTENCAO') {
+    return 'Ração Potro Manutenção';
+  }
 
   return tipo || '-';
 };
@@ -272,20 +294,6 @@ const transferenciaEstaAprovada = (transferencia) => {
   );
 };
 
-const transferenciaTemUnidades = (transferencia) => {
-  return Boolean(
-    transferencia?.unidadeOrigem ||
-      transferencia?.UNIDADE_ORIGEM ||
-      transferencia?.origem ||
-      transferencia?.unidadeSaida ||
-      transferencia?.unidadeSolicitada ||
-      transferencia?.unidadeDestino ||
-      transferencia?.UNIDADE_DESTINO ||
-      transferencia?.destino ||
-      transferencia?.unidadeEntrada ||
-      transferencia?.unidadeSolicitante
-  );
-};
 
 const removerDuplicadasPorUnidade = (unidades) => {
   const mapa = new Map();
@@ -352,25 +360,31 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
 
   const nomeUnidadeRelatorio = relatorioGeral ? 'Geral' : unidadeRelatorio;
 
-  const filtrarPorUnidade = (item) => {
-    if (relatorioGeral) return true;
+  const filtrarPorUnidade = useCallback(
+    (item) => {
+      if (relatorioGeral) return true;
 
-    const unidadeRegistro = obterUnidadeRegistro(item);
+      const unidadeRegistro = obterUnidadeRegistro(item);
 
-    return unidadesSaoIguais(unidadeRegistro, unidadeRelatorio);
-  };
+      return unidadesSaoIguais(unidadeRegistro, unidadeRelatorio);
+    },
+    [relatorioGeral, unidadeRelatorio]
+  );
 
-  const filtrarTransferenciaPorUnidade = (transferencia) => {
-    if (relatorioGeral) return true;
+  const filtrarTransferenciaPorUnidade = useCallback(
+    (transferencia) => {
+      if (relatorioGeral) return true;
 
-    const origem = obterUnidadeOrigemTransferencia(transferencia);
-    const destino = obterUnidadeDestinoTransferencia(transferencia);
+      const origem = obterUnidadeOrigemTransferencia(transferencia);
+      const destino = obterUnidadeDestinoTransferencia(transferencia);
 
-    return (
-      unidadesSaoIguais(origem, unidadeRelatorio) ||
-      unidadesSaoIguais(destino, unidadeRelatorio)
-    );
-  };
+      return (
+        unidadesSaoIguais(origem, unidadeRelatorio) ||
+        unidadesSaoIguais(destino, unidadeRelatorio)
+      );
+    },
+    [relatorioGeral, unidadeRelatorio]
+  );
 
   const pesosDisponiveis = useMemo(() => {
     const registrosComuns = [...entradas, ...saidas, ...extravios]
@@ -408,64 +422,88 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     extravios,
     transferencias,
     produtoSelecionado,
-    unidadeRelatorio,
-    relatorioGeral,
+    filtrarPorUnidade,
+    filtrarTransferenciaPorUnidade,
   ]);
 
-  const filtrarPorPeso = (item) => {
-    if (pesoSelecionado === 'TODOS') return true;
+  const filtrarPorPeso = useCallback(
+    (item) => {
+      if (pesoSelecionado === 'TODOS') return true;
 
-    const pesoItem = obterPesoUnidadeRegistro(item);
+      const pesoItem = obterPesoUnidadeRegistro(item);
 
-    return Number(pesoItem) === Number(pesoSelecionado);
-  };
+      return Number(pesoItem) === Number(pesoSelecionado);
+    },
+    [pesoSelecionado]
+  );
 
-  const filtrarTransferenciaPorPeso = (transferencia) => {
-    if (pesoSelecionado === 'TODOS') return true;
+  const filtrarTransferenciaPorPeso = useCallback(
+    (transferencia) => {
+      if (pesoSelecionado === 'TODOS') return true;
 
-    const pesoTransferencia = obterPesoUnidadeTransferencia(transferencia);
+      const pesoTransferencia = obterPesoUnidadeTransferencia(transferencia);
 
-    return Number(pesoTransferencia) === Number(pesoSelecionado);
-  };
+      return Number(pesoTransferencia) === Number(pesoSelecionado);
+    },
+    [pesoSelecionado]
+  );
 
-  const filtrarPorPeriodoProdutoUnidadeEPeso = (item, campoData) => {
-    const dataItem = item?.[campoData];
+  const filtrarPorPeriodoProdutoUnidadeEPeso = useCallback(
+    (item, campoData) => {
+      const dataItem = item?.[campoData];
 
-    const dentroDoPeriodo =
-      (!dataInicial || dataItem >= dataInicial) &&
-      (!dataFinal || dataItem <= dataFinal);
+      const dentroDoPeriodo =
+        (!dataInicial || dataItem >= dataInicial) &&
+        (!dataFinal || dataItem <= dataFinal);
 
-    const produtoConfere =
-      produtoSelecionado === 'TODOS' ||
-      item?.tipoProduto === produtoSelecionado;
+      const produtoConfere =
+        produtoSelecionado === 'TODOS' ||
+        item?.tipoProduto === produtoSelecionado;
 
-    return (
-      dentroDoPeriodo &&
-      produtoConfere &&
-      filtrarPorUnidade(item) &&
-      filtrarPorPeso(item)
-    );
-  };
+      return (
+        dentroDoPeriodo &&
+        produtoConfere &&
+        filtrarPorUnidade(item) &&
+        filtrarPorPeso(item)
+      );
+    },
+    [
+      dataInicial,
+      dataFinal,
+      produtoSelecionado,
+      filtrarPorUnidade,
+      filtrarPorPeso,
+    ]
+  );
 
-  const filtrarTransferenciaPorPeriodoProdutoUnidadeEPeso = (transferencia) => {
-    const dataTransferencia = obterDataTransferencia(transferencia);
+  const filtrarTransferenciaPorPeriodoProdutoUnidadeEPeso = useCallback(
+    (transferencia) => {
+      const dataTransferencia = obterDataTransferencia(transferencia);
 
-    const dentroDoPeriodo =
-      (!dataInicial || dataTransferencia >= dataInicial) &&
-      (!dataFinal || dataTransferencia <= dataFinal);
+      const dentroDoPeriodo =
+        (!dataInicial || dataTransferencia >= dataInicial) &&
+        (!dataFinal || dataTransferencia <= dataFinal);
 
-    const produtoConfere =
-      produtoSelecionado === 'TODOS' ||
-      transferencia?.tipoProduto === produtoSelecionado;
+      const produtoConfere =
+        produtoSelecionado === 'TODOS' ||
+        transferencia?.tipoProduto === produtoSelecionado;
 
-    return (
-      transferenciaEstaAprovada(transferencia) &&
-      dentroDoPeriodo &&
-      produtoConfere &&
-      filtrarTransferenciaPorUnidade(transferencia) &&
-      filtrarTransferenciaPorPeso(transferencia)
-    );
-  };
+      return (
+        transferenciaEstaAprovada(transferencia) &&
+        dentroDoPeriodo &&
+        produtoConfere &&
+        filtrarTransferenciaPorUnidade(transferencia) &&
+        filtrarTransferenciaPorPeso(transferencia)
+      );
+    },
+    [
+      dataInicial,
+      dataFinal,
+      produtoSelecionado,
+      filtrarTransferenciaPorUnidade,
+      filtrarTransferenciaPorPeso,
+    ]
+  );
 
   const entradasFiltradas = useMemo(() => {
     return entradas
@@ -477,12 +515,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       );
   }, [
     entradas,
-    dataInicial,
-    dataFinal,
-    produtoSelecionado,
-    pesoSelecionado,
-    unidadeRelatorio,
-    relatorioGeral,
+    filtrarPorPeriodoProdutoUnidadeEPeso,
   ]);
 
   const saidasFiltradas = useMemo(() => {
@@ -495,12 +528,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       );
   }, [
     saidas,
-    dataInicial,
-    dataFinal,
-    produtoSelecionado,
-    pesoSelecionado,
-    unidadeRelatorio,
-    relatorioGeral,
+    filtrarPorPeriodoProdutoUnidadeEPeso,
   ]);
 
   const extraviosFiltrados = useMemo(() => {
@@ -515,12 +543,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       );
   }, [
     extravios,
-    dataInicial,
-    dataFinal,
-    produtoSelecionado,
-    pesoSelecionado,
-    unidadeRelatorio,
-    relatorioGeral,
+    filtrarPorPeriodoProdutoUnidadeEPeso,
   ]);
 
   const transferenciasFiltradas = useMemo(() => {
@@ -533,12 +556,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       );
   }, [
     transferencias,
-    dataInicial,
-    dataFinal,
-    produtoSelecionado,
-    pesoSelecionado,
-    unidadeRelatorio,
-    relatorioGeral,
+    filtrarTransferenciaPorPeriodoProdutoUnidadeEPeso,
   ]);
 
   const transferenciasRecebidas = useMemo(() => {
@@ -578,9 +596,8 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   }, [
     entradas,
     produtoSelecionado,
-    pesoSelecionado,
-    unidadeRelatorio,
-    relatorioGeral,
+    filtrarPorUnidade,
+    filtrarPorPeso,
   ]);
 
   const resumo = useMemo(() => {
@@ -694,7 +711,13 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   ]);
 
   const resumoPorProduto = useMemo(() => {
-    const tipos = ['FENO', 'RACAO_ADULTO', 'RACAO_POTRO'];
+    const tipos = [
+      'FENO',
+      'RACAO_ADULTO_PREMIUM',
+      'RACAO_ADULTO_MANUTENCAO',
+      'RACAO_POTRO_PREMIUM',
+      'RACAO_POTRO_MANUTENCAO',
+    ];
 
     return tipos.map((tipo) => {
       const entradasDoProduto = entradas.filter((entrada) => {
@@ -785,9 +808,8 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     transferenciasFiltradas,
     transferenciasRecebidas,
     transferenciasEnviadas,
-    pesoSelecionado,
-    unidadeRelatorio,
-    relatorioGeral,
+    filtrarPorUnidade,
+    filtrarPorPeso,
   ]);
 
   const nomePesoRelatorio =

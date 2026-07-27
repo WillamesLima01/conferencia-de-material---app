@@ -133,7 +133,7 @@ public class LoteFenoRacao {
             name = "usuarioCadastroID",
             nullable = false
     )
-    private Integer usuarioCadastroId;
+    private Long usuarioCadastroId;
 
     @Column(
             name = "dataCadastro",
@@ -144,7 +144,7 @@ public class LoteFenoRacao {
     private LocalDateTime dataCadastro;
 
     @Column(name = "usuarioModificadorID")
-    private Integer usuarioModificadorId;
+    private Long usuarioModificadorId;
 
     @Column(name = "dataModificacao")
     private LocalDateTime dataModificacao;

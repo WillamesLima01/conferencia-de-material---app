@@ -43,7 +43,7 @@ public record TransferenciaFenoRacaoResponseDTO(
 
         Integer saldoPosteriorOrigem,
 
-        Integer aprovadoPorId,
+        Long aprovadoPorId,
 
         String aprovadoPorNome,
 

@@ -57,7 +57,7 @@ public record MovimentacaoFenoRacaoResponseDTO(
 
         String responsavel,
 
-        Integer usuarioId,
+        Long usuarioId,
 
         String usuarioSetor,
 
@@ -69,7 +69,7 @@ public record MovimentacaoFenoRacaoResponseDTO(
 
         LocalDateTime dataCadastro,
 
-        Integer usuarioModificadorId,
+        Long usuarioModificadorId,
 
         LocalDateTime dataModificacao
 

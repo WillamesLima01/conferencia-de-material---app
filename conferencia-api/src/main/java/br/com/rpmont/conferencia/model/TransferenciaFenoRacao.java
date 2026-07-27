@@ -117,7 +117,7 @@ public class TransferenciaFenoRacao {
             name = "aprovadoPorID",
             nullable = false
     )
-    private Integer aprovadoPorId;
+    private Long aprovadoPorId;
 
     @Column(
             name = "dataTransferencia",

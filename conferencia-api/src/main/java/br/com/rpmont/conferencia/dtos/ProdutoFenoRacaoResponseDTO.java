@@ -23,11 +23,11 @@ public record ProdutoFenoRacaoResponseDTO(
 
         SituacaoProdutoFenoRacao situacao,
 
-        Integer usuarioCadastroId,
+        Long usuarioCadastroId,
 
         LocalDateTime dataCadastro,
 
-        Integer usuarioModificadorId,
+        Long usuarioModificadorId,
 
         LocalDateTime dataModificacao
 

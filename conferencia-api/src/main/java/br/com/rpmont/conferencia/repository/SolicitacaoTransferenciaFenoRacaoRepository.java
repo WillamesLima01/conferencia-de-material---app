@@ -35,7 +35,7 @@ public interface SolicitacaoTransferenciaFenoRacaoRepository
 
     List<SolicitacaoTransferenciaFenoRacao>
     findBySolicitadoPorIdOrderByDataSolicitacaoDesc(
-            Integer solicitadoPorId
+            Long solicitadoPorId
     );
 
     Optional<SolicitacaoTransferenciaFenoRacao>

@@ -33,8 +33,8 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(
                         name = "uk_produto_feno_racao_tipo_peso",
                         columnNames = {
-                                "tipoProduto",
-                                "pesoUnidadeKg"
+                                "`tipoProduto`",
+                                "`pesoUnidadeKg`"
                         }
                 )
         }
@@ -43,19 +43,19 @@ public class ProdutoFenoRacao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "`ID`")
     private Integer id;
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "tipoProduto",
+            name = "`tipoProduto`",
             nullable = false,
             length = 30
     )
     private TipoProdutoFenoRacao tipoProduto;
 
     @Column(
-            name = "nomeProduto",
+            name = "`nomeProduto`",
             nullable = false,
             length = 100
     )
@@ -63,14 +63,14 @@ public class ProdutoFenoRacao {
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "unidadeControle",
+            name = "`unidadeControle`",
             nullable = false,
             length = 20
     )
     private UnidadeControleFenoRacao unidadeControle;
 
     @Column(
-            name = "pesoUnidadeKg",
+            name = "`pesoUnidadeKg`",
             nullable = false,
             precision = 10,
             scale = 2
@@ -78,36 +78,35 @@ public class ProdutoFenoRacao {
     private BigDecimal pesoUnidadeKg;
 
     @Column(
-            name = "descricao",
+            name = "`descricao`",
             length = 300
     )
     private String descricao;
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "situacao",
+            name = "`situacao`",
             nullable = false,
             length = 20
     )
     private SituacaoProdutoFenoRacao situacao;
 
     @Column(
-            name = "usuarioCadastroID",
+            name = "`usuarioCadastroID`",
             nullable = false
     )
-    private Integer usuarioCadastroId;
+    private Long usuarioCadastroId;
 
     @Column(
-            name = "dataCadastro",
+            name = "`dataCadastro`",
             nullable = false,
-            insertable = false,
             updatable = false
     )
     private LocalDateTime dataCadastro;
 
-    @Column(name = "usuarioModificadorID")
-    private Integer usuarioModificadorId;
+    @Column(name = "`usuarioModificadorID`")
+    private Long usuarioModificadorId;
 
-    @Column(name = "dataModificacao")
+    @Column(name = "`dataModificacao`")
     private LocalDateTime dataModificacao;
 }

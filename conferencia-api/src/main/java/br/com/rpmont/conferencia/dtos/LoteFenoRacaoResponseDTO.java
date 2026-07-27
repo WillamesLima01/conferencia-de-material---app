@@ -50,11 +50,11 @@ public record LoteFenoRacaoResponseDTO(
 
         SituacaoLoteFenoRacao situacao,
 
-        Integer usuarioCadastroId,
+        Long usuarioCadastroId,
 
         LocalDateTime dataCadastro,
 
-        Integer usuarioModificadorId,
+        Long usuarioModificadorId,
 
         LocalDateTime dataModificacao
 

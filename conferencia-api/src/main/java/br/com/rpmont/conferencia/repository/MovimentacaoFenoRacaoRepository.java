@@ -41,7 +41,7 @@ public interface MovimentacaoFenoRacaoRepository
 
     List<MovimentacaoFenoRacao>
     findByUsuarioIdOrderByDataOperacaoDescDataCadastroDesc(
-            Integer usuarioId
+            Long usuarioId
     );
 
     List<MovimentacaoFenoRacao>

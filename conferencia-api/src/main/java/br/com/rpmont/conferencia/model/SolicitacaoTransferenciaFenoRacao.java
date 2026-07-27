@@ -116,7 +116,7 @@ public class SolicitacaoTransferenciaFenoRacao {
             name = "solicitadoPorID",
             nullable = false
     )
-    private Integer solicitadoPorId;
+    private Long solicitadoPorId;
 
     @Column(
             name = "dataSolicitacao",
@@ -127,7 +127,7 @@ public class SolicitacaoTransferenciaFenoRacao {
     private LocalDateTime dataSolicitacao;
 
     @Column(name = "respondidoPorID")
-    private Integer respondidoPorId;
+    private Long respondidoPorId;
 
     @Column(name = "dataResposta")
     private LocalDateTime dataResposta;

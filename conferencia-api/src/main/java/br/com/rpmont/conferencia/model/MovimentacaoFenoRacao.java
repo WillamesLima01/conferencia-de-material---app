@@ -159,7 +159,7 @@ public class MovimentacaoFenoRacao {
             name = "usuarioID",
             nullable = false
     )
-    private Integer usuarioId;
+    private Long usuarioId;
 
     @Column(
             name = "usuarioSetor",
@@ -191,7 +191,7 @@ public class MovimentacaoFenoRacao {
     private LocalDateTime dataCadastro;
 
     @Column(name = "usuarioModificadorID")
-    private Integer usuarioModificadorId;
+    private Long usuarioModificadorId;
 
     @Column(name = "dataModificacao")
     private LocalDateTime dataModificacao;

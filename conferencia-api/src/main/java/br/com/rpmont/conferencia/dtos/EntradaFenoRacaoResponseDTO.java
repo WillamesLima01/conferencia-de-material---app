@@ -48,7 +48,7 @@ public record EntradaFenoRacaoResponseDTO(
 
         SituacaoLoteFenoRacao situacao,
 
-        Integer usuarioCadastroId,
+        Long usuarioCadastroId,
 
         LocalDateTime dataCadastro
 

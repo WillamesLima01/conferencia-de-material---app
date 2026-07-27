@@ -41,13 +41,13 @@ public record SolicitacaoTransferenciaFenoRacaoResponseDTO(
 
         StatusSolicitacaoTransferenciaFenoRacao status,
 
-        Integer solicitadoPorId,
+        Long solicitadoPorId,
 
         String solicitadoPorNome,
 
         LocalDateTime dataSolicitacao,
 
-        Integer respondidoPorId,
+        Long respondidoPorId,
 
         String respondidoPorNome,
 
