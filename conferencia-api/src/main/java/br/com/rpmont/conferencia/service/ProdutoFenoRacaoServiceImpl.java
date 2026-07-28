@@ -11,6 +11,7 @@ import br.com.rpmont.conferencia.exception.ForbiddenException;
 import br.com.rpmont.conferencia.exception.ResourceNotFoundException;
 import br.com.rpmont.conferencia.model.ProdutoFenoRacao;
 import br.com.rpmont.conferencia.model.Usuario;
+import br.com.rpmont.conferencia.repository.LoteFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.ProdutoFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,8 @@ public class ProdutoFenoRacaoServiceImpl
     private static final String STATUS_LIBERADO = "LIBERADO";
 
     private final ProdutoFenoRacaoRepository produtoRepository;
+
+    private final LoteFenoRacaoRepository loteRepository;
 
     private final UsuarioRepository usuarioRepository;
 
@@ -151,7 +154,7 @@ public class ProdutoFenoRacaoServiceImpl
 
     /*
      * ==========================================
-     * LISTAR ATIVOS
+     * LISTAR PRODUTOS ATIVOS
      * ==========================================
      */
 
@@ -221,6 +224,22 @@ public class ProdutoFenoRacaoServiceImpl
                         produtoId
                 );
 
+        /*
+         * Usuário comum não deve visualizar diretamente
+         * um produto administrativo que esteja inativo.
+         */
+        if (
+                produto.getSituacao() ==
+                        SituacaoProdutoFenoRacao.INATIVO &&
+                        !usuarioEhAdministrador(
+                                usuarioLogado
+                        )
+        ) {
+            throw new ResourceNotFoundException(
+                    "Produto de feno ou ração não encontrado."
+            );
+        }
+
         return converterParaResponse(
                 produto
         );
@@ -274,6 +293,12 @@ public class ProdutoFenoRacaoServiceImpl
                 normalizarPeso(
                         request.pesoUnidadeKg()
                 );
+
+        validarAlteracaoEstruturalDoProduto(
+                produto,
+                request,
+                pesoUnidadeKg
+        );
 
         produtoRepository
                 .findByTipoProdutoAndPesoUnidadeKg(
@@ -384,6 +409,19 @@ public class ProdutoFenoRacaoServiceImpl
             );
         }
 
+        boolean possuiLoteComSaldo =
+                loteRepository
+                        .existsByProdutoIdAndQuantidadeAtualGreaterThan(
+                                produtoId,
+                                0
+                        );
+
+        if (possuiLoteComSaldo) {
+            throw new ConflictException(
+                    "Não é possível inativar o produto porque existem lotes com saldo disponível."
+            );
+        }
+
         produto.setSituacao(
                 SituacaoProdutoFenoRacao.INATIVO
         );
@@ -486,7 +524,7 @@ public class ProdutoFenoRacaoServiceImpl
                 matriculaUsuario == null ||
                         matriculaUsuario.isBlank()
         ) {
-            throw new BusinessException(
+            throw new ForbiddenException(
                     "Usuário autenticado não identificado."
             );
         }
@@ -499,8 +537,8 @@ public class ProdutoFenoRacaoServiceImpl
                         matriculaFormatada
                 )
                 .orElseThrow(
-                        () -> new ResourceNotFoundException(
-                                "Usuário autenticado não encontrado."
+                        () -> new ForbiddenException(
+                                "O usuário autenticado não está disponível no sistema."
                         )
                 );
     }
@@ -554,17 +592,32 @@ public class ProdutoFenoRacaoServiceImpl
             );
         }
 
-        int nivelUsuario =
-                usuario.getNivel();
-
         if (
-                nivelUsuario != NIVEL_ADMIN_MASTER &&
-                        nivelUsuario != NIVEL_ADMIN
+                !usuarioEhAdministrador(
+                        usuario
+                )
         ) {
             throw new ForbiddenException(
                     "Somente administradores podem gerenciar os produtos de feno e ração."
             );
         }
+    }
+
+    private boolean usuarioEhAdministrador(
+            Usuario usuario
+    ) {
+        if (
+                usuario == null ||
+                        usuario.getNivel() == null
+        ) {
+            return false;
+        }
+
+        int nivelUsuario =
+                usuario.getNivel();
+
+        return nivelUsuario == NIVEL_ADMIN_MASTER ||
+                nivelUsuario == NIVEL_ADMIN;
     }
 
     /*
@@ -612,8 +665,10 @@ public class ProdutoFenoRacaoServiceImpl
         }
 
         if (
-                tipoProduto == TipoProdutoFenoRacao.FENO &&
-                        unidadeControle != UnidadeControleFenoRacao.FARDO
+                tipoProduto ==
+                        TipoProdutoFenoRacao.FENO &&
+                        unidadeControle !=
+                                UnidadeControleFenoRacao.FARDO
         ) {
             throw new BusinessException(
                     "O feno deve utilizar FARDO como unidade de controle."
@@ -621,8 +676,10 @@ public class ProdutoFenoRacaoServiceImpl
         }
 
         if (
-                tipoProduto != TipoProdutoFenoRacao.FENO &&
-                        unidadeControle != UnidadeControleFenoRacao.SACO
+                tipoProduto !=
+                        TipoProdutoFenoRacao.FENO &&
+                        unidadeControle !=
+                                UnidadeControleFenoRacao.SACO
         ) {
             throw new BusinessException(
                     "A ração deve utilizar SACO como unidade de controle."
@@ -649,12 +706,63 @@ public class ProdutoFenoRacaoServiceImpl
         }
     }
 
+    /*
+     * Impede a alteração do tipo, da unidade de controle
+     * ou do peso quando o produto já possui lote vinculado.
+     *
+     * Nome e descrição continuam podendo ser alterados.
+     */
+    private void validarAlteracaoEstruturalDoProduto(
+            ProdutoFenoRacao produto,
+            ProdutoFenoRacaoRequestDTO request,
+            BigDecimal pesoUnidadeKg
+    ) {
+        boolean alterouTipo =
+                produto.getTipoProduto() !=
+                        request.tipoProduto();
+
+        boolean alterouUnidadeControle =
+                produto.getUnidadeControle() !=
+                        request.unidadeControle();
+
+        boolean alterouPeso =
+                produto.getPesoUnidadeKg() == null ||
+                        produto.getPesoUnidadeKg()
+                                .compareTo(
+                                        pesoUnidadeKg
+                                ) != 0;
+
+        boolean alterouDadosEstruturais =
+                alterouTipo ||
+                        alterouUnidadeControle ||
+                        alterouPeso;
+
+        if (!alterouDadosEstruturais) {
+            return;
+        }
+
+        boolean possuiLoteVinculado =
+                loteRepository
+                        .existsByProdutoId(
+                                produto.getId()
+                        );
+
+        if (possuiLoteVinculado) {
+            throw new ConflictException(
+                    "Não é possível alterar o tipo, a unidade de controle ou o peso de um produto que já possui lotes vinculados."
+            );
+        }
+    }
+
     private ProdutoFenoRacao buscarProdutoPorId(
             Integer produtoId
     ) {
-        if (produtoId == null) {
+        if (
+                produtoId == null ||
+                        produtoId <= 0
+        ) {
             throw new BusinessException(
-                    "O ID do produto é obrigatório."
+                    "O ID do produto deve ser maior que zero."
             );
         }
 
@@ -689,7 +797,16 @@ public class ProdutoFenoRacaoServiceImpl
             );
         }
 
-        return pesoUnidadeKg.stripTrailingZeros();
+        try {
+            return pesoUnidadeKg.setScale(
+                    2,
+                    java.math.RoundingMode.UNNECESSARY
+            );
+        } catch (ArithmeticException exception) {
+            throw new BusinessException(
+                    "O peso por unidade deve possuir no máximo duas casas decimais."
+            );
+        }
     }
 
     private String normalizarTextoObrigatorio(

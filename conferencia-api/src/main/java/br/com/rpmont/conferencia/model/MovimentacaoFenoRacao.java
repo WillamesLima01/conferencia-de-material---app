@@ -34,39 +34,39 @@ public class MovimentacaoFenoRacao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "`ID`")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "produtoID",
+            name = "`produtoID`",
             nullable = false
     )
     private ProdutoFenoRacao produto;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "loteID",
+            name = "`loteID`",
             nullable = false
     )
     private LoteFenoRacao lote;
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "tipoMovimentacao",
+            name = "`tipoMovimentacao`",
             nullable = false,
             length = 40
     )
     private TipoMovimentacaoFenoRacao tipoMovimentacao;
 
     @Column(
-            name = "quantidadeUnidades",
+            name = "`quantidadeUnidades`",
             nullable = false
     )
     private Integer quantidadeUnidades;
 
     @Column(
-            name = "pesoUnidadeKg",
+            name = "`pesoUnidadeKg`",
             nullable = false,
             precision = 10,
             scale = 2
@@ -74,14 +74,14 @@ public class MovimentacaoFenoRacao {
     private BigDecimal pesoUnidadeKg;
 
     @Column(
-            name = "quantidadeSolicitadaKg",
+            name = "`quantidadeSolicitadaKg`",
             precision = 14,
             scale = 2
     )
     private BigDecimal quantidadeSolicitadaKg;
 
     @Column(
-            name = "pesoMovimentadoKg",
+            name = "`pesoMovimentadoKg`",
             nullable = false,
             precision = 14,
             scale = 2
@@ -89,110 +89,113 @@ public class MovimentacaoFenoRacao {
     private BigDecimal pesoMovimentadoKg;
 
     @Column(
-            name = "sobraCalculadaKg",
+            name = "`sobraCalculadaKg`",
             precision = 14,
             scale = 2
     )
     private BigDecimal sobraCalculadaKg;
 
     @Column(
-            name = "saldoAnterior",
+            name = "`saldoAnterior`",
             nullable = false
     )
     private Integer saldoAnterior;
 
     @Column(
-            name = "saldoPosterior",
+            name = "`saldoPosterior`",
             nullable = false
     )
     private Integer saldoPosterior;
 
     @Column(
-            name = "unidadeOrigem",
+            name = "`unidadeOrigem`",
             length = 50
     )
     private String unidadeOrigem;
 
     @Column(
-            name = "unidadeDestino",
+            name = "`unidadeDestino`",
             length = 50
     )
     private String unidadeDestino;
 
     @Column(
-            name = "dataOperacao",
+            name = "`dataOperacao`",
             nullable = false
     )
     private LocalDate dataOperacao;
 
     @Column(
-            name = "servico",
+            name = "`servico`",
             length = 150
     )
     private String servico;
 
     @Column(
-            name = "motivo",
+            name = "`motivo`",
             length = 250
     )
     private String motivo;
 
     @Column(
-            name = "observacao",
+            name = "`observacao`",
             length = 500
     )
     private String observacao;
 
     @Column(
-            name = "numeroDocumento",
+            name = "`numeroDocumento`",
             length = 100
     )
     private String numeroDocumento;
 
     @Column(
-            name = "responsavel",
+            name = "`responsavel`",
             length = 150
     )
     private String responsavel;
 
+    /*
+     * Confirme no banco se a coluna é usuarioID
+     * ou usuarioCadastroID.
+     */
     @Column(
-            name = "usuarioID",
+            name = "`usuarioID`",
             nullable = false
     )
     private Long usuarioId;
 
     @Column(
-            name = "usuarioSetor",
+            name = "`usuarioSetor`",
             length = 100
     )
     private String usuarioSetor;
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "situacao",
+            name = "`situacao`",
             nullable = false,
             length = 20
     )
     private SituacaoMovimentacaoFenoRacao situacao;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "movimentacaoOrigemID")
+    @JoinColumn(name = "`movimentacaoOrigemID`")
     private MovimentacaoFenoRacao movimentacaoOrigem;
 
-    @Column(name = "transferenciaID")
+    @Column(name = "`transferenciaID`")
     private Long transferenciaId;
 
     @Column(
-            name = "dataCadastro",
+            name = "`dataCadastro`",
             nullable = false,
-            insertable = false,
             updatable = false
     )
     private LocalDateTime dataCadastro;
 
-    @Column(name = "usuarioModificadorID")
+    @Column(name = "`usuarioModificadorID`")
     private Long usuarioModificadorId;
 
-    @Column(name = "dataModificacao")
+    @Column(name = "`dataModificacao`")
     private LocalDateTime dataModificacao;
 }

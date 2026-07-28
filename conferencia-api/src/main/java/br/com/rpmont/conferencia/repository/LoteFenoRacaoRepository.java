@@ -26,14 +26,42 @@ public interface LoteFenoRacaoRepository
             SituacaoLoteFenoRacao situacao
     );
 
+    List<LoteFenoRacao>
+    findByProdutoIdAndUnidadeAndSituacaoAndQuantidadeAtualGreaterThanOrderByDataEntradaAsc(
+            Integer produtoId,
+            String unidade,
+            SituacaoLoteFenoRacao situacao,
+            Integer quantidadeAtual
+    );
+
+    List<LoteFenoRacao> findByProdutoIdAndUnidadeOrderByDataEntradaDesc(
+            Integer produtoId,
+            String unidade
+    );
+
     Optional<LoteFenoRacao> findByIdAndUnidade(
             Integer id,
             String unidade
+    );
+
+    Optional<LoteFenoRacao> findByIdAndUnidadeAndSituacao(
+            Integer id,
+            String unidade,
+            SituacaoLoteFenoRacao situacao
     );
 
     boolean existsByCodigoLoteAndProdutoIdAndUnidade(
             String codigoLote,
             Integer produtoId,
             String unidade
+    );
+
+    boolean existsByProdutoId(
+            Integer produtoId
+    );
+
+    boolean existsByProdutoIdAndQuantidadeAtualGreaterThan(
+            Integer produtoId,
+            Integer quantidadeAtual
     );
 }

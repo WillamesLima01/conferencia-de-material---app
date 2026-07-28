@@ -33,36 +33,36 @@ public class LoteFenoRacao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "`ID`")
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "produtoID",
+            name = "`produtoID`",
             nullable = false
     )
     private ProdutoFenoRacao produto;
 
     @Column(
-            name = "codigoLote",
+            name = "`codigoLote`",
             length = 100
     )
     private String codigoLote;
 
     @Column(
-            name = "quantidadeInicial",
+            name = "`quantidadeInicial`",
             nullable = false
     )
     private Integer quantidadeInicial;
 
     @Column(
-            name = "quantidadeAtual",
+            name = "`quantidadeAtual`",
             nullable = false
     )
     private Integer quantidadeAtual;
 
     @Column(
-            name = "pesoTotalInicialKg",
+            name = "`pesoTotalInicialKg`",
             nullable = false,
             precision = 14,
             scale = 2
@@ -70,7 +70,7 @@ public class LoteFenoRacao {
     private BigDecimal pesoTotalInicialKg;
 
     @Column(
-            name = "pesoTotalAtualKg",
+            name = "`pesoTotalAtualKg`",
             nullable = false,
             precision = 14,
             scale = 2
@@ -78,44 +78,44 @@ public class LoteFenoRacao {
     private BigDecimal pesoTotalAtualKg;
 
     @Column(
-            name = "dataEntrada",
+            name = "`dataEntrada`",
             nullable = false
     )
     private LocalDate dataEntrada;
 
-    @Column(name = "validade")
+    @Column(name = "`validade`")
     private LocalDate validade;
 
     @Column(
-            name = "fornecedor",
+            name = "`fornecedor`",
             length = 150
     )
     private String fornecedor;
 
     @Column(
-            name = "numeroDocumento",
+            name = "`numeroDocumento`",
             length = 100
     )
     private String numeroDocumento;
 
-    @Column(name = "transferenciaOrigemID")
+    @Column(name = "`transferenciaOrigemID`")
     private Long transferenciaOrigemId;
 
     @Column(
-            name = "responsavelRecebimento",
+            name = "`responsavelRecebimento`",
             nullable = false,
             length = 150
     )
     private String responsavelRecebimento;
 
     @Column(
-            name = "observacao",
+            name = "`observacao`",
             length = 500
     )
     private String observacao;
 
     @Column(
-            name = "unidade",
+            name = "`unidade`",
             nullable = false,
             length = 50
     )
@@ -123,29 +123,28 @@ public class LoteFenoRacao {
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "situacao",
+            name = "`situacao`",
             nullable = false,
             length = 30
     )
     private SituacaoLoteFenoRacao situacao;
 
     @Column(
-            name = "usuarioCadastroID",
+            name = "`usuarioCadastroID`",
             nullable = false
     )
     private Long usuarioCadastroId;
 
     @Column(
-            name = "dataCadastro",
+            name = "`dataCadastro`",
             nullable = false,
-            insertable = false,
             updatable = false
     )
     private LocalDateTime dataCadastro;
 
-    @Column(name = "usuarioModificadorID")
+    @Column(name = "`usuarioModificadorID`")
     private Long usuarioModificadorId;
 
-    @Column(name = "dataModificacao")
+    @Column(name = "`dataModificacao`")
     private LocalDateTime dataModificacao;
 }

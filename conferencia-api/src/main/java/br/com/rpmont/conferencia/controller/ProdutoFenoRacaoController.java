@@ -3,13 +3,15 @@ package br.com.rpmont.conferencia.controller;
 import br.com.rpmont.conferencia.dtos.ProdutoFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.ProdutoFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.enums.TipoProdutoFenoRacao;
-import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.service.ProdutoFenoRacaoService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/feno-racao/produtos")
 @RequiredArgsConstructor
+@Validated
 public class ProdutoFenoRacaoController {
 
     private final ProdutoFenoRacaoService produtoService;
@@ -44,9 +47,7 @@ public class ProdutoFenoRacaoController {
     ) {
         return produtoService.cadastrar(
                 request,
-                obterMatriculaUsuario(
-                        authentication
-                )
+                obterMatriculaUsuario(authentication)
         );
     }
 
@@ -57,7 +58,6 @@ public class ProdutoFenoRacaoController {
      */
 
     @GetMapping
-    @ResponseStatus(HttpStatus.OK)
     public List<ProdutoFenoRacaoResponseDTO> listarAtivos(
             @RequestParam(required = false)
             TipoProdutoFenoRacao tipoProduto,
@@ -65,9 +65,7 @@ public class ProdutoFenoRacaoController {
     ) {
         return produtoService.listarAtivos(
                 tipoProduto,
-                obterMatriculaUsuario(
-                        authentication
-                )
+                obterMatriculaUsuario(authentication)
         );
     }
 
@@ -78,16 +76,15 @@ public class ProdutoFenoRacaoController {
      */
 
     @GetMapping("/{produtoId}")
-    @ResponseStatus(HttpStatus.OK)
     public ProdutoFenoRacaoResponseDTO buscarPorId(
-            @PathVariable Integer produtoId,
+            @PathVariable
+            @Positive(message = "O ID do produto deve ser maior que zero.")
+            Integer produtoId,
             Authentication authentication
     ) {
         return produtoService.buscarPorId(
                 produtoId,
-                obterMatriculaUsuario(
-                        authentication
-                )
+                obterMatriculaUsuario(authentication)
         );
     }
 
@@ -98,18 +95,20 @@ public class ProdutoFenoRacaoController {
      */
 
     @PutMapping("/{produtoId}")
-    @ResponseStatus(HttpStatus.OK)
     public ProdutoFenoRacaoResponseDTO atualizar(
-            @PathVariable Integer produtoId,
-            @Valid @RequestBody ProdutoFenoRacaoRequestDTO request,
+            @PathVariable
+            @Positive(message = "O ID do produto deve ser maior que zero.")
+            Integer produtoId,
+
+            @Valid @RequestBody
+            ProdutoFenoRacaoRequestDTO request,
+
             Authentication authentication
     ) {
         return produtoService.atualizar(
                 produtoId,
                 request,
-                obterMatriculaUsuario(
-                        authentication
-                )
+                obterMatriculaUsuario(authentication)
         );
     }
 
@@ -120,16 +119,15 @@ public class ProdutoFenoRacaoController {
      */
 
     @PatchMapping("/{produtoId}/inativar")
-    @ResponseStatus(HttpStatus.OK)
     public ProdutoFenoRacaoResponseDTO inativar(
-            @PathVariable Integer produtoId,
+            @PathVariable
+            @Positive(message = "O ID do produto deve ser maior que zero.")
+            Integer produtoId,
             Authentication authentication
     ) {
         return produtoService.inativar(
                 produtoId,
-                obterMatriculaUsuario(
-                        authentication
-                )
+                obterMatriculaUsuario(authentication)
         );
     }
 
@@ -140,16 +138,15 @@ public class ProdutoFenoRacaoController {
      */
 
     @PatchMapping("/{produtoId}/reativar")
-    @ResponseStatus(HttpStatus.OK)
     public ProdutoFenoRacaoResponseDTO reativar(
-            @PathVariable Integer produtoId,
+            @PathVariable
+            @Positive(message = "O ID do produto deve ser maior que zero.")
+            Integer produtoId,
             Authentication authentication
     ) {
         return produtoService.reativar(
                 produtoId,
-                obterMatriculaUsuario(
-                        authentication
-                )
+                obterMatriculaUsuario(authentication)
         );
     }
 
@@ -166,37 +163,36 @@ public class ProdutoFenoRacaoController {
                 authentication == null ||
                         !authentication.isAuthenticated()
         ) {
-            throw new BusinessException(
+            throw new AuthenticationCredentialsNotFoundException(
                     "Usuário autenticado não identificado."
             );
         }
 
-        Object principal =
-                authentication.getPrincipal();
+        Object principal = authentication.getPrincipal();
 
         if (principal instanceof Usuario usuario) {
+            String matricula = usuario.getMatricula();
+
             if (
-                    usuario.getMatricula() == null ||
-                            usuario.getMatricula().isBlank()
+                    matricula == null ||
+                            matricula.isBlank()
             ) {
-                throw new BusinessException(
+                throw new AuthenticationCredentialsNotFoundException(
                         "O usuário autenticado não possui matrícula cadastrada."
                 );
             }
 
-            return usuario
-                    .getMatricula()
-                    .trim();
+            return matricula.trim();
         }
 
-        String nomeAutenticacao =
-                authentication.getName();
+        String nomeAutenticacao = authentication.getName();
 
         if (
                 nomeAutenticacao == null ||
-                        nomeAutenticacao.isBlank()
+                        nomeAutenticacao.isBlank() ||
+                        "anonymousUser".equalsIgnoreCase(nomeAutenticacao)
         ) {
-            throw new BusinessException(
+            throw new AuthenticationCredentialsNotFoundException(
                     "Usuário autenticado não identificado."
             );
         }

@@ -50,7 +50,11 @@ public record EntradaFenoRacaoResponseDTO(
 
         Long usuarioCadastroId,
 
-        LocalDateTime dataCadastro
+        LocalDateTime dataCadastro,
+
+        Long usuarioModificadorId,
+
+        LocalDateTime dataModificacao
 
 ) {
 }
