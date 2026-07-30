@@ -31,25 +31,25 @@ public class NotificacaoFenoRacao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "`ID`")
     private Long id;
 
     @Column(
-            name = "unidadeDestino",
+            name = "`unidadeDestino`",
             nullable = false,
             length = 50
     )
     private String unidadeDestino;
 
     @Column(
-            name = "titulo",
+            name = "`titulo`",
             nullable = false,
             length = 150
     )
     private String titulo;
 
     @Column(
-            name = "mensagem",
+            name = "`mensagem`",
             nullable = false,
             length = 500
     )
@@ -57,33 +57,32 @@ public class NotificacaoFenoRacao {
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "tipo",
+            name = "`tipo`",
             nullable = false,
             length = 50
     )
     private TipoNotificacaoFenoRacao tipo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "solicitacaoID")
+    @JoinColumn(name = "`solicitacaoID`")
     private SolicitacaoTransferenciaFenoRacao solicitacao;
 
     @Column(
-            name = "lida",
+            name = "`lida`",
             nullable = false
     )
     private Boolean lida;
 
     @Column(
-            name = "dataCriacao",
+            name = "`dataCriacao`",
             nullable = false,
-            insertable = false,
             updatable = false
     )
     private LocalDateTime dataCriacao;
 
-    @Column(name = "dataLeitura")
+    @Column(name = "`dataLeitura`")
     private LocalDateTime dataLeitura;
 
-    @Column(name = "usuarioLeituraID")
+    @Column(name = "`usuarioLeituraID`")
     private Integer usuarioLeituraId;
 }

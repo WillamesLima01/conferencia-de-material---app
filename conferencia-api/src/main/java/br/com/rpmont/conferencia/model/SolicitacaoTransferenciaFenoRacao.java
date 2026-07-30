@@ -32,45 +32,49 @@ public class SolicitacaoTransferenciaFenoRacao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "`ID`")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
-            name = "produtoID",
+            name = "`produtoID`",
             nullable = false
     )
     private ProdutoFenoRacao produto;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "loteSolicitadoID",
-            nullable = false
-    )
-    private LoteFenoRacao loteSolicitado;
+    /*
+     * O lote será selecionado pela unidade de origem
+     * no momento da aprovação da transferência.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "`loteSolicitadoID`")
+    private LoteFenoRacao loteSelecionado;
 
     @Column(
-            name = "unidadeSolicitante",
+            name = "`unidadeSolicitante`",
             nullable = false,
             length = 50
     )
     private String unidadeSolicitante;
 
     @Column(
-            name = "unidadeOrigem",
+            name = "`unidadeOrigem`",
             nullable = false,
             length = 50
     )
     private String unidadeOrigem;
 
     @Column(
-            name = "quantidadeSolicitada",
+            name = "`quantidadeSolicitada`",
             nullable = false
     )
     private Integer quantidadeSolicitada;
 
+    @Column(name = "`quantidadeAprovada`")
+    private Integer quantidadeAprovada;
+
     @Column(
-            name = "pesoUnidadeKg",
+            name = "`pesoUnidadeKg`",
             nullable = false,
             precision = 10,
             scale = 2
@@ -78,7 +82,7 @@ public class SolicitacaoTransferenciaFenoRacao {
     private BigDecimal pesoUnidadeKg;
 
     @Column(
-            name = "pesoTotalSolicitadoKg",
+            name = "`pesoTotalSolicitadoKg`",
             nullable = false,
             precision = 14,
             scale = 2
@@ -86,19 +90,26 @@ public class SolicitacaoTransferenciaFenoRacao {
     private BigDecimal pesoTotalSolicitadoKg;
 
     @Column(
-            name = "quantidadeDisponivelNoPedido",
+            name = "`pesoTotalAprovadoKg`",
+            precision = 14,
+            scale = 2
+    )
+    private BigDecimal pesoTotalAprovadoKg;
+
+    @Column(
+            name = "`quantidadeDisponivelNoPedido`",
             nullable = false
     )
     private Integer quantidadeDisponivelNoPedido;
 
     @Column(
-            name = "saldoPrevistoOrigem",
+            name = "`saldoPrevistoOrigem`",
             nullable = false
     )
     private Integer saldoPrevistoOrigem;
 
     @Column(
-            name = "justificativa",
+            name = "`justificativa`",
             nullable = false,
             length = 500
     )
@@ -106,34 +117,33 @@ public class SolicitacaoTransferenciaFenoRacao {
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "status",
+            name = "`status`",
             nullable = false,
             length = 30
     )
     private StatusSolicitacaoTransferenciaFenoRacao status;
 
     @Column(
-            name = "solicitadoPorID",
+            name = "`solicitadoPorID`",
             nullable = false
     )
     private Long solicitadoPorId;
 
     @Column(
-            name = "dataSolicitacao",
+            name = "`dataSolicitacao`",
             nullable = false,
-            insertable = false,
             updatable = false
     )
     private LocalDateTime dataSolicitacao;
 
-    @Column(name = "respondidoPorID")
+    @Column(name = "`respondidoPorID`")
     private Long respondidoPorId;
 
-    @Column(name = "dataResposta")
+    @Column(name = "`dataResposta`")
     private LocalDateTime dataResposta;
 
     @Column(
-            name = "observacaoResposta",
+            name = "`observacaoResposta`",
             length = 500
     )
     private String observacaoResposta;

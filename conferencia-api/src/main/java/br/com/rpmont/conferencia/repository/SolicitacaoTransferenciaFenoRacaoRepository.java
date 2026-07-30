@@ -44,8 +44,8 @@ public interface SolicitacaoTransferenciaFenoRacaoRepository
             String unidadeOrigem
     );
 
-    boolean existsByLoteSolicitadoIdAndStatus(
-            Integer loteSolicitadoId,
+    boolean existsByLoteSelecionado_IdAndStatus(
+            Integer loteSelecionadoId,
             StatusSolicitacaoTransferenciaFenoRacao status
     );
 }

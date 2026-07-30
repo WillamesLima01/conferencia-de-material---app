@@ -19,7 +19,7 @@ public record SolicitacaoTransferenciaFenoRacaoResponseDTO(
 
         UnidadeControleFenoRacao unidadeControle,
 
-        Integer loteSolicitadoId,
+        Integer loteSelecionadoId,
 
         String codigoLote,
 
@@ -29,9 +29,13 @@ public record SolicitacaoTransferenciaFenoRacaoResponseDTO(
 
         Integer quantidadeSolicitada,
 
+        Integer quantidadeAprovada,
+
         BigDecimal pesoUnidadeKg,
 
         BigDecimal pesoTotalSolicitadoKg,
+
+        BigDecimal pesoTotalAprovadoKg,
 
         Integer quantidadeDisponivelNoPedido,
 

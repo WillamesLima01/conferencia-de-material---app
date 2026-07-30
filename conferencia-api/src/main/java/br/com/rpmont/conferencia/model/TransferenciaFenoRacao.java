@@ -32,61 +32,75 @@ import java.time.LocalDateTime;
 public class TransferenciaFenoRacao {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @GeneratedValue(
+            strategy = GenerationType.IDENTITY
+    )
+    @Column(name = "`ID`")
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
     @JoinColumn(
-            name = "solicitacaoID",
+            name = "`solicitacaoID`",
             nullable = false,
             unique = true
     )
     private SolicitacaoTransferenciaFenoRacao solicitacao;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
     @JoinColumn(
-            name = "produtoID",
+            name = "`produtoID`",
             nullable = false
     )
     private ProdutoFenoRacao produto;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
     @JoinColumn(
-            name = "loteOrigemID",
+            name = "`loteOrigemID`",
             nullable = false
     )
     private LoteFenoRacao loteOrigem;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
     @JoinColumn(
-            name = "loteDestinoID",
+            name = "`loteDestinoID`",
             nullable = false
     )
     private LoteFenoRacao loteDestino;
 
     @Column(
-            name = "unidadeOrigem",
+            name = "`unidadeOrigem`",
             nullable = false,
             length = 50
     )
     private String unidadeOrigem;
 
     @Column(
-            name = "unidadeDestino",
+            name = "`unidadeDestino`",
             nullable = false,
             length = 50
     )
     private String unidadeDestino;
 
     @Column(
-            name = "quantidadeTransferida",
+            name = "`quantidadeTransferida`",
             nullable = false
     )
     private Integer quantidadeTransferida;
 
     @Column(
-            name = "pesoUnidadeKg",
+            name = "`pesoUnidadeKg`",
             nullable = false,
             precision = 10,
             scale = 2
@@ -94,7 +108,7 @@ public class TransferenciaFenoRacao {
     private BigDecimal pesoUnidadeKg;
 
     @Column(
-            name = "pesoTotalKg",
+            name = "`pesoTotalKg`",
             nullable = false,
             precision = 14,
             scale = 2
@@ -102,38 +116,38 @@ public class TransferenciaFenoRacao {
     private BigDecimal pesoTotalKg;
 
     @Column(
-            name = "saldoAnteriorOrigem",
+            name = "`saldoAnteriorOrigem`",
             nullable = false
     )
     private Integer saldoAnteriorOrigem;
 
     @Column(
-            name = "saldoPosteriorOrigem",
+            name = "`saldoPosteriorOrigem`",
             nullable = false
     )
     private Integer saldoPosteriorOrigem;
 
     @Column(
-            name = "aprovadoPorID",
+            name = "`aprovadoPorID`",
             nullable = false
     )
     private Long aprovadoPorId;
 
     @Column(
-            name = "dataTransferencia",
+            name = "`dataTransferencia`",
             nullable = false
     )
     private LocalDateTime dataTransferencia;
 
     @Column(
-            name = "observacao",
+            name = "`observacao`",
             length = 500
     )
     private String observacao;
 
     @Enumerated(EnumType.STRING)
     @Column(
-            name = "situacao",
+            name = "`situacao`",
             nullable = false,
             length = 30
     )
