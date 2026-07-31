@@ -35,4 +35,13 @@ public interface NotificacaoFenoRacaoRepository
     findBySolicitacaoIdOrderByDataCriacaoDesc(
             Long solicitacaoId
     );
+
+    List<NotificacaoFenoRacao>
+    findByLidaOrderByDataCriacaoDesc(
+            Boolean lida
+    );
+
+    long countByLida(
+            Boolean lida
+    );
 }

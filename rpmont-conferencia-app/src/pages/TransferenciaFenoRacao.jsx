@@ -1,4 +1,9 @@
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   FaArrowLeft,
   FaBell,
@@ -13,10 +18,13 @@ import { GiGrain } from 'react-icons/gi';
 
 import '../styles/TransferenciaFenoRacao.css';
 
-const STORAGE_KEY_ENTRADAS = 'entradasAlimentacaoEquina';
-const STORAGE_KEY_SOLICITACOES = 'solicitacoesTransferenciaAlimentacaoEquina';
-const STORAGE_KEY_TRANSFERENCIAS = 'transferenciasAlimentacaoEquina';
-const STORAGE_KEY_NOTIFICACOES = 'notificacoesAlimentacaoEquina';
+import {
+  listarNotificacoesFenoRacao,
+  listarSolicitacoesEnviadas,
+  listarSolicitacoesRecebidas,
+  listarTransferencias,
+  marcarNotificacaoComoLida,
+} from '../services/fenoRacaoTransferenciaService';
 
 const PRODUTOS = [
   {
@@ -26,14 +34,26 @@ const PRODUTOS = [
     unidadePlural: 'fardos',
   },
   {
-    valor: 'RACAO_ADULTO',
-    nome: 'Ração Adulto',
+    valor: 'RACAO_ADULTO_PREMIUM',
+    nome: 'Ração Adulto Premium',
     unidade: 'saco',
     unidadePlural: 'sacos',
   },
   {
-    valor: 'RACAO_POTRO',
-    nome: 'Ração Potro',
+    valor: 'RACAO_ADULTO_MANUTENCAO',
+    nome: 'Ração Adulto Manutenção',
+    unidade: 'saco',
+    unidadePlural: 'sacos',
+  },
+  {
+    valor: 'RACAO_POTRO_PREMIUM',
+    nome: 'Ração Potro Premium',
+    unidade: 'saco',
+    unidadePlural: 'sacos',
+  },
+  {
+    valor: 'RACAO_POTRO_MANUTENCAO',
+    nome: 'Ração Potro Manutenção',
     unidade: 'saco',
     unidadePlural: 'sacos',
   },
@@ -47,6 +67,38 @@ const NIVEIS_USUARIO = {
   USUARIO_COMUM: 3,
 };
 
+const STORAGE_KEY_ENTRADAS =
+  'entradasAlimentacaoEquina';
+
+const STORAGE_KEY_SOLICITACOES =
+  'solicitacoesTransferenciaAlimentacaoEquina';
+
+const carregarStorage = (chave) => {
+  const dadosSalvos = localStorage.getItem(chave);
+
+  if (!dadosSalvos) {
+    return [];
+  }
+
+  try {
+    const dadosConvertidos =
+      JSON.parse(dadosSalvos);
+
+    return Array.isArray(dadosConvertidos)
+      ? dadosConvertidos
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const salvarStorage = (chave, valor) => {
+  localStorage.setItem(
+    chave,
+    JSON.stringify(valor)
+  );
+};
+
 const gerarId = () => {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -57,23 +109,6 @@ const gerarId = () => {
 
 const dataAtual = () => new Date().toISOString().slice(0, 10);
 const dataHoraAtual = () => new Date().toISOString();
-
-const carregarStorage = (chave) => {
-  const dadosSalvos = localStorage.getItem(chave);
-
-  if (!dadosSalvos) return [];
-
-  try {
-    const dadosConvertidos = JSON.parse(dadosSalvos);
-    return Array.isArray(dadosConvertidos) ? dadosConvertidos : [];
-  } catch {
-    return [];
-  }
-};
-
-const salvarStorage = (chave, valor) => {
-  localStorage.setItem(chave, JSON.stringify(valor));
-};
 
 const normalizarTexto = (valor) => {
   return String(valor ?? '')
@@ -183,13 +218,32 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
     carregarStorage(STORAGE_KEY_SOLICITACOES)
   );
 
-  const [transferencias, setTransferencias] = useState(() =>
-    carregarStorage(STORAGE_KEY_TRANSFERENCIAS)
-  );
+  const [
+    solicitacoesRecebidasApi,
+    setSolicitacoesRecebidasApi,
+  ] = useState([]);
 
-  const [notificacoes, setNotificacoes] = useState(() =>
-    carregarStorage(STORAGE_KEY_NOTIFICACOES)
-  );
+  const [
+    solicitacoesEnviadasApi,
+    setSolicitacoesEnviadasApi,
+  ] = useState([]);
+
+  const [transferencias, setTransferencias] =
+    useState([]);
+
+  const [notificacoes, setNotificacoes] =
+    useState([]);
+
+  const [carregandoDados, setCarregandoDados] =
+    useState(true);
+
+  const [erroCarregamento, setErroCarregamento] =
+    useState('');
+
+  const [
+    atualizandoNotificacaoId,
+    setAtualizandoNotificacaoId,
+  ] = useState(null);
 
   const [tipoProduto, setTipoProduto] = useState('');
   const [estoqueSolicitadoId, setEstoqueSolicitadoId] = useState('');
@@ -206,6 +260,80 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
 
   const unidadeUsuario = obterUnidadeOficial(obterUnidadeUsuario(usuario));
   const unidadeDestino = obterOutraUnidade(unidadeUsuario);
+
+  const obterMensagemErro = (error) => {
+    return (
+      error?.data?.message ||
+      error?.message ||
+      'Não foi possível carregar os dados de transferência.'
+    );
+  };
+
+  const carregarDadosTransferencia = useCallback(
+    async (exibirCarregamento = true) => {
+      try {
+        if (exibirCarregamento) {
+          setCarregandoDados(true);
+        }
+
+        setErroCarregamento('');
+
+        const [
+          recebidas,
+          enviadas,
+          transferenciasRecebidas,
+          notificacoesRecebidas,
+        ] = await Promise.all([
+          listarSolicitacoesRecebidas(),
+          listarSolicitacoesEnviadas(),
+          listarTransferencias(),
+          listarNotificacoesFenoRacao(),
+        ]);
+
+        setSolicitacoesRecebidasApi(
+          Array.isArray(recebidas)
+            ? recebidas
+            : []
+        );
+
+        setSolicitacoesEnviadasApi(
+          Array.isArray(enviadas)
+            ? enviadas
+            : []
+        );
+
+        setTransferencias(
+          Array.isArray(transferenciasRecebidas)
+            ? transferenciasRecebidas
+            : []
+        );
+
+        setNotificacoes(
+          Array.isArray(notificacoesRecebidas)
+            ? notificacoesRecebidas
+            : []
+        );
+      } catch (error) {
+        console.error(
+          'Erro ao carregar dados de transferência:',
+          error
+        );
+
+        setErroCarregamento(
+          obterMensagemErro(error)
+        );
+      } finally {
+        if (exibirCarregamento) {
+          setCarregandoDados(false);
+        }
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    carregarDadosTransferencia();
+  }, [carregarDadosTransferencia]);
 
   const produtoSelecionado = useMemo(() => {
     return PRODUTOS.find((produto) => produto.valor === tipoProduto) || null;
@@ -246,27 +374,18 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
   }, [entradas, estoqueSolicitadoId]);
 
   const solicitacoesRecebidas = useMemo(() => {
-    return solicitacoes.filter(
-      (item) =>
-        normalizarTexto(item.unidadeOrigem) === normalizarTexto(unidadeUsuario)
-    );
-  }, [solicitacoes, unidadeUsuario]);
+    return solicitacoesRecebidasApi;
+  }, [solicitacoesRecebidasApi]);
 
   const solicitacoesEnviadas = useMemo(() => {
-    return solicitacoes.filter(
-      (item) =>
-        normalizarTexto(item.unidadeSolicitante) ===
-        normalizarTexto(unidadeUsuario)
-    );
-  }, [solicitacoes, unidadeUsuario]);
+    return solicitacoesEnviadasApi;
+  }, [solicitacoesEnviadasApi]);
 
   const notificacoesPendentes = useMemo(() => {
     return notificacoes.filter(
-      (item) =>
-        normalizarTexto(item.unidadeDestino) ===
-          normalizarTexto(unidadeUsuario) && !item.lida
+      (item) => !item.lida
     );
-  }, [notificacoes, unidadeUsuario]);
+  }, [notificacoes]);
 
   const estoquesDisponiveisParaTransferir = useMemo(() => {
     if (!solicitacaoSelecionada) return [];
@@ -317,6 +436,49 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
     }, 3500);
   };
 
+  const handleMarcarNotificacaoComoLida = async (
+    notificacaoId
+  ) => {
+    try {
+      setAtualizandoNotificacaoId(
+        notificacaoId
+      );
+
+      await marcarNotificacaoComoLida(
+        notificacaoId
+      );
+
+      setNotificacoes((listaAtual) =>
+        listaAtual.map((notificacao) =>
+          notificacao.id === notificacaoId
+            ? {
+                ...notificacao,
+                lida: true,
+                dataLeitura:
+                  notificacao.dataLeitura ||
+                  new Date().toISOString(),
+              }
+            : notificacao
+        )
+      );
+
+      mostrarMensagem(
+        'Notificação marcada como lida.'
+      );
+    } catch (error) {
+      console.error(
+        'Erro ao marcar notificação como lida:',
+        error
+      );
+
+      mostrarMensagem(
+        obterMensagemErro(error)
+      );
+    } finally {
+      setAtualizandoNotificacaoId(null);
+    }
+  };
+
   const salvarEntradas = (novaLista) => {
     setEntradas(novaLista);
     salvarStorage(STORAGE_KEY_ENTRADAS, novaLista);
@@ -329,12 +491,10 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
 
   const salvarTransferencias = (novaLista) => {
     setTransferencias(novaLista);
-    salvarStorage(STORAGE_KEY_TRANSFERENCIAS, novaLista);
   };
 
   const salvarNotificacoes = (novaLista) => {
     setNotificacoes(novaLista);
-    salvarStorage(STORAGE_KEY_NOTIFICACOES, novaLista);
   };
 
   const limparFormulario = () => {
@@ -618,7 +778,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
       id: gerarId(),
       unidadeDestino: solicitacaoSelecionada.unidadeSolicitante,
       titulo: 'Transferência aprovada',
-      mensagem: `${unidadeUsuario} transferiu ${quantidadeTransferida} ${solicitacaoSelecionada.unidadeControlePlural} de ${solicitacaoSelecionada.nomeProduto} de ${formatarNumero(solicitacaoSelecionada.pesoUnidadeKg)} kg.`,
+      mensagem: `${unidadeUsuario} transferiu ${quantidadeTransferida} ${solicitacaoSelecionada.unidadeControle === 'FARDO'
+                    ? 'fardos'
+                    : 'sacos'} de ${solicitacaoSelecionada.nomeProduto} de ${formatarNumero(solicitacaoSelecionada.pesoUnidadeKg)} kg.`,
       tipo: 'RESPOSTA_TRANSFERENCIA_ALIMENTACAO',
       lida: false,
       referenciaId: solicitacaoSelecionada.id,
@@ -708,8 +870,116 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
         </header>
 
         {mensagem && (
-          <div className="transferencia-alimentacao-mensagem">{mensagem}</div>
+          <div className="transferencia-alimentacao-mensagem">
+            {mensagem}
+          </div>
         )}
+
+        {carregandoDados && (
+          <div className="transferencia-alimentacao-mensagem">
+            Carregando solicitações, transferências e notificações...
+          </div>
+        )}
+
+        {erroCarregamento && (
+          <div className="transferencia-alimentacao-mensagem">
+            <span>{erroCarregamento}</span>
+
+            <button
+              type="button"
+              onClick={() =>
+                carregarDadosTransferencia()
+              }
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        <section className="transferencia-alimentacao-card">
+          <div className="transferencia-alimentacao-lista-header">
+            <div>
+              <span>Central de avisos</span>
+              <h2>Notificações</h2>
+            </div>
+
+            <strong>
+              {notificacoesPendentes.length}
+            </strong>
+          </div>
+
+          {notificacoes.length === 0 ? (
+            <div className="transferencia-alimentacao-vazio">
+              <FaBell />
+              <p>Nenhuma notificação encontrada.</p>
+            </div>
+          ) : (
+            <div className="transferencia-alimentacao-lista">
+              {notificacoes.map((item) => (
+                <article
+                  key={item.id}
+                  className={`transferencia-alimentacao-item ${
+                    item.lida
+                      ? 'status-transferida'
+                      : 'status-pendente'
+                  }`}
+                >
+                  <div className="transferencia-alimentacao-item-icon">
+                    <FaBell />
+                  </div>
+
+                  <div className="transferencia-alimentacao-item-info">
+                    <span>
+                      {item.lida
+                        ? 'LIDA'
+                        : 'NÃO LIDA'}
+                    </span>
+
+                    <h3>{item.titulo}</h3>
+
+                    <p>{item.mensagem}</p>
+
+                    {item.solicitacaoId && (
+                      <p>
+                        Solicitação:{' '}
+                        <strong>
+                          nº {item.solicitacaoId}
+                        </strong>
+                      </p>
+                    )}
+
+                    <small>
+                      {formatarDataHora(
+                        item.dataCriacao
+                      )}
+                    </small>
+                  </div>
+
+                  {!item.lida && (
+                    <button
+                      type="button"
+                      className="transferencia-alimentacao-analisar"
+                      disabled={
+                        atualizandoNotificacaoId ===
+                        item.id
+                      }
+                      onClick={() =>
+                        handleMarcarNotificacaoComoLida(
+                          item.id
+                        )
+                      }
+                    >
+                      {atualizandoNotificacaoId ===
+                      item.id
+                        ? 'Salvando...'
+                        : 'Marcar como lida'}
+                    </button>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="transferencia-alimentacao-card destaque">
           <div className="transferencia-alimentacao-card-titulo">
@@ -913,7 +1183,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                       {item.unidadeSolicitante} solicitou{' '}
                       <strong>
                         {formatarNumero(item.quantidadeSolicitada)}{' '}
-                        {item.unidadeControlePlural} de{' '}
+                        {item.unidadeControle === 'FARDO'
+                          ? 'fardos'
+                          : 'sacos'} de{' '}
                         {formatarNumero(item.pesoUnidadeKg)} kg
                       </strong>
                     </p>
@@ -921,8 +1193,8 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                     <p>
                       Estoque solicitado:{' '}
                       <strong>
-                        {item.loteOrigemSolicitado
-                          ? `Lote ${item.loteOrigemSolicitado}`
+                        {item.codigoLote
+                          ? `Lote ${item.codigoLote}`
                           : 'Sem lote informado'}
                       </strong>
                     </p>
@@ -992,7 +1264,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                       Quantidade:{' '}
                       <strong>
                         {formatarNumero(item.quantidadeSolicitada)}{' '}
-                        {item.unidadeControlePlural} de{' '}
+                        {item.unidadeControle === 'FARDO'
+                          ? 'fardos'
+                          : 'sacos'} de{' '}
                         {formatarNumero(item.pesoUnidadeKg)} kg
                       </strong>
                     </p>
@@ -1045,7 +1319,7 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                   </div>
 
                   <div className="transferencia-alimentacao-item-info">
-                    <span>TRANSFERIDA</span>
+                    <span>{item.situacao}</span>
                     <h3>{item.nomeProduto}</h3>
 
                     <p>
@@ -1056,7 +1330,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                       Quantidade:{' '}
                       <strong>
                         {formatarNumero(item.quantidadeTransferida)}{' '}
-                        {item.unidadeControlePlural} de{' '}
+                        {item.unidadeControle === 'FARDO'
+                          ? 'fardos'
+                          : 'sacos'} de{' '}
                         {formatarNumero(item.pesoUnidadeKg)} kg
                       </strong>
                     </p>
@@ -1084,7 +1360,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                 solicitou{' '}
                 <strong>
                   {formatarNumero(solicitacaoSelecionada.quantidadeSolicitada)}{' '}
-                  {solicitacaoSelecionada.unidadeControlePlural} de{' '}
+                  {solicitacaoSelecionada.unidadeControle === 'FARDO'
+                    ? 'fardos'
+                    : 'sacos'} de{' '}
                   {formatarNumero(solicitacaoSelecionada.pesoUnidadeKg)} kg
                 </strong>{' '}
                 de <strong>{solicitacaoSelecionada.nomeProduto}</strong>.
@@ -1096,7 +1374,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                   {formatarNumero(
                     solicitacaoSelecionada.quantidadeDisponivelNoPedido
                   )}{' '}
-                  {solicitacaoSelecionada.unidadeControlePlural} disponíveis
+                  {solicitacaoSelecionada.unidadeControle === 'FARDO'
+                    ? 'fardos'
+                    : 'sacos'} disponíveis
                 </strong>
 
                 <span>Peso total solicitado</span>

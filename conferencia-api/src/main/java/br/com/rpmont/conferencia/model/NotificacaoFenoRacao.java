@@ -84,5 +84,5 @@ public class NotificacaoFenoRacao {
     private LocalDateTime dataLeitura;
 
     @Column(name = "`usuarioLeituraID`")
-    private Integer usuarioLeituraId;
+    private Long usuarioLeituraId;
 }

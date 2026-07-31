@@ -1,39 +1,38 @@
 package br.com.rpmont.conferencia.service;
 
-import br.com.rpmont.conferencia.dtos.*;
-import br.com.rpmont.conferencia.enums.StatusSolicitacaoTransferenciaFenoRacao;
+import br.com.rpmont.conferencia.dtos.TransferenciaFenoRacaoResponseDTO;
+import br.com.rpmont.conferencia.enums.SituacaoTransferenciaFenoRacao;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface TransferenciaFenoRacaoService {
 
-    SolicitacaoTransferenciaFenoRacaoResponseDTO solicitar(
-            CriarSolicitacaoTransferenciaFenoRacaoRequestDTO request,
+    List<TransferenciaFenoRacaoResponseDTO> listarEnviadas(
+            Integer produtoId,
+            LocalDate dataInicial,
+            LocalDate dataFinal,
+            SituacaoTransferenciaFenoRacao situacao,
             String matriculaUsuario
     );
 
-    SolicitacaoTransferenciaFenoRacaoResponseDTO buscarSolicitacaoPorId(
-            Long solicitacaoId,
+    List<TransferenciaFenoRacaoResponseDTO> listarRecebidas(
+            Integer produtoId,
+            LocalDate dataInicial,
+            LocalDate dataFinal,
+            SituacaoTransferenciaFenoRacao situacao,
             String matriculaUsuario
     );
 
-    List<SolicitacaoTransferenciaFenoRacaoResponseDTO> listarSolicitacoes(
-            StatusSolicitacaoTransferenciaFenoRacao status,
+    List<TransferenciaFenoRacaoResponseDTO> listarTodas(
+            Integer produtoId,
+            LocalDate dataInicial,
+            LocalDate dataFinal,
+            SituacaoTransferenciaFenoRacao situacao,
             String matriculaUsuario
     );
 
-    RespostaSolicitacaoTransferenciaFenoRacaoDTO responder(
-            Long solicitacaoId,
-            ResponderSolicitacaoTransferenciaFenoRacaoRequestDTO request,
-            String matriculaUsuario
-    );
-
-    List<TransferenciaFenoRacaoResponseDTO> listarTransferencias(
-            String unidade,
-            String matriculaUsuario
-    );
-
-    TransferenciaFenoRacaoResponseDTO buscarTransferenciaPorId(
+    TransferenciaFenoRacaoResponseDTO buscarPorId(
             Long transferenciaId,
             String matriculaUsuario
     );
