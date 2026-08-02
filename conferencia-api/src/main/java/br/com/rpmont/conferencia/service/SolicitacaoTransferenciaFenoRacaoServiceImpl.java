@@ -1,6 +1,7 @@
 package br.com.rpmont.conferencia.service;
 
 import br.com.rpmont.conferencia.dtos.AprovarSolicitacaoTransferenciaFenoRacaoRequestDTO;
+import br.com.rpmont.conferencia.dtos.ItemSolicitacaoTransferenciaFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.dtos.SolicitacaoTransferenciaFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.SolicitacaoTransferenciaFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.enums.SituacaoLoteFenoRacao;
@@ -14,20 +15,8 @@ import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.exception.ConflictException;
 import br.com.rpmont.conferencia.exception.ForbiddenException;
 import br.com.rpmont.conferencia.exception.ResourceNotFoundException;
-import br.com.rpmont.conferencia.model.LoteFenoRacao;
-import br.com.rpmont.conferencia.model.MovimentacaoFenoRacao;
-import br.com.rpmont.conferencia.model.NotificacaoFenoRacao;
-import br.com.rpmont.conferencia.model.ProdutoFenoRacao;
-import br.com.rpmont.conferencia.model.SolicitacaoTransferenciaFenoRacao;
-import br.com.rpmont.conferencia.model.TransferenciaFenoRacao;
-import br.com.rpmont.conferencia.model.Usuario;
-import br.com.rpmont.conferencia.repository.LoteFenoRacaoRepository;
-import br.com.rpmont.conferencia.repository.MovimentacaoFenoRacaoRepository;
-import br.com.rpmont.conferencia.repository.NotificacaoFenoRacaoRepository;
-import br.com.rpmont.conferencia.repository.ProdutoFenoRacaoRepository;
-import br.com.rpmont.conferencia.repository.SolicitacaoTransferenciaFenoRacaoRepository;
-import br.com.rpmont.conferencia.repository.TransferenciaFenoRacaoRepository;
-import br.com.rpmont.conferencia.repository.UsuarioRepository;
+import br.com.rpmont.conferencia.model.*;
+import br.com.rpmont.conferencia.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +53,9 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
 
     private final MovimentacaoFenoRacaoRepository
             movimentacaoRepository;
+
+    private final ItemSolicitacaoTransferenciaFenoRacaoRepository
+            itemSolicitacaoRepository;
 
     @Override
     @Transactional
@@ -232,11 +224,18 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                         solicitacao
                 );
 
+        criarItensPlanejados(
+                salva,
+                lotesDisponiveis,
+                request.quantidadeSolicitada(),
+                usuario,
+                dataAtual
+        );
+
         criarNotificacaoNovaSolicitacao(
                 salva,
                 dataAtual
         );
-
         return converterParaResponse(
                 salva
         );
@@ -515,59 +514,80 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
         );
 
         if (solicitacao.getStatus()
-                != StatusSolicitacaoTransferenciaFenoRacao
-                .PENDENTE) {
+                != StatusSolicitacaoTransferenciaFenoRacao.PENDENTE) {
 
             throw new ConflictException(
                     "Somente solicitações pendentes podem ser aprovadas."
             );
         }
 
-        if (transferenciaRepository
-                .existsBySolicitacaoId(
-                        solicitacaoId
-                )) {
-
+        if (transferenciaRepository.existsBySolicitacaoId(
+                solicitacaoId
+        )) {
             throw new ConflictException(
                     "Esta solicitação já possui uma transferência registrada."
             );
         }
 
-        Integer quantidadeAprovada =
-                request.quantidadeAprovada();
-
-        if (quantidadeAprovada == null
-                || quantidadeAprovada <= 0) {
-
-            throw new BusinessException(
-                    "A quantidade aprovada deve ser maior que zero."
-            );
-        }
-
-        if (quantidadeAprovada
-                > solicitacao.getQuantidadeSolicitada()) {
-
-            throw new BusinessException(
-                    "A quantidade aprovada não pode ser maior que a quantidade solicitada."
-            );
-        }
-
-        LoteFenoRacao loteOrigem =
-                loteRepository
-                        .findById(
-                                request.loteOrigemId()
-                        )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Lote de origem não encontrado."
-                                )
+        List<ItemSolicitacaoTransferenciaFenoRacao> itens =
+                itemSolicitacaoRepository
+                        .findBySolicitacaoIdOrderByOrdemAtendimentoAsc(
+                                solicitacaoId
                         );
 
-        validarLoteParaTransferencia(
-                loteOrigem,
-                solicitacao,
-                quantidadeAprovada
-        );
+        if (itens.isEmpty()) {
+            throw new ConflictException(
+                    "A solicitação não possui etapas de atendimento planejadas."
+            );
+        }
+
+        int quantidadeTotalPlanejada =
+                itens.stream()
+                        .map(
+                                ItemSolicitacaoTransferenciaFenoRacao
+                                        ::getQuantidadePrevista
+                        )
+                        .filter(
+                                Objects::nonNull
+                        )
+                        .mapToInt(
+                                Integer::intValue
+                        )
+                        .sum();
+
+        if (quantidadeTotalPlanejada
+                != solicitacao.getQuantidadeSolicitada()) {
+
+            throw new ConflictException(
+                    "A soma das etapas planejadas não corresponde à quantidade solicitada."
+            );
+        }
+
+        /*
+         * Revalidação antes de qualquer baixa.
+         *
+         * Caso um lote tenha sofrido movimentação depois
+         * da solicitação, toda a aprovação é interrompida.
+         */
+        for (ItemSolicitacaoTransferenciaFenoRacao item : itens) {
+
+            LoteFenoRacao loteOrigem =
+                    loteRepository
+                            .findById(
+                                    item.getLoteOrigem().getId()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Um dos lotes planejados não foi encontrado."
+                                    )
+                            );
+
+            validarLoteParaTransferencia(
+                    loteOrigem,
+                    solicitacao,
+                    item.getQuantidadePrevista()
+            );
+        }
 
         LocalDateTime dataAtual =
                 LocalDateTime.now();
@@ -578,59 +598,48 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
         BigDecimal pesoUnidadeKg =
                 solicitacao.getPesoUnidadeKg();
 
-        BigDecimal pesoTotalKg =
+        Integer quantidadeTotalTransferida =
+                solicitacao.getQuantidadeSolicitada();
+
+        BigDecimal pesoTotalTransferidoKg =
                 pesoUnidadeKg.multiply(
                         BigDecimal.valueOf(
-                                quantidadeAprovada
+                                quantidadeTotalTransferida
                         )
                 );
 
-        int saldoAnteriorOrigem =
-                loteOrigem.getQuantidadeAtual();
-
-        int saldoPosteriorOrigem =
-                saldoAnteriorOrigem
-                        - quantidadeAprovada;
-
-        loteOrigem.setQuantidadeAtual(
-                saldoPosteriorOrigem
-        );
-
-        loteOrigem.setPesoTotalAtualKg(
-                pesoUnidadeKg.multiply(
-                        BigDecimal.valueOf(
-                                saldoPosteriorOrigem
+        int saldoTotalAnterior =
+                itens.stream()
+                        .map(
+                                ItemSolicitacaoTransferenciaFenoRacao
+                                        ::getLoteOrigem
                         )
-                )
-        );
+                        .map(
+                                LoteFenoRacao::getQuantidadeAtual
+                        )
+                        .filter(
+                                Objects::nonNull
+                        )
+                        .mapToInt(
+                                Integer::intValue
+                        )
+                        .sum();
 
-        loteOrigem.setUsuarioModificadorId(
-                usuario.getId()
-        );
+        int saldoTotalPosterior =
+                saldoTotalAnterior
+                        - quantidadeTotalTransferida;
 
-        loteOrigem.setDataModificacao(
-                dataAtual
-        );
-
-        loteRepository.save(
-                loteOrigem
-        );
-
-        LoteFenoRacao loteDestino =
-                criarLoteDestino(
-                        solicitacao,
-                        loteOrigem,
-                        quantidadeAprovada,
-                        pesoTotalKg,
-                        usuario,
-                        dataAtual
+        String observacao =
+                normalizarObservacao(
+                        request.observacao()
                 );
 
-        loteDestino =
-                loteRepository.save(
-                        loteDestino
-                );
-
+        /*
+         * Registro principal da transferência.
+         *
+         * Os lotes específicos ficam registrados
+         * nos itens da solicitação.
+         */
         TransferenciaFenoRacao transferencia =
                 TransferenciaFenoRacao
                         .builder()
@@ -641,10 +650,10 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                                 solicitacao.getProduto()
                         )
                         .loteOrigem(
-                                loteOrigem
+                                null
                         )
                         .loteDestino(
-                                loteDestino
+                                null
                         )
                         .unidadeOrigem(
                                 solicitacao.getUnidadeOrigem()
@@ -653,19 +662,19 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                                 solicitacao.getUnidadeSolicitante()
                         )
                         .quantidadeTransferida(
-                                quantidadeAprovada
+                                quantidadeTotalTransferida
                         )
                         .pesoUnidadeKg(
                                 pesoUnidadeKg
                         )
                         .pesoTotalKg(
-                                pesoTotalKg
+                                pesoTotalTransferidoKg
                         )
                         .saldoAnteriorOrigem(
-                                saldoAnteriorOrigem
+                                saldoTotalAnterior
                         )
                         .saldoPosteriorOrigem(
-                                saldoPosteriorOrigem
+                                saldoTotalPosterior
                         )
                         .aprovadoPorId(
                                 usuario.getId()
@@ -674,13 +683,10 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                                 dataAtual
                         )
                         .observacao(
-                                normalizarObservacao(
-                                        request.observacao()
-                                )
+                                observacao
                         )
                         .situacao(
-                                SituacaoTransferenciaFenoRacao
-                                        .CONCLUIDA
+                                SituacaoTransferenciaFenoRacao.CONCLUIDA
                         )
                         .build();
 
@@ -689,71 +695,174 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                         transferencia
                 );
 
-        loteDestino.setTransferenciaOrigemId(
-                transferencia.getId()
-        );
+        /*
+         * Cada etapa gera:
+         *
+         * 1. baixa no lote de origem;
+         * 2. lote correspondente no destino;
+         * 3. movimentação de saída;
+         * 4. movimentação de entrada;
+         * 5. atualização do item planejado.
+         */
+        for (ItemSolicitacaoTransferenciaFenoRacao item : itens) {
 
-        loteDestino.setUsuarioModificadorId(
-                usuario.getId()
-        );
+            LoteFenoRacao loteOrigem =
+                    loteRepository
+                            .findById(
+                                    item.getLoteOrigem().getId()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "Um dos lotes planejados não foi encontrado."
+                                    )
+                            );
 
-        loteDestino.setDataModificacao(
-                dataAtual
-        );
+            Integer quantidadeEtapa =
+                    item.getQuantidadePrevista();
 
-        loteRepository.save(
-                loteDestino
-        );
+            int saldoAnterior =
+                    loteOrigem.getQuantidadeAtual();
 
-        MovimentacaoFenoRacao movimentacaoSaida =
-                criarMovimentacaoTransferenciaSaida(
-                        transferencia,
-                        loteOrigem,
-                        usuario,
-                        quantidadeAprovada,
-                        pesoTotalKg,
-                        saldoAnteriorOrigem,
-                        saldoPosteriorOrigem,
-                        dataOperacao,
-                        dataAtual
-                );
+            int saldoPosterior =
+                    saldoAnterior
+                            - quantidadeEtapa;
 
-        movimentacaoSaida =
-                movimentacaoRepository.save(
-                        movimentacaoSaida
-                );
+            BigDecimal pesoEtapaKg =
+                    pesoUnidadeKg.multiply(
+                            BigDecimal.valueOf(
+                                    quantidadeEtapa
+                            )
+                    );
 
-        MovimentacaoFenoRacao movimentacaoEntrada =
-                criarMovimentacaoTransferenciaEntrada(
-                        transferencia,
-                        loteDestino,
-                        movimentacaoSaida,
-                        usuario,
-                        quantidadeAprovada,
-                        pesoTotalKg,
-                        dataOperacao,
-                        dataAtual
-                );
+            loteOrigem.setQuantidadeAtual(
+                    saldoPosterior
+            );
 
-        movimentacaoRepository.save(
-                movimentacaoEntrada
-        );
+            loteOrigem.setPesoTotalAtualKg(
+                    pesoUnidadeKg.multiply(
+                            BigDecimal.valueOf(
+                                    saldoPosterior
+                            )
+                    )
+            );
+
+            loteOrigem.setUsuarioModificadorId(
+                    usuario.getId()
+            );
+
+            loteOrigem.setDataModificacao(
+                    dataAtual
+            );
+
+            loteRepository.save(
+                    loteOrigem
+            );
+
+            LoteFenoRacao loteDestino =
+                    criarLoteDestino(
+                            solicitacao,
+                            loteOrigem,
+                            quantidadeEtapa,
+                            pesoEtapaKg,
+                            usuario,
+                            dataAtual,
+                            item.getOrdemAtendimento()
+                    );
+
+            loteDestino =
+                    loteRepository.save(
+                            loteDestino
+                    );
+
+            loteDestino.setTransferenciaOrigemId(
+                    transferencia.getId()
+            );
+
+            loteDestino.setUsuarioModificadorId(
+                    usuario.getId()
+            );
+
+            loteDestino.setDataModificacao(
+                    dataAtual
+            );
+
+            loteRepository.save(
+                    loteDestino
+            );
+
+            MovimentacaoFenoRacao movimentacaoSaida =
+                    criarMovimentacaoTransferenciaSaida(
+                            transferencia,
+                            loteOrigem,
+                            usuario,
+                            quantidadeEtapa,
+                            pesoEtapaKg,
+                            saldoAnterior,
+                            saldoPosterior,
+                            dataOperacao,
+                            dataAtual
+                    );
+
+            movimentacaoSaida =
+                    movimentacaoRepository.save(
+                            movimentacaoSaida
+                    );
+
+            MovimentacaoFenoRacao movimentacaoEntrada =
+                    criarMovimentacaoTransferenciaEntrada(
+                            transferencia,
+                            loteDestino,
+                            movimentacaoSaida,
+                            usuario,
+                            quantidadeEtapa,
+                            pesoEtapaKg,
+                            dataOperacao,
+                            dataAtual
+                    );
+
+            movimentacaoRepository.save(
+                    movimentacaoEntrada
+            );
+
+            item.setTransferencia(
+                    transferencia
+            );
+
+            item.setLoteDestino(
+                    loteDestino
+            );
+
+            item.setQuantidadeAprovada(
+                    quantidadeEtapa
+            );
+
+            item.setSaldoAnterior(
+                    saldoAnterior
+            );
+
+            item.setSaldoPosterior(
+                    saldoPosterior
+            );
+
+            itemSolicitacaoRepository.save(
+                    item
+            );
+        }
 
         solicitacao.setLoteSelecionado(
-                loteOrigem
+                null
         );
 
         solicitacao.setQuantidadeAprovada(
-                quantidadeAprovada
+                quantidadeTotalTransferida
         );
 
         solicitacao.setPesoTotalAprovadoKg(
-                pesoTotalKg
+                pesoTotalTransferidoKg
         );
 
         solicitacao.setStatus(
-                StatusSolicitacaoTransferenciaFenoRacao
-                        .TRANSFERIDA
+                StatusSolicitacaoTransferenciaFenoRacao.TRANSFERIDA
         );
 
         solicitacao.setRespondidoPorId(
@@ -765,9 +874,7 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
         );
 
         solicitacao.setObservacaoResposta(
-                normalizarObservacao(
-                        request.observacao()
-                )
+                observacao
         );
 
         SolicitacaoTransferenciaFenoRacao salva =
@@ -777,7 +884,7 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
 
         criarNotificacaoTransferenciaAprovada(
                 salva,
-                quantidadeAprovada,
+                quantidadeTotalTransferida,
                 dataAtual
         );
 
@@ -918,26 +1025,13 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
             Integer produtoId,
             String unidadeOrigem
     ) {
-        LocalDate hoje =
-                LocalDate.now();
-
         return loteRepository
-                .findByProdutoIdAndUnidadeAndSituacaoAndQuantidadeAtualGreaterThanOrderByDataEntradaAsc(
+                .buscarLotesElegiveisOrdenados(
                         produtoId,
                         unidadeOrigem,
                         SituacaoLoteFenoRacao.ATIVO,
-                        0
-                )
-                .stream()
-                .filter(lote ->
-                        lote.getValidade() == null
-                                || !lote
-                                .getValidade()
-                                .isBefore(
-                                        hoje
-                                )
-                )
-                .toList();
+                        LocalDate.now()
+                );
     }
 
     private SolicitacaoTransferenciaFenoRacao buscarSolicitacao(
@@ -1054,7 +1148,8 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
             Integer quantidadeAprovada,
             BigDecimal pesoTotalKg,
             Usuario usuario,
-            LocalDateTime dataAtual
+            LocalDateTime dataAtual,
+            Integer ordemAtendimento
     ) {
         return LoteFenoRacao
                 .builder()
@@ -1064,7 +1159,8 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                 .codigoLote(
                         gerarCodigoLoteTransferencia(
                                 solicitacao.getId(),
-                                loteOrigem.getCodigoLote()
+                                loteOrigem.getCodigoLote(),
+                                ordemAtendimento
                         )
                 )
                 .quantidadeInicial(
@@ -1503,7 +1599,8 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
 
     private String gerarCodigoLoteTransferencia(
             Long solicitacaoId,
-            String codigoLoteOrigem
+            String codigoLoteOrigem,
+            Integer ordemAtendimento
     ) {
         String sufixo =
                 codigoLoteOrigem == null
@@ -1515,6 +1612,8 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                 "TR-"
                         + solicitacaoId
                         + "-"
+                        + ordemAtendimento
+                        + "-"
                         + sufixo;
 
         if (codigo.length() > 100) {
@@ -1525,6 +1624,100 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
         }
 
         return codigo;
+    }
+
+    private void criarItensPlanejados(
+            SolicitacaoTransferenciaFenoRacao solicitacao,
+            List<LoteFenoRacao> lotesOrdenados,
+            Integer quantidadeSolicitada,
+            Usuario usuario,
+            LocalDateTime dataAtual
+    ) {
+        int quantidadeRestante =
+                quantidadeSolicitada;
+
+        int ordemAtendimento =
+                1;
+
+        for (LoteFenoRacao lote : lotesOrdenados) {
+
+            if (quantidadeRestante <= 0) {
+                break;
+            }
+
+            Integer saldoDisponivel =
+                    lote.getQuantidadeAtual();
+
+            if (saldoDisponivel == null
+                    || saldoDisponivel <= 0) {
+
+                continue;
+            }
+
+            int quantidadePrevista =
+                    Math.min(
+                            saldoDisponivel,
+                            quantidadeRestante
+                    );
+
+            ItemSolicitacaoTransferenciaFenoRacao item =
+                    ItemSolicitacaoTransferenciaFenoRacao
+                            .builder()
+                            .solicitacao(
+                                    solicitacao
+                            )
+                            .transferencia(
+                                    null
+                            )
+                            .loteOrigem(
+                                    lote
+                            )
+                            .loteDestino(
+                                    null
+                            )
+                            .saldoDisponivelPlanejamento(
+                                    saldoDisponivel
+                            )
+                            .quantidadePrevista(
+                                    quantidadePrevista
+                            )
+                            .quantidadeAprovada(
+                                    null
+                            )
+                            .ordemAtendimento(
+                                    ordemAtendimento
+                            )
+                            .saldoAnterior(
+                                    null
+                            )
+                            .saldoPosterior(
+                                    null
+                            )
+                            .usuarioCadastroId(
+                                    Math.toIntExact(
+                                            usuario.getId()
+                                    )
+                            )
+                            .dataCadastro(
+                                    dataAtual
+                            )
+                            .build();
+
+            itemSolicitacaoRepository.save(
+                    item
+            );
+
+            quantidadeRestante -=
+                    quantidadePrevista;
+
+            ordemAtendimento++;
+        }
+
+        if (quantidadeRestante > 0) {
+            throw new ConflictException(
+                    "Não foi possível distribuir toda a quantidade solicitada entre os lotes disponíveis."
+            );
+        }
     }
 
     private SolicitacaoTransferenciaFenoRacaoResponseDTO
@@ -1573,8 +1766,50 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                 solicitacao.getRespondidoPorId(),
                 respondidoPorNome,
                 solicitacao.getDataResposta(),
-                solicitacao.getObservacaoResposta()
+                solicitacao.getObservacaoResposta(),
+                converterItensParaResponse(
+                        solicitacao.getId()
+                )
         );
+    }
+
+    private List<ItemSolicitacaoTransferenciaFenoRacaoResponseDTO>
+    converterItensParaResponse(
+            Long solicitacaoId
+    ) {
+        return itemSolicitacaoRepository
+                .findBySolicitacaoIdOrderByOrdemAtendimentoAsc(
+                        solicitacaoId
+                )
+                .stream()
+                .map(item -> {
+                    LoteFenoRacao loteOrigem =
+                            item.getLoteOrigem();
+
+                    LoteFenoRacao loteDestino =
+                            item.getLoteDestino();
+
+                    return new ItemSolicitacaoTransferenciaFenoRacaoResponseDTO(
+                            item.getId(),
+                            item.getOrdemAtendimento(),
+                            loteOrigem.getId(),
+                            loteOrigem.getCodigoLote(),
+                            loteOrigem.getDataEntrada(),
+                            loteOrigem.getValidade(),
+                            item.getSaldoDisponivelPlanejamento(),
+                            item.getQuantidadePrevista(),
+                            item.getQuantidadeAprovada(),
+                            item.getSaldoAnterior(),
+                            item.getSaldoPosterior(),
+                            loteDestino != null
+                                    ? loteDestino.getId()
+                                    : null,
+                            loteDestino != null
+                                    ? loteDestino.getCodigoLote()
+                                    : null
+                    );
+                })
+                .toList();
     }
 
     private String buscarNomeUsuario(

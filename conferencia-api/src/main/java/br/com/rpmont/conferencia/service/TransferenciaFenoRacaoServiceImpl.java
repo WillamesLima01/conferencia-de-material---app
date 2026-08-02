@@ -1,12 +1,16 @@
 package br.com.rpmont.conferencia.service;
 
+import br.com.rpmont.conferencia.dtos.ItemTransferenciaFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.dtos.TransferenciaFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.enums.SituacaoTransferenciaFenoRacao;
 import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.exception.ForbiddenException;
 import br.com.rpmont.conferencia.exception.ResourceNotFoundException;
+import br.com.rpmont.conferencia.model.ItemSolicitacaoTransferenciaFenoRacao;
+import br.com.rpmont.conferencia.model.LoteFenoRacao;
 import br.com.rpmont.conferencia.model.TransferenciaFenoRacao;
 import br.com.rpmont.conferencia.model.Usuario;
+import br.com.rpmont.conferencia.repository.ItemSolicitacaoTransferenciaFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.TransferenciaFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,9 @@ public class TransferenciaFenoRacaoServiceImpl
 
     private final UsuarioRepository
             usuarioRepository;
+
+    private final ItemSolicitacaoTransferenciaFenoRacaoRepository
+            itemSolicitacaoRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -312,6 +319,11 @@ public class TransferenciaFenoRacaoServiceImpl
                         transferencia.getAprovadoPorId()
                 );
 
+        List<ItemTransferenciaFenoRacaoResponseDTO> etapas =
+                converterEtapasParaResponse(
+                        transferencia.getId()
+                );
+
         return new TransferenciaFenoRacaoResponseDTO(
                 transferencia.getId(),
 
@@ -380,7 +392,59 @@ public class TransferenciaFenoRacaoServiceImpl
                 aprovadoPorNome,
                 transferencia.getDataTransferencia(),
                 transferencia.getObservacao(),
-                transferencia.getSituacao()
+                transferencia.getSituacao(),
+                etapas
+        );
+    }
+
+    private List<ItemTransferenciaFenoRacaoResponseDTO>
+    converterEtapasParaResponse(
+            Long transferenciaId
+    ) {
+        return itemSolicitacaoRepository
+                .findByTransferenciaIdOrderByOrdemAtendimentoAsc(
+                        transferenciaId
+                )
+                .stream()
+                .map(this::converterEtapaParaResponse)
+                .toList();
+    }
+
+    private ItemTransferenciaFenoRacaoResponseDTO
+    converterEtapaParaResponse(
+            ItemSolicitacaoTransferenciaFenoRacao item
+    ) {
+        LoteFenoRacao loteOrigem =
+                item.getLoteOrigem();
+
+        LoteFenoRacao loteDestino =
+                item.getLoteDestino();
+
+        return new ItemTransferenciaFenoRacaoResponseDTO(
+                item.getId(),
+                item.getOrdemAtendimento(),
+                loteOrigem != null
+                        ? loteOrigem.getId()
+                        : null,
+                loteOrigem != null
+                        ? loteOrigem.getCodigoLote()
+                        : null,
+                loteOrigem != null
+                        ? loteOrigem.getDataEntrada()
+                        : null,
+                loteOrigem != null
+                        ? loteOrigem.getValidade()
+                        : null,
+                loteDestino != null
+                        ? loteDestino.getId()
+                        : null,
+                loteDestino != null
+                        ? loteDestino.getCodigoLote()
+                        : null,
+                item.getQuantidadePrevista(),
+                item.getQuantidadeAprovada(),
+                item.getSaldoAnterior(),
+                item.getSaldoPosterior()
         );
     }
 

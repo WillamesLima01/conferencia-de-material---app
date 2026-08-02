@@ -59,20 +59,14 @@ public class TransferenciaFenoRacao {
     )
     private ProdutoFenoRacao produto;
 
-    @ManyToOne(
-            fetch = FetchType.LAZY,
-            optional = false
-    )
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "`loteOrigemID`",
             nullable = false
     )
     private LoteFenoRacao loteOrigem;
 
-    @ManyToOne(
-            fetch = FetchType.LAZY,
-            optional = false
-    )
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "`loteDestinoID`",
             nullable = false

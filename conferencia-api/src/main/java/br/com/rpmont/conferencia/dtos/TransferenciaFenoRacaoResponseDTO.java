@@ -6,6 +6,7 @@ import br.com.rpmont.conferencia.enums.UnidadeControleFenoRacao;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record TransferenciaFenoRacaoResponseDTO(
 
@@ -51,7 +52,9 @@ public record TransferenciaFenoRacaoResponseDTO(
 
         String observacao,
 
-        SituacaoTransferenciaFenoRacao situacao
+        SituacaoTransferenciaFenoRacao situacao,
+
+        List<ItemTransferenciaFenoRacaoResponseDTO> etapas
 
 ) {
 }
