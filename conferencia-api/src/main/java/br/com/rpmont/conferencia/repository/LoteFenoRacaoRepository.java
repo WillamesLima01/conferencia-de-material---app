@@ -1,6 +1,7 @@
 package br.com.rpmont.conferencia.repository;
 
 import br.com.rpmont.conferencia.enums.SituacaoLoteFenoRacao;
+import br.com.rpmont.conferencia.enums.SituacaoProdutoFenoRacao;
 import br.com.rpmont.conferencia.model.LoteFenoRacao;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -118,4 +119,40 @@ public interface LoteFenoRacaoRepository
             @Param("hoje")
             LocalDate hoje
     );
+
+    @Query("""
+        SELECT
+            lote.produto.id,
+            lote.produto.tipoProduto,
+            lote.produto.nomeProduto,
+            lote.produto.unidadeControle,
+            lote.produto.pesoUnidadeKg,
+            lote.unidade,
+            SUM(lote.quantidadeAtual),
+            SUM(lote.pesoTotalAtualKg),
+            COUNT(lote.id)
+        FROM LoteFenoRacao lote
+        WHERE LOWER(lote.unidade) = LOWER(:unidade)
+          AND lote.situacao = :situacaoLote
+          AND lote.produto.situacao = :situacaoProduto
+          AND lote.quantidadeAtual > 0
+          AND (lote.validade IS NULL OR lote.validade >= :hoje)
+        GROUP BY
+            lote.produto.id,
+            lote.produto.tipoProduto,
+            lote.produto.nomeProduto,
+            lote.produto.unidadeControle,
+            lote.produto.pesoUnidadeKg,
+            lote.unidade
+        ORDER BY
+            lote.produto.tipoProduto,
+            lote.produto.pesoUnidadeKg
+        """)
+    List<Object[]> buscarResumoEstoqueTransferencia(
+            @Param("unidade") String unidade,
+            @Param("situacaoLote") SituacaoLoteFenoRacao situacaoLote,
+            @Param("situacaoProduto") SituacaoProdutoFenoRacao situacaoProduto,
+            @Param("hoje") LocalDate hoje
+    );
+
 }

@@ -19,96 +19,30 @@ import { GiGrain } from 'react-icons/gi';
 import '../styles/TransferenciaFenoRacao.css';
 
 import {
+  listarProdutosFenoRacao,
+} from '../services/produtoFenoRacaoService';
+
+import {
+  listarUnidadesAtivas,
+} from '../services/unidadeService';
+
+import {
+  aprovarSolicitacaoTransferencia,
+  consultarResumoEstoqueTransferencia,
+  criarSolicitacaoTransferencia,
   listarNotificacoesFenoRacao,
   listarSolicitacoesEnviadas,
   listarSolicitacoesRecebidas,
   listarTransferencias,
   marcarNotificacaoComoLida,
+  negarSolicitacaoTransferencia,
 } from '../services/fenoRacaoTransferenciaService';
-
-const PRODUTOS = [
-  {
-    valor: 'FENO',
-    nome: 'Feno',
-    unidade: 'fardo',
-    unidadePlural: 'fardos',
-  },
-  {
-    valor: 'RACAO_ADULTO_PREMIUM',
-    nome: 'Ração Adulto Premium',
-    unidade: 'saco',
-    unidadePlural: 'sacos',
-  },
-  {
-    valor: 'RACAO_ADULTO_MANUTENCAO',
-    nome: 'Ração Adulto Manutenção',
-    unidade: 'saco',
-    unidadePlural: 'sacos',
-  },
-  {
-    valor: 'RACAO_POTRO_PREMIUM',
-    nome: 'Ração Potro Premium',
-    unidade: 'saco',
-    unidadePlural: 'sacos',
-  },
-  {
-    valor: 'RACAO_POTRO_MANUTENCAO',
-    nome: 'Ração Potro Manutenção',
-    unidade: 'saco',
-    unidadePlural: 'sacos',
-  },
-];
-
-const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
 
 const NIVEIS_USUARIO = {
   ADMIN_MASTER: 1,
   ADMIN: 2,
   USUARIO_COMUM: 3,
 };
-
-const STORAGE_KEY_ENTRADAS =
-  'entradasAlimentacaoEquina';
-
-const STORAGE_KEY_SOLICITACOES =
-  'solicitacoesTransferenciaAlimentacaoEquina';
-
-const carregarStorage = (chave) => {
-  const dadosSalvos = localStorage.getItem(chave);
-
-  if (!dadosSalvos) {
-    return [];
-  }
-
-  try {
-    const dadosConvertidos =
-      JSON.parse(dadosSalvos);
-
-    return Array.isArray(dadosConvertidos)
-      ? dadosConvertidos
-      : [];
-  } catch {
-    return [];
-  }
-};
-
-const salvarStorage = (chave, valor) => {
-  localStorage.setItem(
-    chave,
-    JSON.stringify(valor)
-  );
-};
-
-const gerarId = () => {
-  if (window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const dataAtual = () => new Date().toISOString().slice(0, 10);
-const dataHoraAtual = () => new Date().toISOString();
 
 const normalizarTexto = (valor) => {
   return String(valor ?? '')
@@ -120,14 +54,6 @@ const normalizarTexto = (valor) => {
     .replace(/°/g, '')
     .replace(/\s+/g, '')
     .replace(/[^A-Z0-9]/g, '');
-};
-
-const obterUnidadeOficial = (unidade) => {
-  const unidadeNormalizada = normalizarTexto(unidade);
-
-  if (unidadeNormalizada === '3EPMONT') return '3º EPMont';
-
-  return 'RPMont';
 };
 
 const obterUnidadeUsuario = (usuario) => {
@@ -153,42 +79,6 @@ const usuarioEhAdmin = (usuario) => {
   );
 };
 
-const usuarioEhUnidadeEquina = (usuario) => {
-  const unidade = normalizarTexto(obterUnidadeUsuario(usuario));
-
-  return UNIDADES_EQUINAS.includes(unidade);
-};
-
-const obterOutraUnidade = (unidade) => {
-  const unidadeNormalizada = normalizarTexto(unidade);
-
-  if (unidadeNormalizada === 'RPMONT') return '3º EPMont';
-
-  return 'RPMont';
-};
-
-const obterIdUsuario = (usuario) => {
-  return (
-    usuario?.id ||
-    usuario?.ID ||
-    usuario?.matricula ||
-    usuario?.MATRICULA ||
-    usuario?.email ||
-    usuario?.EMAIL ||
-    1
-  );
-};
-
-const obterNomeUsuario = (usuario) => {
-  return (
-    usuario?.nomeExibicao ||
-    `${usuario?.postGrad || usuario?.POSTGRAD || ''} ${
-      usuario?.nome || usuario?.NOME || ''
-    }`.trim() ||
-    'Usuário'
-  );
-};
-
 const formatarNumero = (valor) => {
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 0,
@@ -201,7 +91,9 @@ const formatarDataHora = (valor) => {
 
   const data = new Date(valor);
 
-  if (Number.isNaN(data.getTime())) return '-';
+  if (Number.isNaN(data.getTime())) {
+    return '-';
+  }
 
   return data.toLocaleString('pt-BR', {
     dateStyle: 'short',
@@ -209,23 +101,69 @@ const formatarDataHora = (valor) => {
   });
 };
 
-function TransferenciaFenoRacao({ usuario, onVoltar }) {
-  const [entradas, setEntradas] = useState(() =>
-    carregarStorage(STORAGE_KEY_ENTRADAS)
-  );
+const obterUnidadePlural = (
+  unidadeControle,
+  quantidade = 2
+) => {
+  const plural = Number(quantidade) !== 1;
 
-  const [solicitacoes, setSolicitacoes] = useState(() =>
-    carregarStorage(STORAGE_KEY_SOLICITACOES)
+  if (unidadeControle === 'FARDO') {
+    return plural ? 'fardos' : 'fardo';
+  }
+
+  if (unidadeControle === 'SACO') {
+    return plural ? 'sacos' : 'saco';
+  }
+
+  return plural ? 'unidades' : 'unidade';
+};
+
+const obterNomeProduto = (produto) => {
+  return (
+    produto?.nomeProduto ||
+    produto?.nome ||
+    produto?.tipoProduto ||
+    'Produto'
   );
+};
+
+const obterEtapas = (item) => {
+  return Array.isArray(item?.etapas)
+    ? item.etapas
+    : [];
+};
+
+function TransferenciaFenoRacao({
+  usuario,
+  onVoltar,
+}) {
+  const [produtos, setProdutos] = useState([]);
+  const [unidades, setUnidades] = useState([]);
+  const [unidadeOrigem, setUnidadeOrigem] =
+    useState('');
+  const [resumoEstoque, setResumoEstoque] =
+    useState([]);
+  const [
+    carregandoResumoEstoque,
+    setCarregandoResumoEstoque,
+  ] = useState(false);
+
+  const [produtoId, setProdutoId] = useState('');
+  const [
+    quantidadeSolicitada,
+    setQuantidadeSolicitada,
+  ] = useState('');
+  const [justificativa, setJustificativa] =
+    useState('');
 
   const [
-    solicitacoesRecebidasApi,
-    setSolicitacoesRecebidasApi,
+    solicitacoesRecebidas,
+    setSolicitacoesRecebidas,
   ] = useState([]);
 
   const [
-    solicitacoesEnviadasApi,
-    setSolicitacoesEnviadasApi,
+    solicitacoesEnviadas,
+    setSolicitacoesEnviadas,
   ] = useState([]);
 
   const [transferencias, setTransferencias] =
@@ -245,29 +183,153 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
     setAtualizandoNotificacaoId,
   ] = useState(null);
 
-  const [tipoProduto, setTipoProduto] = useState('');
-  const [estoqueSolicitadoId, setEstoqueSolicitadoId] = useState('');
-  const [quantidadeSolicitada, setQuantidadeSolicitada] = useState('');
-  const [justificativa, setJustificativa] = useState('');
-  const [mensagem, setMensagem] = useState('');
+  const [
+    solicitacaoSelecionada,
+    setSolicitacaoSelecionada,
+  ] = useState(null);
 
-  const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState(null);
-  const [estoqueAnaliseId, setEstoqueAnaliseId] = useState('');
-  const [observacaoResposta, setObservacaoResposta] = useState('');
+  const [
+    observacaoResposta,
+    setObservacaoResposta,
+  ] = useState('');
+
+  const [mensagem, setMensagem] =
+    useState('');
+
+  const [
+    mensagemSolicitacao,
+    setMensagemSolicitacao,
+  ] = useState('');
+
+  const [enviandoSolicitacao, setEnviandoSolicitacao] =
+    useState(false);
+
+  const [processandoResposta, setProcessandoResposta] =
+    useState(false);
 
   const admin = usuarioEhAdmin(usuario);
-  const unidadeEquina = usuarioEhUnidadeEquina(usuario);
 
-  const unidadeUsuario = obterUnidadeOficial(obterUnidadeUsuario(usuario));
-  const unidadeDestino = obterOutraUnidade(unidadeUsuario);
+  const unidadeUsuario =
+    obterUnidadeUsuario(usuario).trim();
 
-  const obterMensagemErro = (error) => {
-    return (
-      error?.data?.message ||
-      error?.message ||
-      'Não foi possível carregar os dados de transferência.'
+  const unidadesDisponiveis = useMemo(() => {
+    return unidades.filter((unidade) => {
+      const identificador =
+        unidade?.sigla ||
+        unidade?.nome ||
+        '';
+
+      return (
+        Boolean(unidade?.ativo ?? true) &&
+        normalizarTexto(identificador) !==
+          normalizarTexto(unidadeUsuario)
+      );
+    });
+  }, [unidades, unidadeUsuario]);
+
+  const produtosComEstoque = useMemo(() => {
+    const saldoPorProduto = new Map(
+      resumoEstoque.map((item) => [
+        String(item.produtoId),
+        item,
+      ])
     );
-  };
+
+    return produtos.map((produto) => {
+      const resumo =
+        saldoPorProduto.get(
+          String(produto.id)
+        ) || {};
+
+      return {
+        ...produto,
+        quantidadeDisponivel: Number(
+          resumo.quantidadeDisponivel || 0
+        ),
+        pesoTotalDisponivelKg: Number(
+          resumo.pesoTotalDisponivelKg || 0
+        ),
+        quantidadeLotes: Number(
+          resumo.quantidadeLotes || 0
+        ),
+        unidadeEstoque:
+          resumo.unidade || unidadeOrigem,
+      };
+    });
+  }, [produtos, resumoEstoque, unidadeOrigem]);
+
+  const produtoSelecionado = useMemo(() => {
+    return (
+      produtosComEstoque.find(
+        (produto) =>
+          String(produto.id) ===
+          String(produtoId)
+      ) || null
+    );
+  }, [produtosComEstoque, produtoId]);
+
+  const quantidadeSolicitadaNumerica = Number(
+    quantidadeSolicitada
+  );
+
+  const pesoUnidadeKg = Number(
+    produtoSelecionado?.pesoUnidadeKg || 0
+  );
+
+  const pesoTotalSolicitadoKg =
+    quantidadeSolicitadaNumerica > 0
+      ? quantidadeSolicitadaNumerica *
+        pesoUnidadeKg
+      : 0;
+
+  const quantidadeDisponivel = Number(
+    produtoSelecionado?.quantidadeDisponivel || 0
+  );
+
+  const estoqueInsuficiente =
+    Boolean(produtoSelecionado) &&
+    quantidadeSolicitadaNumerica > 0 &&
+    quantidadeSolicitadaNumerica >
+      quantidadeDisponivel;
+
+  const notificacoesPendentes = useMemo(() => {
+    return notificacoes.filter(
+      (item) => !item.lida
+    );
+  }, [notificacoes]);
+
+  const obterMensagemErro = useCallback(
+    (error) => {
+      return (
+        error?.data?.message ||
+        error?.message ||
+        'Não foi possível concluir a operação.'
+      );
+    },
+    []
+  );
+
+  const mostrarMensagem = useCallback(
+    (texto) => {
+      setMensagem(texto);
+
+      window.setTimeout(() => {
+        setMensagem('');
+      }, 4000);
+    },
+    []
+  );
+
+  const mostrarMensagemSolicitacao = useCallback(
+    (texto) => {
+      setMensagemSolicitacao(texto);
+
+      window.setTimeout(() => {
+        setMensagemSolicitacao('');
+      }, 7000);
+    },
+    []
+  );
 
   const carregarDadosTransferencia = useCallback(
     async (exibirCarregamento = true) => {
@@ -279,24 +341,40 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
         setErroCarregamento('');
 
         const [
+          produtosRecebidos,
+          unidadesRecebidas,
           recebidas,
           enviadas,
           transferenciasRecebidas,
           notificacoesRecebidas,
         ] = await Promise.all([
+          listarProdutosFenoRacao(),
+          listarUnidadesAtivas(),
           listarSolicitacoesRecebidas(),
           listarSolicitacoesEnviadas(),
           listarTransferencias(),
           listarNotificacoesFenoRacao(),
         ]);
 
-        setSolicitacoesRecebidasApi(
+        setProdutos(
+          Array.isArray(produtosRecebidos)
+            ? produtosRecebidos
+            : []
+        );
+
+        setUnidades(
+          Array.isArray(unidadesRecebidas)
+            ? unidadesRecebidas
+            : []
+        );
+
+        setSolicitacoesRecebidas(
           Array.isArray(recebidas)
             ? recebidas
             : []
         );
 
-        setSolicitacoesEnviadasApi(
+        setSolicitacoesEnviadas(
           Array.isArray(enviadas)
             ? enviadas
             : []
@@ -328,484 +406,313 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
         }
       }
     },
-    []
+    [obterMensagemErro]
   );
 
   useEffect(() => {
     carregarDadosTransferencia();
   }, [carregarDadosTransferencia]);
 
-  const produtoSelecionado = useMemo(() => {
-    return PRODUTOS.find((produto) => produto.valor === tipoProduto) || null;
-  }, [tipoProduto]);
+  const carregarResumoEstoque = useCallback(
+    async (unidade) => {
+      if (!unidade) {
+        setResumoEstoque([]);
+        return;
+      }
 
-  const estoquesDaUnidadeDestino = useMemo(() => {
-    if (!tipoProduto) return [];
+      try {
+        setCarregandoResumoEstoque(true);
+        setMensagemSolicitacao('');
 
-    return entradas
-      .filter((entrada) => {
-        const mesmaUnidadeDestino =
-          normalizarTexto(entrada.unidade) === normalizarTexto(unidadeDestino);
+        const resumo =
+          await consultarResumoEstoqueTransferencia(
+            unidade
+          );
 
-        const mesmoProduto = entrada.tipoProduto === tipoProduto;
-        const temSaldo = Number(entrada.quantidadeAtual || 0) > 0;
+        setResumoEstoque(
+          Array.isArray(resumo)
+            ? resumo
+            : []
+        );
+      } catch (error) {
+        console.error(
+          'Erro ao consultar estoque da unidade:',
+          error
+        );
 
-        return mesmaUnidadeDestino && mesmoProduto && temSaldo;
-      })
-      .sort((a, b) => {
-        const pesoA = Number(a.pesoUnidadeKg || 0);
-        const pesoB = Number(b.pesoUnidadeKg || 0);
+        setResumoEstoque([]);
+        mostrarMensagemSolicitacao(
+          obterMensagemErro(error)
+        );
+      } finally {
+        setCarregandoResumoEstoque(false);
+      }
+    },
+    [
+      mostrarMensagemSolicitacao,
+      obterMensagemErro,
+    ]
+  );
 
-        if (pesoA !== pesoB) return pesoA - pesoB;
+  useEffect(() => {
+    setProdutoId('');
+    setQuantidadeSolicitada('');
+    setResumoEstoque([]);
 
-        const dataA = new Date(a.dataEntrada || 0).getTime();
-        const dataB = new Date(b.dataEntrada || 0).getTime();
-
-        return dataA - dataB;
-      });
-  }, [entradas, tipoProduto, unidadeDestino]);
-
-  const estoqueSolicitado = useMemo(() => {
-    return (
-      entradas.find(
-        (entrada) => String(entrada.id) === String(estoqueSolicitadoId)
-      ) || null
-    );
-  }, [entradas, estoqueSolicitadoId]);
-
-  const solicitacoesRecebidas = useMemo(() => {
-    return solicitacoesRecebidasApi;
-  }, [solicitacoesRecebidasApi]);
-
-  const solicitacoesEnviadas = useMemo(() => {
-    return solicitacoesEnviadasApi;
-  }, [solicitacoesEnviadasApi]);
-
-  const notificacoesPendentes = useMemo(() => {
-    return notificacoes.filter(
-      (item) => !item.lida
-    );
-  }, [notificacoes]);
-
-  const estoquesDisponiveisParaTransferir = useMemo(() => {
-    if (!solicitacaoSelecionada) return [];
-
-    return entradas.filter((entrada) => {
-      const mesmaUnidade =
-        normalizarTexto(entrada.unidade) === normalizarTexto(unidadeUsuario);
-
-      const mesmoProduto =
-        entrada.tipoProduto === solicitacaoSelecionada.tipoProduto;
-
-      const mesmoPeso =
-        Number(entrada.pesoUnidadeKg || 0) ===
-        Number(solicitacaoSelecionada.pesoUnidadeKg || 0);
-
-      const temSaldo = Number(entrada.quantidadeAtual || 0) > 0;
-
-      return mesmaUnidade && mesmoProduto && mesmoPeso && temSaldo;
-    });
-  }, [entradas, solicitacaoSelecionada, unidadeUsuario]);
-
-  const estoqueAnalise = useMemo(() => {
-    return (
-      entradas.find(
-        (entrada) => String(entrada.id) === String(estoqueAnaliseId)
-      ) || null
-    );
-  }, [entradas, estoqueAnaliseId]);
-
-  const pesoUnidadeKg = Number(estoqueSolicitado?.pesoUnidadeKg || 0);
-  const quantidadeDisponivel = Number(estoqueSolicitado?.quantidadeAtual || 0);
-  const pesoDisponivelKg = quantidadeDisponivel * pesoUnidadeKg;
-
-  const quantidadeSolicitadaNumerica = Number(quantidadeSolicitada);
-  const pesoTotalSolicitadoKg =
-    pesoUnidadeKg > 0 && quantidadeSolicitadaNumerica > 0
-      ? pesoUnidadeKg * quantidadeSolicitadaNumerica
-      : 0;
-
-  const saldoAposSolicitacao =
-    quantidadeDisponivel - quantidadeSolicitadaNumerica;
-
-  const mostrarMensagem = (texto) => {
-    setMensagem(texto);
-
-    window.setTimeout(() => {
-      setMensagem('');
-    }, 3500);
-  };
-
-  const handleMarcarNotificacaoComoLida = async (
-    notificacaoId
-  ) => {
-    try {
-      setAtualizandoNotificacaoId(
-        notificacaoId
+    if (unidadeOrigem) {
+      carregarResumoEstoque(
+        unidadeOrigem
       );
-
-      await marcarNotificacaoComoLida(
-        notificacaoId
-      );
-
-      setNotificacoes((listaAtual) =>
-        listaAtual.map((notificacao) =>
-          notificacao.id === notificacaoId
-            ? {
-                ...notificacao,
-                lida: true,
-                dataLeitura:
-                  notificacao.dataLeitura ||
-                  new Date().toISOString(),
-              }
-            : notificacao
-        )
-      );
-
-      mostrarMensagem(
-        'Notificação marcada como lida.'
-      );
-    } catch (error) {
-      console.error(
-        'Erro ao marcar notificação como lida:',
-        error
-      );
-
-      mostrarMensagem(
-        obterMensagemErro(error)
-      );
-    } finally {
-      setAtualizandoNotificacaoId(null);
     }
-  };
-
-  const salvarEntradas = (novaLista) => {
-    setEntradas(novaLista);
-    salvarStorage(STORAGE_KEY_ENTRADAS, novaLista);
-  };
-
-  const salvarSolicitacoes = (novaLista) => {
-    setSolicitacoes(novaLista);
-    salvarStorage(STORAGE_KEY_SOLICITACOES, novaLista);
-  };
-
-  const salvarTransferencias = (novaLista) => {
-    setTransferencias(novaLista);
-  };
-
-  const salvarNotificacoes = (novaLista) => {
-    setNotificacoes(novaLista);
-  };
+  }, [
+    unidadeOrigem,
+    carregarResumoEstoque,
+  ]);
 
   const limparFormulario = () => {
-    setTipoProduto('');
-    setEstoqueSolicitadoId('');
+    setProdutoId('');
     setQuantidadeSolicitada('');
     setJustificativa('');
+    setMensagemSolicitacao('');
   };
 
   const abrirAnalise = (solicitacao) => {
     setSolicitacaoSelecionada(solicitacao);
-    setEstoqueAnaliseId(String(solicitacao.entradaOrigemIdSolicitada || ''));
     setObservacaoResposta('');
   };
 
   const fecharAnalise = () => {
+    if (processandoResposta) return;
+
     setSolicitacaoSelecionada(null);
-    setEstoqueAnaliseId('');
     setObservacaoResposta('');
   };
 
-  const handleProdutoChange = (event) => {
-    setTipoProduto(event.target.value);
-    setEstoqueSolicitadoId('');
-    setQuantidadeSolicitada('');
-    setMensagem('');
-  };
+  const handleMarcarNotificacaoComoLida =
+    async (notificacaoId) => {
+      try {
+        setAtualizandoNotificacaoId(
+          notificacaoId
+        );
 
-  const enviarSolicitacaoTransferencia = (event) => {
-    event.preventDefault();
+        await marcarNotificacaoComoLida(
+          notificacaoId
+        );
 
-    if (!admin || !unidadeEquina) {
-      mostrarMensagem(
-        'Apenas administradores do RPMont e 3º EPMont podem solicitar transferência.'
-      );
-      return;
-    }
+        setNotificacoes((listaAtual) =>
+          listaAtual.map((notificacao) =>
+            notificacao.id === notificacaoId
+              ? {
+                  ...notificacao,
+                  lida: true,
+                  dataLeitura:
+                    notificacao.dataLeitura ||
+                    new Date().toISOString(),
+                }
+              : notificacao
+          )
+        );
 
-    if (!produtoSelecionado) {
-      mostrarMensagem('Selecione o produto.');
-      return;
-    }
+        mostrarMensagem(
+          'Notificação marcada como lida.'
+        );
+      } catch (error) {
+        console.error(
+          'Erro ao marcar notificação como lida:',
+          error
+        );
 
-    if (!estoqueSolicitado) {
-      mostrarMensagem(
-        `Selecione o estoque disponível na unidade ${unidadeDestino}.`
-      );
-      return;
-    }
-
-    if (
-      !Number.isFinite(quantidadeSolicitadaNumerica) ||
-      quantidadeSolicitadaNumerica <= 0
-    ) {
-      mostrarMensagem('Informe uma quantidade válida.');
-      return;
-    }
-
-    if (!Number.isInteger(quantidadeSolicitadaNumerica)) {
-      mostrarMensagem(
-        `A quantidade de ${produtoSelecionado.unidadePlural} deve ser inteira.`
-      );
-      return;
-    }
-
-    if (quantidadeSolicitadaNumerica > quantidadeDisponivel) {
-      mostrarMensagem(
-        `A quantidade solicitada não pode ser maior que o saldo disponível: ${formatarNumero(
-          quantidadeDisponivel
-        )} ${produtoSelecionado.unidadePlural}.`
-      );
-      return;
-    }
-
-    if (!justificativa.trim()) {
-      mostrarMensagem('Informe a justificativa da solicitação.');
-      return;
-    }
-
-    const novaSolicitacao = {
-      id: gerarId(),
-      unidadeSolicitante: unidadeUsuario,
-      unidadeOrigem: unidadeDestino,
-
-      entradaOrigemIdSolicitada: estoqueSolicitado.id,
-      loteOrigemSolicitado: estoqueSolicitado.lote || '',
-      fornecedorOrigem: estoqueSolicitado.fornecedor || '',
-
-      tipoProduto: produtoSelecionado.valor,
-      nomeProduto: produtoSelecionado.nome,
-      quantidadeSolicitada: quantidadeSolicitadaNumerica,
-      unidadeControle: produtoSelecionado.unidade.toUpperCase(),
-      unidadeControlePlural: produtoSelecionado.unidadePlural,
-      pesoUnidadeKg,
-      pesoTotalSolicitadoKg,
-
-      quantidadeDisponivelNoPedido: quantidadeDisponivel,
-      pesoDisponivelNoPedido: pesoDisponivelKg,
-      saldoPrevistoOrigem: saldoAposSolicitacao,
-
-      justificativa: justificativa.trim(),
-      status: 'PENDENTE',
-      solicitadoPorId: obterIdUsuario(usuario),
-      solicitadoPorNome: obterNomeUsuario(usuario),
-      dataSolicitacao: dataHoraAtual(),
-      respondidoPorId: null,
-      respondidoPorNome: '',
-      dataResposta: null,
-      observacaoResposta: '',
-      transferenciaId: null,
+        mostrarMensagem(
+          obterMensagemErro(error)
+        );
+      } finally {
+        setAtualizandoNotificacaoId(null);
+      }
     };
 
-    const novaNotificacao = {
-      id: gerarId(),
-      unidadeDestino,
-      titulo: 'Nova solicitação de transferência',
-      mensagem: `${unidadeUsuario} solicitou ${quantidadeSolicitadaNumerica} ${produtoSelecionado.unidadePlural} de ${produtoSelecionado.nome} de ${formatarNumero(pesoUnidadeKg)} kg.`,
-      tipo: 'TRANSFERENCIA_ALIMENTACAO',
-      lida: false,
-      referenciaId: novaSolicitacao.id,
-      dataCriacao: dataHoraAtual(),
-    };
+  const enviarSolicitacaoTransferencia =
+    async (event) => {
+      event.preventDefault();
 
-    salvarSolicitacoes([novaSolicitacao, ...solicitacoes]);
-    salvarNotificacoes([novaNotificacao, ...notificacoes]);
-
-    limparFormulario();
-    mostrarMensagem('Solicitação de transferência enviada com sucesso.');
-  };
-
-  const negarSolicitacao = () => {
-    if (!solicitacaoSelecionada) return;
-
-    if (!observacaoResposta.trim()) {
-      mostrarMensagem('Informe o motivo da negativa.');
-      return;
-    }
-
-    const solicitacoesAtualizadas = solicitacoes.map((item) =>
-      item.id === solicitacaoSelecionada.id
-        ? {
-            ...item,
-            status: 'NEGADA',
-            respondidoPorId: obterIdUsuario(usuario),
-            respondidoPorNome: obterNomeUsuario(usuario),
-            dataResposta: dataHoraAtual(),
-            observacaoResposta: observacaoResposta.trim(),
-          }
-        : item
-    );
-
-    const novaNotificacao = {
-      id: gerarId(),
-      unidadeDestino: solicitacaoSelecionada.unidadeSolicitante,
-      titulo: 'Transferência negada',
-      mensagem: `${unidadeUsuario} negou a solicitação de ${solicitacaoSelecionada.nomeProduto} de ${formatarNumero(solicitacaoSelecionada.pesoUnidadeKg)} kg.`,
-      tipo: 'RESPOSTA_TRANSFERENCIA_ALIMENTACAO',
-      lida: false,
-      referenciaId: solicitacaoSelecionada.id,
-      dataCriacao: dataHoraAtual(),
-    };
-
-    const notificacoesAtualizadas = notificacoes.map((notificacao) =>
-      notificacao.referenciaId === solicitacaoSelecionada.id
-        ? {
-            ...notificacao,
-            lida: true,
-          }
-        : notificacao
-    );
-
-    salvarSolicitacoes(solicitacoesAtualizadas);
-    salvarNotificacoes([novaNotificacao, ...notificacoesAtualizadas]);
-
-    fecharAnalise();
-    mostrarMensagem('Solicitação negada com sucesso.');
-  };
-
-  const aprovarTransferencia = () => {
-    if (!solicitacaoSelecionada) return;
-
-    if (!estoqueAnalise) {
-      mostrarMensagem('Selecione o estoque/lote que será transferido.');
-      return;
-    }
-
-    const quantidadeTransferida = Number(
-      solicitacaoSelecionada.quantidadeSolicitada || 0
-    );
-
-    const saldoDisponivel = Number(estoqueAnalise.quantidadeAtual || 0);
-
-    if (quantidadeTransferida > saldoDisponivel) {
-      mostrarMensagem(
-        `Estoque insuficiente. Disponível: ${formatarNumero(
-          saldoDisponivel
-        )} ${solicitacaoSelecionada.unidadeControlePlural}.`
-      );
-      return;
-    }
-
-    const transferenciaId = gerarId();
-    const novaEntradaId = gerarId();
-
-    const entradasAtualizadas = entradas.map((entrada) => {
-      if (String(entrada.id) !== String(estoqueAnalise.id)) {
-        return entrada;
+      if (!admin) {
+        mostrarMensagemSolicitacao(
+          'Apenas administradores podem solicitar transferência.'
+        );
+        return;
       }
 
-      const novoSaldo =
-        Number(entrada.quantidadeAtual || 0) - quantidadeTransferida;
+      if (!unidadeOrigem) {
+        mostrarMensagemSolicitacao(
+          'Selecione a unidade de origem.'
+        );
+        return;
+      }
 
-      return {
-        ...entrada,
-        quantidadeAtual: novoSaldo,
-        pesoAtualKg: novoSaldo * Number(entrada.pesoUnidadeKg || 0),
-        dataModificacao: dataHoraAtual(),
-        userModificador: obterIdUsuario(usuario),
-      };
-    });
+      if (!produtoSelecionado) {
+        mostrarMensagemSolicitacao(
+          'Selecione o produto.'
+        );
+        return;
+      }
 
-    const novaEntradaDestino = {
-      ...estoqueAnalise,
-      id: novaEntradaId,
-      lote: estoqueAnalise.lote
-        ? `${estoqueAnalise.lote}-TRANSF`
-        : `TRANSF-${dataAtual()}`,
-      unidade: solicitacaoSelecionada.unidadeSolicitante,
-      quantidadeEntrada: quantidadeTransferida,
-      quantidadeInicial: quantidadeTransferida,
-      quantidade: quantidadeTransferida,
-      quantidadeAtual: quantidadeTransferida,
-      pesoTotalKg:
-        quantidadeTransferida * Number(estoqueAnalise.pesoUnidadeKg || 0),
-      pesoAtualKg:
-        quantidadeTransferida * Number(estoqueAnalise.pesoUnidadeKg || 0),
-      fornecedor: `Transferência ${unidadeUsuario}`,
-      origemTransferenciaId: transferenciaId,
-      dataEntrada: dataAtual(),
-      dataCadastro: dataHoraAtual(),
-      dataModificacao: dataHoraAtual(),
-      userModificador: obterIdUsuario(usuario),
+      if (
+        !Number.isInteger(
+          quantidadeSolicitadaNumerica
+        ) ||
+        quantidadeSolicitadaNumerica <= 0
+      ) {
+        mostrarMensagemSolicitacao(
+          'Informe uma quantidade inteira maior que zero.'
+        );
+        return;
+      }
+
+      if (estoqueInsuficiente) {
+        mostrarMensagemSolicitacao(
+          `Estoque insuficiente. Disponível: ${formatarNumero(
+            quantidadeDisponivel
+          )} ${obterUnidadePlural(
+            produtoSelecionado.unidadeControle,
+            quantidadeDisponivel
+          )}.`
+        );
+        return;
+      }
+
+      if (!justificativa.trim()) {
+        mostrarMensagemSolicitacao(
+          'Informe a justificativa da solicitação.'
+        );
+        return;
+      }
+
+      try {
+        setEnviandoSolicitacao(true);
+
+        const solicitacaoCriada =
+          await criarSolicitacaoTransferencia({
+            produtoId: Number(
+              produtoSelecionado.id
+            ),
+            unidadeOrigem,
+            quantidadeSolicitada:
+              quantidadeSolicitadaNumerica,
+            justificativa:
+              justificativa.trim(),
+          });
+
+        limparFormulario();
+
+        await carregarDadosTransferencia(false);
+        await carregarResumoEstoque(
+          unidadeOrigem
+        );
+
+        const quantidadeEtapas =
+          obterEtapas(
+            solicitacaoCriada
+          ).length;
+
+        mostrarMensagemSolicitacao(
+          quantidadeEtapas > 1
+            ? `Solicitação enviada com sucesso e planejada em ${quantidadeEtapas} etapas.`
+            : 'Solicitação enviada com sucesso.'
+        );
+      } catch (error) {
+        console.error(
+          'Erro ao criar solicitação:',
+          error
+        );
+
+        const mensagemErro =
+          obterMensagemErro(error);
+
+        mostrarMensagemSolicitacao(
+          mensagemErro
+        );
+      } finally {
+        setEnviandoSolicitacao(false);
+      }
     };
 
-    const novaTransferencia = {
-      id: transferenciaId,
-      solicitacaoId: solicitacaoSelecionada.id,
-      unidadeOrigem: unidadeUsuario,
-      unidadeDestino: solicitacaoSelecionada.unidadeSolicitante,
-      entradaOrigemId: estoqueAnalise.id,
-      entradaDestinoId: novaEntradaId,
-      tipoProduto: solicitacaoSelecionada.tipoProduto,
-      nomeProduto: solicitacaoSelecionada.nomeProduto,
-      quantidadeTransferida,
-      unidadeControlePlural: solicitacaoSelecionada.unidadeControlePlural,
-      pesoUnidadeKg: Number(estoqueAnalise.pesoUnidadeKg || 0),
-      pesoTotalKg:
-        quantidadeTransferida * Number(estoqueAnalise.pesoUnidadeKg || 0),
-      loteOrigem: estoqueAnalise.lote || '',
-      aprovadoPorId: obterIdUsuario(usuario),
-      aprovadoPorNome: obterNomeUsuario(usuario),
-      dataTransferencia: dataHoraAtual(),
-      observacao: observacaoResposta.trim(),
+  const negarSolicitacao =
+    async () => {
+      if (!solicitacaoSelecionada) return;
+
+      const observacao =
+        observacaoResposta.trim();
+
+      if (!observacao) {
+        mostrarMensagem(
+          'Informe o motivo da negativa.'
+        );
+        return;
+      }
+
+      try {
+        setProcessandoResposta(true);
+
+        await negarSolicitacaoTransferencia(
+          solicitacaoSelecionada.id,
+          observacao
+        );
+
+        fecharAnalise();
+        await carregarDadosTransferencia(false);
+
+        mostrarMensagem(
+          'Solicitação negada com sucesso.'
+        );
+      } catch (error) {
+        console.error(
+          'Erro ao negar solicitação:',
+          error
+        );
+
+        mostrarMensagem(
+          obterMensagemErro(error)
+        );
+      } finally {
+        setProcessandoResposta(false);
+        setSolicitacaoSelecionada(null);
+        setObservacaoResposta('');
+      }
     };
 
-    const solicitacoesAtualizadas = solicitacoes.map((item) =>
-      item.id === solicitacaoSelecionada.id
-        ? {
-            ...item,
-            status: 'TRANSFERIDA',
-            respondidoPorId: obterIdUsuario(usuario),
-            respondidoPorNome: obterNomeUsuario(usuario),
-            dataResposta: dataHoraAtual(),
-            observacaoResposta: observacaoResposta.trim(),
-            transferenciaId,
-          }
-        : item
-    );
+  const aprovarTransferencia =
+    async () => {
+      if (!solicitacaoSelecionada) return;
 
-    const novaNotificacao = {
-      id: gerarId(),
-      unidadeDestino: solicitacaoSelecionada.unidadeSolicitante,
-      titulo: 'Transferência aprovada',
-      mensagem: `${unidadeUsuario} transferiu ${quantidadeTransferida} ${solicitacaoSelecionada.unidadeControle === 'FARDO'
-                    ? 'fardos'
-                    : 'sacos'} de ${solicitacaoSelecionada.nomeProduto} de ${formatarNumero(solicitacaoSelecionada.pesoUnidadeKg)} kg.`,
-      tipo: 'RESPOSTA_TRANSFERENCIA_ALIMENTACAO',
-      lida: false,
-      referenciaId: solicitacaoSelecionada.id,
-      dataCriacao: dataHoraAtual(),
+      try {
+        setProcessandoResposta(true);
+
+        await aprovarSolicitacaoTransferencia(
+          solicitacaoSelecionada.id,
+          observacaoResposta.trim()
+        );
+
+        await carregarDadosTransferencia(false);
+
+        mostrarMensagem(
+          'Transferência aprovada e estoque movimentado com sucesso.'
+        );
+      } catch (error) {
+        console.error(
+          'Erro ao aprovar solicitação:',
+          error
+        );
+
+        mostrarMensagem(
+          obterMensagemErro(error)
+        );
+      } finally {
+        setProcessandoResposta(false);
+        setSolicitacaoSelecionada(null);
+        setObservacaoResposta('');
+      }
     };
 
-    const notificacoesAtualizadas = notificacoes.map((notificacao) =>
-      notificacao.referenciaId === solicitacaoSelecionada.id
-        ? {
-            ...notificacao,
-            lida: true,
-          }
-        : notificacao
-    );
-
-    salvarEntradas([novaEntradaDestino, ...entradasAtualizadas]);
-    salvarTransferencias([novaTransferencia, ...transferencias]);
-    salvarSolicitacoes(solicitacoesAtualizadas);
-    salvarNotificacoes([novaNotificacao, ...notificacoesAtualizadas]);
-
-    fecharAnalise();
-    mostrarMensagem('Transferência aprovada e estoque movimentado com sucesso.');
-  };
-
-  if (!admin || !unidadeEquina) {
+  if (!admin) {
     return (
       <main className="transferencia-alimentacao-page">
         <section className="transferencia-alimentacao-phone">
@@ -828,12 +735,10 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
           <section className="transferencia-alimentacao-card">
             <div className="transferencia-alimentacao-vazio">
               <FaTriangleExclamation />
-
               <h2>Acesso negado</h2>
-
               <p>
                 Transferência de Feno e Ração é permitida somente para
-                administradores do RPMont e 3º EPMont.
+                administradores.
               </p>
             </div>
           </section>
@@ -841,6 +746,130 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
       </main>
     );
   }
+
+  const renderizarEtapasSolicitacao = (item) => {
+    const etapas = obterEtapas(item);
+
+    if (etapas.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="transferencia-alimentacao-etapas">
+        <strong>
+          Planejamento automático:
+        </strong>
+
+        {etapas.map((etapa) => (
+          <div
+            key={etapa.id}
+            className="transferencia-alimentacao-etapa"
+          >
+            <span>
+              Etapa {etapa.ordemAtendimento}
+            </span>
+
+            <p>
+              Lote{' '}
+              <strong>
+                {etapa.codigoLoteOrigem ||
+                  etapa.loteOrigemId}
+              </strong>
+            </p>
+
+            <p>
+              Quantidade prevista:{' '}
+              <strong>
+                {formatarNumero(
+                  etapa.quantidadePrevista
+                )}{' '}
+                {obterUnidadePlural(
+                  item.unidadeControle,
+                  etapa.quantidadePrevista
+                )}
+              </strong>
+            </p>
+
+            {etapa.validade && (
+              <p>
+                Validade:{' '}
+                <strong>{etapa.validade}</strong>
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderizarEtapasTransferencia = (item) => {
+    const etapas = obterEtapas(item);
+
+    if (etapas.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="transferencia-alimentacao-etapas">
+        <strong>
+          Etapas da transferência:
+        </strong>
+
+        {etapas.map((etapa) => (
+          <div
+            key={etapa.id}
+            className="transferencia-alimentacao-etapa"
+          >
+            <span>
+              Etapa {etapa.ordemAtendimento}
+            </span>
+
+            <p>
+              Origem:{' '}
+              <strong>
+                {etapa.codigoLoteOrigem ||
+                  etapa.loteOrigemId}
+              </strong>
+            </p>
+
+            <p>
+              Destino:{' '}
+              <strong>
+                {etapa.codigoLoteDestino ||
+                  etapa.loteDestinoId}
+              </strong>
+            </p>
+
+            <p>
+              Quantidade:{' '}
+              <strong>
+                {formatarNumero(
+                  etapa.quantidadeAprovada
+                )}{' '}
+                {obterUnidadePlural(
+                  item.unidadeControle,
+                  etapa.quantidadeAprovada
+                )}
+              </strong>
+            </p>
+
+            <p>
+              Saldo da origem:{' '}
+              <strong>
+                {formatarNumero(
+                  etapa.saldoAnteriorOrigem
+                )}{' '}
+                →{' '}
+                {formatarNumero(
+                  etapa.saldoPosteriorOrigem
+                )}
+              </strong>
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <main className="transferencia-alimentacao-page">
@@ -864,7 +893,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
             <FaBell />
 
             {notificacoesPendentes.length > 0 && (
-              <strong>{notificacoesPendentes.length}</strong>
+              <strong>
+                {notificacoesPendentes.length}
+              </strong>
             )}
           </div>
         </header>
@@ -936,7 +967,6 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                     </span>
 
                     <h3>{item.titulo}</h3>
-
                     <p>{item.mensagem}</p>
 
                     {item.solicitacaoId && (
@@ -988,94 +1018,176 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
             <div>
               <h2>Nova solicitação</h2>
               <p>
-                Consulte o estoque do <strong>{unidadeDestino}</strong> antes de
-                solicitar.
+                Selecione a unidade de origem e o sistema
+                distribuirá os lotes automaticamente por FEFO/FIFO.
               </p>
             </div>
           </div>
 
           <form
             className="transferencia-alimentacao-form"
-            onSubmit={enviarSolicitacaoTransferencia}
+            onSubmit={
+              enviarSolicitacaoTransferencia
+            }
           >
             <div className="transferencia-alimentacao-form-group">
-              <label htmlFor="produtoTransferencia">Produto</label>
-
-              <select
-                id="produtoTransferencia"
-                value={tipoProduto}
-                onChange={handleProdutoChange}
-              >
-                <option value="">Selecione o produto</option>
-
-                {PRODUTOS.map((produto) => (
-                  <option key={produto.valor} value={produto.valor}>
-                    {produto.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="transferencia-alimentacao-form-group">
-              <label htmlFor="estoqueTransferencia">
-                Peso e estoque disponível no {unidadeDestino}
+              <label htmlFor="unidadeOrigemTransferencia">
+                Unidade de origem
               </label>
 
               <select
-                id="estoqueTransferencia"
-                value={estoqueSolicitadoId}
-                disabled={!tipoProduto}
+                id="unidadeOrigemTransferencia"
+                value={unidadeOrigem}
                 onChange={(event) => {
-                  setEstoqueSolicitadoId(event.target.value);
-                  setQuantidadeSolicitada('');
-                  setMensagem('');
+                  setUnidadeOrigem(
+                    event.target.value
+                  );
+                  setMensagemSolicitacao('');
                 }}
               >
                 <option value="">
-                  {!tipoProduto
-                    ? 'Selecione o produto primeiro'
-                    : estoquesDaUnidadeDestino.length === 0
-                      ? `Nenhum estoque disponível no ${unidadeDestino}`
-                      : 'Selecione o estoque'}
+                  Selecione a unidade
                 </option>
 
-                {estoquesDaUnidadeDestino.map((entrada) => (
-                  <option key={entrada.id} value={entrada.id}>
-                    {formatarNumero(entrada.pesoUnidadeKg)} kg —{' '}
-                    {formatarNumero(entrada.quantidadeAtual)}{' '}
-                    {produtoSelecionado?.unidadePlural}
-                    {entrada.lote ? ` — Lote ${entrada.lote}` : ''}
+                {unidadesDisponiveis.map(
+                  (unidade) => {
+                    const valor =
+                      unidade.sigla ||
+                      unidade.nome;
+
+                    return (
+                      <option
+                        key={unidade.id}
+                        value={valor}
+                      >
+                        {unidade.nome}
+                        {unidade.sigla &&
+                          unidade.sigla !==
+                            unidade.nome &&
+                          ` (${unidade.sigla})`}
+                      </option>
+                    );
+                  }
+                )}
+              </select>
+            </div>
+
+            <div className="transferencia-alimentacao-form-group">
+              <label htmlFor="produtoTransferencia">
+                Produto
+              </label>
+
+              <select
+                id="produtoTransferencia"
+                value={produtoId}
+                disabled={
+                  !unidadeOrigem ||
+                  carregandoResumoEstoque
+                }
+                onChange={(event) => {
+                  setProdutoId(
+                    event.target.value
+                  );
+                  setQuantidadeSolicitada('');
+                  setMensagemSolicitacao('');
+                }}
+              >
+                <option value="">
+                  {carregandoResumoEstoque
+                    ? 'Consultando estoque...'
+                    : unidadeOrigem
+                      ? 'Selecione o produto'
+                      : 'Selecione primeiro a unidade'}
+                </option>
+
+                {produtosComEstoque.map((produto) => (
+                  <option
+                    key={produto.id}
+                    value={produto.id}
+                  >
+                    {obterNomeProduto(produto)}
+                    {' — '}
+                    {formatarNumero(
+                      produto.pesoUnidadeKg
+                    )}{' '}
+                    kg
+                    {' — '}
+                    {formatarNumero(
+                      produto.quantidadeDisponivel
+                    )}{' '}
+                    {obterUnidadePlural(
+                      produto.unidadeControle,
+                      produto.quantidadeDisponivel
+                    )}{' '}
+                    disponíveis
                   </option>
                 ))}
               </select>
             </div>
 
-            {estoqueSolicitado && (
+            {produtoSelecionado && (
               <div className="transferencia-alimentacao-estoque-info">
                 <div>
-                  <span>Peso por unidade</span>
-                  <strong>{formatarNumero(pesoUnidadeKg)} kg</strong>
+                  <span>Tipo</span>
+                  <strong>
+                    {produtoSelecionado.tipoProduto}
+                  </strong>
                 </div>
 
                 <div>
-                  <span>Saldo disponível no {unidadeDestino}</span>
+                  <span>Unidade de controle</span>
                   <strong>
-                    {formatarNumero(quantidadeDisponivel)}{' '}
-                    {produtoSelecionado?.unidadePlural}
+                    {produtoSelecionado.unidadeControle}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Peso por unidade</span>
+                  <strong>
+                    {formatarNumero(
+                      produtoSelecionado.pesoUnidadeKg
+                    )}{' '}
+                    kg
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Disponível</span>
+                  <strong>
+                    {formatarNumero(
+                      produtoSelecionado.quantidadeDisponivel
+                    )}{' '}
+                    {obterUnidadePlural(
+                      produtoSelecionado.unidadeControle,
+                      produtoSelecionado.quantidadeDisponivel
+                    )}
                   </strong>
                 </div>
 
                 <div>
                   <span>Peso disponível</span>
-                  <strong>{formatarNumero(pesoDisponivelKg)} kg</strong>
+                  <strong>
+                    {formatarNumero(
+                      produtoSelecionado.pesoTotalDisponivelKg
+                    )}{' '}
+                    kg
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Lotes elegíveis</span>
+                  <strong>
+                    {formatarNumero(
+                      produtoSelecionado.quantidadeLotes
+                    )}
+                  </strong>
                 </div>
               </div>
             )}
 
             <div className="transferencia-alimentacao-form-group">
               <label htmlFor="quantidadeTransferencia">
-                Quantidade solicitada de{' '}
-                {produtoSelecionado?.unidadePlural || 'unidades'}
+                Quantidade solicitada
               </label>
 
               <input
@@ -1085,66 +1197,114 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                 step="1"
                 inputMode="numeric"
                 value={quantidadeSolicitada}
-                placeholder={
-                  produtoSelecionado
-                    ? `Ex.: 30 ${produtoSelecionado.unidadePlural}`
-                    : 'Informe a quantidade'
-                }
-                disabled={!estoqueSolicitado}
+                placeholder="Informe a quantidade"
+                disabled={!produtoSelecionado}
                 onChange={(event) => {
-                  setQuantidadeSolicitada(event.target.value);
-                  setMensagem('');
+                  setQuantidadeSolicitada(
+                    event.target.value
+                  );
+                  setMensagemSolicitacao('');
                 }}
               />
             </div>
+
+            {estoqueInsuficiente && (
+              <div
+                className="transferencia-alimentacao-mensagem"
+                role="alert"
+              >
+                <FaTriangleExclamation />
+                <span>
+                  Estoque insuficiente. Disponível:{' '}
+                  <strong>
+                    {formatarNumero(
+                      quantidadeDisponivel
+                    )}{' '}
+                    {obterUnidadePlural(
+                      produtoSelecionado.unidadeControle,
+                      quantidadeDisponivel
+                    )}
+                  </strong>
+                  .
+                </span>
+              </div>
+            )}
 
             <div className="transferencia-alimentacao-resumo">
               <div>
                 <span>Quantidade solicitada</span>
                 <strong>
                   {quantidadeSolicitadaNumerica > 0
-                    ? `${formatarNumero(quantidadeSolicitadaNumerica)} ${
-                        produtoSelecionado?.unidadePlural || 'unidades'
-                      }`
+                    ? `${formatarNumero(
+                        quantidadeSolicitadaNumerica
+                      )} ${obterUnidadePlural(
+                        produtoSelecionado?.unidadeControle,
+                        quantidadeSolicitadaNumerica
+                      )}`
                     : '0'}
                 </strong>
               </div>
 
               <div>
                 <span>Peso total solicitado</span>
-                <strong>{formatarNumero(pesoTotalSolicitadoKg)} kg</strong>
+                <strong>
+                  {formatarNumero(
+                    pesoTotalSolicitadoKg
+                  )}{' '}
+                  kg
+                </strong>
               </div>
 
               <div className="transferencia-alimentacao-resumo-total">
-                <span>Saldo previsto no {unidadeDestino}</span>
-                <strong
-                  className={
-                    saldoAposSolicitacao < 0 ? 'saldo-insuficiente' : ''
-                  }
-                >
-                  {formatarNumero(Math.max(saldoAposSolicitacao, 0))}{' '}
-                  {produtoSelecionado?.unidadePlural || 'unidades'}
-                </strong>
+                <span>Unidade de origem</span>
+                <strong>{unidadeOrigem}</strong>
               </div>
             </div>
 
             <div className="transferencia-alimentacao-form-group">
-              <label htmlFor="justificativaTransferencia">Justificativa</label>
+              <label htmlFor="justificativaTransferencia">
+                Justificativa
+              </label>
 
               <textarea
                 id="justificativaTransferencia"
                 value={justificativa}
+                maxLength={500}
                 placeholder="Explique o motivo da solicitação"
                 onChange={(event) => {
-                  setJustificativa(event.target.value);
-                  setMensagem('');
+                  setJustificativa(
+                    event.target.value
+                  );
+                  setMensagemSolicitacao('');
                 }}
               />
             </div>
 
-            <button type="submit" className="transferencia-alimentacao-enviar">
+            {mensagemSolicitacao && (
+              <div
+                className="transferencia-alimentacao-mensagem"
+                role="alert"
+                aria-live="assertive"
+              >
+                <FaTriangleExclamation />
+                <span>{mensagemSolicitacao}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="transferencia-alimentacao-enviar"
+              disabled={
+                enviandoSolicitacao ||
+                !unidadeOrigem ||
+                !produtoSelecionado ||
+                estoqueInsuficiente
+              }
+            >
               <FaPaperPlane />
-              Enviar solicitação
+              {enviandoSolicitacao
+                ? 'Enviando...'
+                : 'Enviar solicitação'}
             </button>
           </form>
         </section>
@@ -1156,7 +1316,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
               <h2>Solicitações para analisar</h2>
             </div>
 
-            <strong>{solicitacoesRecebidas.length}</strong>
+            <strong>
+              {solicitacoesRecebidas.length}
+            </strong>
           </div>
 
           {solicitacoesRecebidas.length === 0 ? (
@@ -1169,7 +1331,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
               {solicitacoesRecebidas.map((item) => (
                 <article
                   key={item.id}
-                  className={`transferencia-alimentacao-item status-${item.status.toLowerCase()}`}
+                  className={`transferencia-alimentacao-item status-${String(
+                    item.status
+                  ).toLowerCase()}`}
                 >
                   <div className="transferencia-alimentacao-item-icon">
                     <GiGrain />
@@ -1180,42 +1344,54 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                     <h3>{item.nomeProduto}</h3>
 
                     <p>
-                      {item.unidadeSolicitante} solicitou{' '}
+                      {item.unidadeSolicitante}{' '}
+                      solicitou{' '}
                       <strong>
-                        {formatarNumero(item.quantidadeSolicitada)}{' '}
-                        {item.unidadeControle === 'FARDO'
-                          ? 'fardos'
-                          : 'sacos'} de{' '}
-                        {formatarNumero(item.pesoUnidadeKg)} kg
-                      </strong>
-                    </p>
-
-                    <p>
-                      Estoque solicitado:{' '}
-                      <strong>
-                        {item.codigoLote
-                          ? `Lote ${item.codigoLote}`
-                          : 'Sem lote informado'}
+                        {formatarNumero(
+                          item.quantidadeSolicitada
+                        )}{' '}
+                        {obterUnidadePlural(
+                          item.unidadeControle,
+                          item.quantidadeSolicitada
+                        )}{' '}
+                        de{' '}
+                        {formatarNumero(
+                          item.pesoUnidadeKg
+                        )}{' '}
+                        kg
                       </strong>
                     </p>
 
                     <p>
                       Peso total:{' '}
                       <strong>
-                        {formatarNumero(item.pesoTotalSolicitadoKg)} kg
+                        {formatarNumero(
+                          item.pesoTotalSolicitadoKg
+                        )}{' '}
+                        kg
                       </strong>
                     </p>
 
                     <p>{item.justificativa}</p>
 
-                    <small>{formatarDataHora(item.dataSolicitacao)}</small>
+                    {renderizarEtapasSolicitacao(
+                      item
+                    )}
+
+                    <small>
+                      {formatarDataHora(
+                        item.dataSolicitacao
+                      )}
+                    </small>
                   </div>
 
                   {item.status === 'PENDENTE' && (
                     <button
                       type="button"
                       className="transferencia-alimentacao-analisar"
-                      onClick={() => abrirAnalise(item)}
+                      onClick={() =>
+                        abrirAnalise(item)
+                      }
                     >
                       Analisar
                     </button>
@@ -1233,7 +1409,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
               <h2>Minhas solicitações</h2>
             </div>
 
-            <strong>{solicitacoesEnviadas.length}</strong>
+            <strong>
+              {solicitacoesEnviadas.length}
+            </strong>
           </div>
 
           {solicitacoesEnviadas.length === 0 ? (
@@ -1246,7 +1424,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
               {solicitacoesEnviadas.map((item) => (
                 <article
                   key={item.id}
-                  className={`transferencia-alimentacao-item status-${item.status.toLowerCase()}`}
+                  className={`transferencia-alimentacao-item status-${String(
+                    item.status
+                  ).toLowerCase()}`}
                 >
                   <div className="transferencia-alimentacao-item-icon">
                     <FaRightLeft />
@@ -1257,34 +1437,43 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                     <h3>{item.nomeProduto}</h3>
 
                     <p>
-                      Para <strong>{item.unidadeOrigem}</strong>
+                      Origem:{' '}
+                      <strong>
+                        {item.unidadeOrigem}
+                      </strong>
                     </p>
 
                     <p>
                       Quantidade:{' '}
                       <strong>
-                        {formatarNumero(item.quantidadeSolicitada)}{' '}
-                        {item.unidadeControle === 'FARDO'
-                          ? 'fardos'
-                          : 'sacos'} de{' '}
-                        {formatarNumero(item.pesoUnidadeKg)} kg
+                        {formatarNumero(
+                          item.quantidadeSolicitada
+                        )}{' '}
+                        {obterUnidadePlural(
+                          item.unidadeControle,
+                          item.quantidadeSolicitada
+                        )}
                       </strong>
                     </p>
 
-                    <p>
-                      Peso total:{' '}
-                      <strong>
-                        {formatarNumero(item.pesoTotalSolicitadoKg)} kg
-                      </strong>
-                    </p>
+                    {renderizarEtapasSolicitacao(
+                      item
+                    )}
 
                     {item.observacaoResposta && (
                       <p>
-                        Resposta: <strong>{item.observacaoResposta}</strong>
+                        Resposta:{' '}
+                        <strong>
+                          {item.observacaoResposta}
+                        </strong>
                       </p>
                     )}
 
-                    <small>{formatarDataHora(item.dataSolicitacao)}</small>
+                    <small>
+                      {formatarDataHora(
+                        item.dataSolicitacao
+                      )}
+                    </small>
                   </div>
                 </article>
               ))}
@@ -1299,7 +1488,9 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
               <h2>Transferências realizadas</h2>
             </div>
 
-            <strong>{transferencias.length}</strong>
+            <strong>
+              {transferencias.length}
+            </strong>
           </div>
 
           {transferencias.length === 0 ? (
@@ -1323,26 +1514,47 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                     <h3>{item.nomeProduto}</h3>
 
                     <p>
-                      {item.unidadeOrigem} → {item.unidadeDestino}
+                      {item.unidadeOrigem} →{' '}
+                      {item.unidadeDestino}
                     </p>
 
                     <p>
                       Quantidade:{' '}
                       <strong>
-                        {formatarNumero(item.quantidadeTransferida)}{' '}
-                        {item.unidadeControle === 'FARDO'
-                          ? 'fardos'
-                          : 'sacos'} de{' '}
-                        {formatarNumero(item.pesoUnidadeKg)} kg
+                        {formatarNumero(
+                          item.quantidadeTransferida
+                        )}{' '}
+                        {obterUnidadePlural(
+                          item.unidadeControle,
+                          item.quantidadeTransferida
+                        )}{' '}
+                        de{' '}
+                        {formatarNumero(
+                          item.pesoUnidadeKg
+                        )}{' '}
+                        kg
                       </strong>
                     </p>
 
                     <p>
                       Peso total:{' '}
-                      <strong>{formatarNumero(item.pesoTotalKg)} kg</strong>
+                      <strong>
+                        {formatarNumero(
+                          item.pesoTotalKg
+                        )}{' '}
+                        kg
+                      </strong>
                     </p>
 
-                    <small>{formatarDataHora(item.dataTransferencia)}</small>
+                    {renderizarEtapasTransferencia(
+                      item
+                    )}
+
+                    <small>
+                      {formatarDataHora(
+                        item.dataTransferencia
+                      )}
+                    </small>
                   </div>
                 </article>
               ))}
@@ -1356,68 +1568,84 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
               <h2>Analisar transferência</h2>
 
               <p>
-                <strong>{solicitacaoSelecionada.unidadeSolicitante}</strong>{' '}
+                <strong>
+                  {
+                    solicitacaoSelecionada.unidadeSolicitante
+                  }
+                </strong>{' '}
                 solicitou{' '}
                 <strong>
-                  {formatarNumero(solicitacaoSelecionada.quantidadeSolicitada)}{' '}
-                  {solicitacaoSelecionada.unidadeControle === 'FARDO'
-                    ? 'fardos'
-                    : 'sacos'} de{' '}
-                  {formatarNumero(solicitacaoSelecionada.pesoUnidadeKg)} kg
+                  {formatarNumero(
+                    solicitacaoSelecionada.quantidadeSolicitada
+                  )}{' '}
+                  {obterUnidadePlural(
+                    solicitacaoSelecionada.unidadeControle,
+                    solicitacaoSelecionada.quantidadeSolicitada
+                  )}{' '}
+                  de{' '}
+                  {formatarNumero(
+                    solicitacaoSelecionada.pesoUnidadeKg
+                  )}{' '}
+                  kg
                 </strong>{' '}
-                de <strong>{solicitacaoSelecionada.nomeProduto}</strong>.
+                de{' '}
+                <strong>
+                  {
+                    solicitacaoSelecionada.nomeProduto
+                  }
+                </strong>
+                .
               </p>
 
               <div className="transferencia-alimentacao-modal-resumo">
-                <span>Estoque visto no momento do pedido</span>
+                <span>
+                  Estoque visto no momento do pedido
+                </span>
+
                 <strong>
                   {formatarNumero(
                     solicitacaoSelecionada.quantidadeDisponivelNoPedido
                   )}{' '}
-                  {solicitacaoSelecionada.unidadeControle === 'FARDO'
-                    ? 'fardos'
-                    : 'sacos'} disponíveis
+                  {obterUnidadePlural(
+                    solicitacaoSelecionada.unidadeControle,
+                    solicitacaoSelecionada.quantidadeDisponivelNoPedido
+                  )}
                 </strong>
 
                 <span>Peso total solicitado</span>
+
                 <strong>
-                  {formatarNumero(solicitacaoSelecionada.pesoTotalSolicitadoKg)}{' '}
+                  {formatarNumero(
+                    solicitacaoSelecionada.pesoTotalSolicitadoKg
+                  )}{' '}
                   kg
                 </strong>
 
                 <span>Justificativa</span>
-                <strong>{solicitacaoSelecionada.justificativa}</strong>
+
+                <strong>
+                  {
+                    solicitacaoSelecionada.justificativa
+                  }
+                </strong>
               </div>
 
-              <label className="transferencia-alimentacao-modal-label">
-                Estoque/lote para transferência
-
-                <select
-                  value={estoqueAnaliseId}
-                  onChange={(event) => {
-                    setEstoqueAnaliseId(event.target.value);
-                    setMensagem('');
-                  }}
-                >
-                  <option value="">Selecione o estoque</option>
-
-                  {estoquesDisponiveisParaTransferir.map((entrada) => (
-                    <option key={entrada.id} value={entrada.id}>
-                      {formatarNumero(entrada.pesoUnidadeKg)} kg —{' '}
-                      {formatarNumero(entrada.quantidadeAtual)} disponíveis
-                      {entrada.lote ? ` — Lote ${entrada.lote}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {renderizarEtapasSolicitacao(
+                solicitacaoSelecionada
+              )}
 
               <label className="transferencia-alimentacao-modal-label">
-                Observação / motivo da negativa
+                Observação da aprovação ou motivo da negativa
 
                 <textarea
                   value={observacaoResposta}
-                  placeholder="Obrigatório se for negar"
-                  onChange={(event) => setObservacaoResposta(event.target.value)}
+                  maxLength={500}
+                  placeholder="Obrigatório para negar. Opcional para aprovar."
+                  onChange={(event) =>
+                    setObservacaoResposta(
+                      event.target.value
+                    )
+                  }
                 />
               </label>
 
@@ -1425,15 +1653,19 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                 <button
                   type="button"
                   className="transferencia-alimentacao-aprovar"
+                  disabled={processandoResposta}
                   onClick={aprovarTransferencia}
                 >
                   <FaCircleCheck />
-                  Aprovar e transferir
+                  {processandoResposta
+                    ? 'Processando...'
+                    : 'Aprovar e transferir'}
                 </button>
 
                 <button
                   type="button"
                   className="transferencia-alimentacao-negar"
+                  disabled={processandoResposta}
                   onClick={negarSolicitacao}
                 >
                   <FaXmark />
@@ -1443,6 +1675,7 @@ function TransferenciaFenoRacao({ usuario, onVoltar }) {
                 <button
                   type="button"
                   className="transferencia-alimentacao-fechar"
+                  disabled={processandoResposta}
                   onClick={fecharAnalise}
                 >
                   Fechar

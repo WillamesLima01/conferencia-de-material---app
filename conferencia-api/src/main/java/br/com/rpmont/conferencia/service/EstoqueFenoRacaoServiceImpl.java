@@ -3,6 +3,7 @@ package br.com.rpmont.conferencia.service;
 import br.com.rpmont.conferencia.dtos.CadastrarEntradaFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.EntradaFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.dtos.LoteFenoRacaoResponseDTO;
+import br.com.rpmont.conferencia.dtos.ResumoEstoqueTransferenciaDTO;
 import br.com.rpmont.conferencia.enums.SituacaoLoteFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoProdutoFenoRacao;
@@ -20,6 +21,7 @@ import br.com.rpmont.conferencia.repository.LoteFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.MovimentacaoFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.ProdutoFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.UsuarioRepository;
+import br.com.rpmont.conferencia.repository.UnidadeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,8 @@ public class EstoqueFenoRacaoServiceImpl
     private final MovimentacaoFenoRacaoRepository movimentacaoRepository;
 
     private final UsuarioRepository usuarioRepository;
+
+    private final UnidadeRepository unidadeRepository;
 
     /*
      * ==========================================
@@ -303,6 +307,73 @@ public class EstoqueFenoRacaoServiceImpl
                 )
                 .map(
                         this::converterParaLoteResponse
+                )
+                .toList();
+    }
+
+    /*
+     * ==========================================
+     * RESUMO DE ESTOQUE PARA TRANSFERÊNCIA
+     * ==========================================
+     */
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResumoEstoqueTransferenciaDTO> consultarResumoTransferencia(
+            String unidade,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoAoModulo(
+                usuarioLogado
+        );
+
+        validarUsuarioAdministrador(
+                usuarioLogado
+        );
+
+        String unidadeConsulta =
+                normalizarTextoObrigatorio(
+                        unidade,
+                        "A unidade de origem é obrigatória."
+                );
+
+        if (
+                usuarioLogado.getUnidade() != null &&
+                        unidadeConsulta.equalsIgnoreCase(
+                                usuarioLogado.getUnidade().trim()
+                        )
+        ) {
+            throw new BusinessException(
+                    "A unidade de origem deve ser diferente da unidade solicitante."
+            );
+        }
+
+        if (
+                !unidadeRepository
+                        .existsBySiglaIgnoreCaseAndAtivoTrue(
+                                unidadeConsulta
+                        )
+        ) {
+            throw new ResourceNotFoundException(
+                    "A unidade de origem informada não existe ou está inativa."
+            );
+        }
+
+        return loteRepository
+                .buscarResumoEstoqueTransferencia(
+                        unidadeConsulta,
+                        SituacaoLoteFenoRacao.ATIVO,
+                        SituacaoProdutoFenoRacao.ATIVO,
+                        LocalDate.now()
+                )
+                .stream()
+                .map(
+                        this::converterParaResumoTransferencia
                 )
                 .toList();
     }
@@ -1700,6 +1771,47 @@ public class EstoqueFenoRacaoServiceImpl
      * CONVERSÃO PARA RESPONSE
      * ==========================================
      */
+
+    private ResumoEstoqueTransferenciaDTO converterParaResumoTransferencia(
+            Object[] registro
+    ) {
+        if (
+                registro == null ||
+                        registro.length < 9
+        ) {
+            throw new ConflictException(
+                    "O resumo de estoque retornou dados inválidos."
+            );
+        }
+
+        Integer produtoId =
+                ((Number) registro[0]).intValue();
+
+        Integer quantidadeDisponivel =
+                ((Number) registro[6]).intValue();
+
+        BigDecimal pesoTotalDisponivelKg =
+                normalizarValorMonetarioOuPeso(
+                        (BigDecimal) registro[7]
+                );
+
+        Integer quantidadeLotes =
+                ((Number) registro[8]).intValue();
+
+        return new ResumoEstoqueTransferenciaDTO(
+                produtoId,
+                (TipoProdutoFenoRacao) registro[1],
+                (String) registro[2],
+                (br.com.rpmont.conferencia.enums.UnidadeControleFenoRacao) registro[3],
+                normalizarValorMonetarioOuPeso(
+                        (BigDecimal) registro[4]
+                ),
+                (String) registro[5],
+                quantidadeDisponivel,
+                pesoTotalDisponivelKg,
+                quantidadeLotes
+        );
+    }
 
     private EntradaFenoRacaoResponseDTO converterParaEntradaResponse(
             LoteFenoRacao lote

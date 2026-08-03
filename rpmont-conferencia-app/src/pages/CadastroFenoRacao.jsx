@@ -31,14 +31,26 @@ const PRODUTOS = [
     unidadePlural: 'fardos',
   },
   {
-    valor: 'RACAO_ADULTO',
-    nome: 'Ração Adulto',
+    valor: 'RACAO_ADULTO_PREMIUM',
+    nome: 'Ração Adulto Premium',
     unidade: 'saco',
     unidadePlural: 'sacos',
   },
   {
-    valor: 'RACAO_POTRO',
-    nome: 'Ração Potro',
+    valor: 'RACAO_ADULTO_MANUTENCAO',
+    nome: 'Ração Adulto Manutenção',
+    unidade: 'saco',
+    unidadePlural: 'sacos',
+  },
+  {
+    valor: 'RACAO_POTRO_PREMIUM',
+    nome: 'Ração Potro Premium',
+    unidade: 'saco',
+    unidadePlural: 'sacos',
+  },
+  {
+    valor: 'RACAO_POTRO_MANUTENCAO',
+    nome: 'Ração Potro Manutenção',
     unidade: 'saco',
     unidadePlural: 'sacos',
   },
@@ -343,11 +355,14 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     if (tipo === 'FENO') {
       return 'icone-feno';
     }
-
-    if (tipo === 'RACAO_POTRO') {
+  
+    if (
+      tipo === 'RACAO_POTRO_PREMIUM' ||
+      tipo === 'RACAO_POTRO_MANUTENCAO'
+    ) {
       return 'icone-racao-potro';
     }
-
+  
     return 'icone-racao-adulto';
   };
 

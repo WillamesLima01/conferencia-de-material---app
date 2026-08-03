@@ -17,6 +17,8 @@ public interface UnidadeRepository
 
     boolean existsByNomeIgnoreCaseAndIdNot(String nome, Long id);
 
+    boolean existsBySiglaIgnoreCaseAndAtivoTrue(String sigla);
+
     Optional<Unidade> findBySiglaIgnoreCase(String sigla);
 
     Optional<Unidade> findByNomeIgnoreCase(String nome);

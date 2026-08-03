@@ -3,6 +3,7 @@ package br.com.rpmont.conferencia.service;
 import br.com.rpmont.conferencia.dtos.CadastrarEntradaFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.EntradaFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.dtos.LoteFenoRacaoResponseDTO;
+import br.com.rpmont.conferencia.dtos.ResumoEstoqueTransferenciaDTO;
 import br.com.rpmont.conferencia.enums.SituacaoLoteFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoProdutoFenoRacao;
 
@@ -20,6 +21,11 @@ public interface EstoqueFenoRacaoService {
             TipoProdutoFenoRacao tipoProduto,
             BigDecimal pesoUnidadeKg,
             SituacaoLoteFenoRacao situacao,
+            String unidade,
+            String matriculaUsuario
+    );
+
+    List<ResumoEstoqueTransferenciaDTO> consultarResumoTransferencia(
             String unidade,
             String matriculaUsuario
     );

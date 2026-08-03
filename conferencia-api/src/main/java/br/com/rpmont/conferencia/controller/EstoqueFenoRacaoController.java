@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import br.com.rpmont.conferencia.dtos.ResumoEstoqueTransferenciaDTO;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -169,6 +170,20 @@ public class EstoqueFenoRacaoController {
                 obterMatriculaUsuario(authentication)
         );
     }
+
+    @GetMapping("/resumo-transferencia")
+    public List<ResumoEstoqueTransferenciaDTO> consultarResumoTransferencia(
+            @RequestParam
+            @NotBlank(message = "A unidade de origem é obrigatória.")
+            String unidade,
+            Authentication authentication
+    ) {
+        return estoqueService.consultarResumoTransferencia(
+                unidade.trim(),
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
 
     /*
      * ==========================================
