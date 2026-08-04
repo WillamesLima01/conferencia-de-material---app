@@ -363,13 +363,57 @@ function ConsultaMovimentacoes({
   ]);
 
   useEffect(() => {
-    consultarMovimentacoes(
+    let componenteAtivo = true;
+
+    const filtrosIniciais =
       usuarioEhAdminMaster
         ? {}
         : {
             unidade: unidadeUsuario,
-          }
-    );
+          };
+
+    listarMovimentacoesMaterial(
+      filtrosIniciais
+    )
+      .then((resposta) => {
+        if (!componenteAtivo) {
+          return;
+        }
+
+        const lista = Array.isArray(resposta)
+          ? resposta
+          : Array.isArray(resposta?.data)
+            ? resposta.data
+            : [];
+
+        setMovimentacoes(lista);
+        setFiltrosAplicados(
+          filtrosIniciais
+        );
+        setErro('');
+      })
+      .catch((error) => {
+        if (!componenteAtivo) {
+          return;
+        }
+
+        console.error(
+          'Erro ao consultar movimentações:',
+          error
+        );
+
+        setMovimentacoes([]);
+
+        setErro(
+          error?.response?.data?.message ||
+            error?.message ||
+            'Não foi possível consultar as movimentações patrimoniais.'
+        );
+      });
+
+    return () => {
+      componenteAtivo = false;
+    };
   }, [
     usuarioEhAdminMaster,
     unidadeUsuario,

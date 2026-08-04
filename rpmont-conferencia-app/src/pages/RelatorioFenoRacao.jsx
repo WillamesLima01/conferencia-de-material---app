@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FaArrowLeft,
   FaBoxesStacked,
@@ -13,15 +13,13 @@ import {
 import { GiGrain } from 'react-icons/gi';
 
 import { gerarRelatorioFenoRacaoPdf } from '../relatorios/gerarRelatorioFenoRacaoPdf';
+import {
+  listarEstoqueFenoRacao,
+  listarMovimentacoesFenoRacao,
+} from '../services/fenoRacaoEstoqueService';
+import { listarTransferencias } from '../services/fenoRacaoTransferenciaService';
 
 import '../styles/RelatorioFenoRacao.css';
-
-const STORAGE_KEY_ENTRADAS = 'entradasAlimentacaoEquina';
-const STORAGE_KEY_SAIDAS = 'saidasAlimentacaoEquina';
-const STORAGE_KEY_EXTRAVIOS = 'extraviosAlimentacaoEquina';
-const STORAGE_KEY_TRANSFERENCIAS = 'transferenciasAlimentacaoEquina';
-const STORAGE_KEY_SOLICITACOES_TRANSFERENCIA =
-  'solicitacoesTransferenciaAlimentacaoEquina';
 
 const UNIDADES_PADRAO = ['RPMont', '3º EPMont'];
 
@@ -58,45 +56,6 @@ const PRODUTOS = [
   },
 ];
 
-const carregarStorage = (chave) => {
-  const dadosSalvos = localStorage.getItem(chave);
-
-  if (!dadosSalvos) return [];
-
-  try {
-    const dadosConvertidos = JSON.parse(dadosSalvos);
-
-    return Array.isArray(dadosConvertidos) ? dadosConvertidos : [];
-  } catch {
-    return [];
-  }
-};
-
-const carregarTransferenciasStorage = () => {
-  const transferencias = carregarStorage(STORAGE_KEY_TRANSFERENCIAS);
-  const solicitacoes = carregarStorage(STORAGE_KEY_SOLICITACOES_TRANSFERENCIA);
-
-  const mapa = new Map();
-
-  [...transferencias, ...solicitacoes].forEach((transferencia, index) => {
-    const chave =
-      transferencia?.id ||
-      transferencia?.ID ||
-      `${transferencia?.tipoProduto || 'produto'}-${
-        transferencia?.unidadeOrigem || transferencia?.origem || 'origem'
-      }-${transferencia?.unidadeDestino || transferencia?.destino || 'destino'}-${
-        transferencia?.dataAprovacao ||
-        transferencia?.dataTransferencia ||
-        transferencia?.dataSolicitacao ||
-        index
-      }`;
-
-    mapa.set(chave, transferencia);
-  });
-
-  return Array.from(mapa.values());
-};
-
 const dataHoje = () => new Date().toISOString().slice(0, 10);
 
 const primeiroDiaDoMes = () => {
@@ -114,14 +73,95 @@ const formatarNumero = (valor) => {
   }).format(Number(valor || 0));
 };
 
+const obterDataSemHorario = (valor) => {
+  if (!valor) return '';
+
+  return String(valor).split('T')[0];
+};
+
 const formatarData = (valor) => {
-  if (!valor) return '-';
+  const dataSemHorario = obterDataSemHorario(valor);
 
-  const [ano, mes, dia] = String(valor).split('-');
+  if (!dataSemHorario) return '-';
 
-  if (!ano || !mes || !dia) return valor;
+  const [ano, mes, dia] = dataSemHorario.split('-');
+
+  if (!ano || !mes || !dia) return String(valor);
 
   return `${dia}/${mes}/${ano}`;
+};
+
+const extrairListaResposta = (resposta) => {
+  if (Array.isArray(resposta)) return resposta;
+  if (Array.isArray(resposta?.content)) return resposta.content;
+  if (Array.isArray(resposta?.dados)) return resposta.dados;
+  if (Array.isArray(resposta?.itens)) return resposta.itens;
+
+  return [];
+};
+
+const obterMensagemErro = (erro) => {
+  return (
+    erro?.message ||
+    erro?.response?.data?.message ||
+    'Não foi possível carregar os dados do relatório.'
+  );
+};
+
+const normalizarMovimentacao = (movimentacao) => {
+  const quantidade = Number(
+    movimentacao?.quantidadeUnidades ??
+      movimentacao?.quantidade ??
+      0
+  );
+
+  const pesoMovimentado = Number(
+    movimentacao?.pesoMovimentadoKg ??
+      movimentacao?.pesoTotalKg ??
+      quantidade * Number(movimentacao?.pesoUnidadeKg ?? 0)
+  );
+
+  const unidade =
+    movimentacao?.unidade ||
+    movimentacao?.unidadeOrigem ||
+    movimentacao?.unidadeDestino ||
+    '';
+
+  const codigoLote =
+    movimentacao?.codigoLote ||
+    movimentacao?.lote ||
+    '';
+
+  const dataOperacao =
+    movimentacao?.dataOperacao ||
+    movimentacao?.dataCadastro ||
+    '';
+
+  return {
+    ...movimentacao,
+    unidade,
+    lote: codigoLote,
+    codigoLote,
+    dataSaida: movimentacao?.dataSaida || dataOperacao,
+    dataExtravio: movimentacao?.dataExtravio || dataOperacao,
+    quantidadeRetirada:
+      movimentacao?.quantidadeRetirada ?? quantidade,
+    pesoLiberadoKg:
+      movimentacao?.pesoLiberadoKg ?? pesoMovimentado,
+    quantidadeExtraviada:
+      movimentacao?.quantidadeExtraviada ?? quantidade,
+    pesoExtraviadoKg:
+      movimentacao?.pesoExtraviadoKg ?? pesoMovimentado,
+    responsavel:
+      movimentacao?.responsavel ||
+      movimentacao?.usuarioCadastroNome ||
+      movimentacao?.nomeUsuario ||
+      '-',
+    motivo:
+      movimentacao?.motivo ||
+      movimentacao?.observacao ||
+      '-',
+  };
 };
 
 const obterNomeProduto = (tipo) => {
@@ -240,6 +280,7 @@ const obterDataTransferencia = (transferencia) => {
     transferencia?.dataAprovacao ||
     transferencia?.dataTransferencia ||
     transferencia?.dataSolicitacao ||
+    transferencia?.dataCadastro ||
     transferencia?.data ||
     ''
   );
@@ -266,8 +307,10 @@ const obterPesoUnidadeTransferencia = (transferencia) => {
 
 const obterPesoTotalTransferencia = (transferencia) => {
   const pesoTotalSalvo = Number(
-    transferencia?.pesoTotalKg ??
+    transferencia?.pesoTotalTransferidoKg ??
+      transferencia?.pesoTotalKg ??
       transferencia?.pesoTransferidoKg ??
+      transferencia?.pesoTotalAprovadoKg ??
       transferencia?.pesoSolicitadoKg ??
       0
   );
@@ -277,6 +320,35 @@ const obterPesoTotalTransferencia = (transferencia) => {
   return (
     obterQuantidadeTransferencia(transferencia) *
     obterPesoUnidadeTransferencia(transferencia)
+  );
+};
+
+const obterLoteTransferencia = (transferencia) => {
+  const itens = Array.isArray(transferencia?.itens)
+    ? transferencia.itens
+    : Array.isArray(transferencia?.etapas)
+      ? transferencia.etapas
+      : [];
+
+  const lotesDosItens = itens
+    .map(
+      (item) =>
+        item?.codigoLoteOrigem ||
+        item?.codigoLote ||
+        item?.lote ||
+        ''
+    )
+    .filter(Boolean);
+
+  if (lotesDosItens.length > 0) {
+    return [...new Set(lotesDosItens)].join(', ');
+  }
+
+  return (
+    transferencia?.codigoLoteOrigem ||
+    transferencia?.codigoLote ||
+    transferencia?.lote ||
+    '-'
   );
 };
 
@@ -312,10 +384,12 @@ const removerDuplicadasPorUnidade = (unidades) => {
 };
 
 function RelatorioFenoRacao({ usuario, onVoltar }) {
-  const [entradas] = useState(() => carregarStorage(STORAGE_KEY_ENTRADAS));
-  const [saidas] = useState(() => carregarStorage(STORAGE_KEY_SAIDAS));
-  const [extravios] = useState(() => carregarStorage(STORAGE_KEY_EXTRAVIOS));
-  const [transferencias] = useState(() => carregarTransferenciasStorage());
+  const [entradas, setEntradas] = useState([]);
+  const [saidas, setSaidas] = useState([]);
+  const [extravios, setExtravios] = useState([]);
+  const [transferencias, setTransferencias] = useState([]);
+  const [carregandoDados, setCarregandoDados] = useState(true);
+  const [erroCarregamento, setErroCarregamento] = useState('');
 
   const unidadeUsuario = obterUnidadeUsuario(usuario);
   const nivelUsuario = obterNivelUsuario(usuario);
@@ -333,6 +407,67 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     return podeSelecionarUnidadeRelatorio ? 'GERAL' : unidadeUsuario;
   });
   const [gerandoPdf, setGerandoPdf] = useState(false);
+
+  useEffect(() => {
+    let componenteAtivo = true;
+
+    const carregarDadosBackend = async () => {
+      try {
+        setCarregandoDados(true);
+        setErroCarregamento('');
+
+        const [respostaEstoque, respostaMovimentacoes, respostaTransferencias] =
+          await Promise.all([
+            listarEstoqueFenoRacao(),
+            listarMovimentacoesFenoRacao(),
+            listarTransferencias(),
+          ]);
+
+        if (!componenteAtivo) return;
+
+        const estoque = extrairListaResposta(respostaEstoque);
+        const movimentacoes = extrairListaResposta(
+          respostaMovimentacoes
+        ).map(normalizarMovimentacao);
+        const transferenciasCarregadas = extrairListaResposta(
+          respostaTransferencias
+        );
+
+        setEntradas(estoque);
+        setSaidas(
+          movimentacoes.filter(
+            (item) =>
+              normalizarTexto(item?.tipoMovimentacao) === 'SAIDA'
+          )
+        );
+        setExtravios(
+          movimentacoes.filter(
+            (item) =>
+              normalizarTexto(item?.tipoMovimentacao) === 'EXTRAVIO'
+          )
+        );
+        setTransferencias(transferenciasCarregadas);
+      } catch (error) {
+        if (!componenteAtivo) return;
+
+        console.error(
+          'Erro ao carregar relatório de feno e ração:',
+          error
+        );
+        setErroCarregamento(obterMensagemErro(error));
+      } finally {
+        if (componenteAtivo) {
+          setCarregandoDados(false);
+        }
+      }
+    };
+
+    carregarDadosBackend();
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, []);
 
   const produtoAtual = PRODUTOS.find(
     (produto) => produto.valor === produtoSelecionado
@@ -450,7 +585,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
 
   const filtrarPorPeriodoProdutoUnidadeEPeso = useCallback(
     (item, campoData) => {
-      const dataItem = item?.[campoData];
+      const dataItem = obterDataSemHorario(item?.[campoData]);
 
       const dentroDoPeriodo =
         (!dataInicial || dataItem >= dataInicial) &&
@@ -478,7 +613,9 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
 
   const filtrarTransferenciaPorPeriodoProdutoUnidadeEPeso = useCallback(
     (transferencia) => {
-      const dataTransferencia = obterDataTransferencia(transferencia);
+      const dataTransferencia = obterDataSemHorario(
+        obterDataTransferencia(transferencia)
+      );
 
       const dentroDoPeriodo =
         (!dataInicial || dataTransferencia >= dataInicial) &&
@@ -1002,7 +1139,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
               type="button"
               className="relatorio-alimentacao-pdf"
               onClick={gerarPdfRelatorio}
-              disabled={gerandoPdf}
+              disabled={gerandoPdf || carregandoDados || Boolean(erroCarregamento)}
             >
               <FaFilePdf />
               {gerandoPdf ? 'Gerando PDF...' : 'Gerar PDF'}
@@ -1011,6 +1148,18 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
         </section>
 
         <section className="relatorio-alimentacao-documento">
+          {carregandoDados && (
+            <div className="relatorio-alimentacao-vazio">
+              Carregando dados do banco de dados...
+            </div>
+          )}
+
+          {!carregandoDados && erroCarregamento && (
+            <div className="relatorio-alimentacao-vazio">
+              {erroCarregamento}
+            </div>
+          )}
+
           <div className="relatorio-alimentacao-documento-topo">
             <div>
               <span>Relatório</span>
@@ -1156,7 +1305,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
                           <td>{obterUnidadeRegistro(entrada) || '-'}</td>
                         )}
                         <td>{obterNomeProduto(entrada.tipoProduto)}</td>
-                        <td>{entrada.lote || '-'}</td>
+                        <td>{entrada.codigoLote || entrada.lote || '-'}</td>
                         <td>{formatarData(entrada.dataEntrada)}</td>
                         <td>{formatarNumero(entrada.pesoUnidadeKg)} kg</td>
                         <td>{formatarNumero(entrada.quantidadeAtual)}</td>
@@ -1215,7 +1364,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
                           )}
                           <td>{formatarData(entrada.dataEntrada)}</td>
                           <td>{obterNomeProduto(entrada.tipoProduto)}</td>
-                          <td>{entrada.lote || '-'}</td>
+                          <td>{entrada.codigoLote || entrada.lote || '-'}</td>
                           <td>{entrada.fornecedor || '-'}</td>
                           <td>{formatarNumero(quantidade)}</td>
                           <td>{formatarNumero(entrada.pesoUnidadeKg)} kg</td>
@@ -1274,7 +1423,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
                             obterNomeProduto(saida.tipoProduto)}
                         </td>
                         <td>{saida.servico || '-'}</td>
-                        <td>{saida.lote || '-'}</td>
+                        <td>{saida.codigoLote || saida.lote || '-'}</td>
                         <td>{formatarNumero(saida.quantidadeRetirada)}</td>
                         <td>{formatarNumero(saida.pesoLiberadoKg)} kg</td>
                         <td>{saida.responsavel || '-'}</td>
@@ -1332,7 +1481,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
                           {obterUnidadeDestinoTransferencia(transferencia) ||
                             '-'}
                         </td>
-                        <td>{transferencia.lote || '-'}</td>
+                        <td>{obterLoteTransferencia(transferencia)}</td>
                         <td>
                           {formatarNumero(
                             obterQuantidadeTransferencia(transferencia)
@@ -1401,7 +1550,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
                           {extravio.nomeProduto ||
                             obterNomeProduto(extravio.tipoProduto)}
                         </td>
-                        <td>{extravio.lote || '-'}</td>
+                        <td>{extravio.codigoLote || extravio.lote || '-'}</td>
                         <td>{formatarNumero(extravio.quantidadeExtraviada)}</td>
                         <td>{formatarNumero(extravio.pesoExtraviadoKg)} kg</td>
                         <td>{extravio.responsavel || '-'}</td>

@@ -139,10 +139,6 @@ const obterStatusUsuario = (usuario) => {
     .toUpperCase();
 };
 
-const usuarioAtivoPorStatus = (status) => {
-  return status === STATUS_ACESSO.LIBERADO ? 1 : 0;
-};
-
 const obterRotuloNivel = (usuario) => {
   if (usuarioEhAdminMaster(usuario)) return 'Admin Master';
   if (usuarioEhAdmin(usuario)) return 'Administrador';

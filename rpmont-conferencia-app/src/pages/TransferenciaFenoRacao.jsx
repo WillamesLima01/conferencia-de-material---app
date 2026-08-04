@@ -410,8 +410,96 @@ function TransferenciaFenoRacao({
   );
 
   useEffect(() => {
-    carregarDadosTransferencia();
-  }, [carregarDadosTransferencia]);
+    let componenteAtivo = true;
+
+    Promise.all([
+      listarProdutosFenoRacao(),
+      listarUnidadesAtivas(),
+      listarSolicitacoesRecebidas(),
+      listarSolicitacoesEnviadas(),
+      listarTransferencias(),
+      listarNotificacoesFenoRacao(),
+    ])
+      .then(
+        ([
+          produtosRecebidos,
+          unidadesRecebidas,
+          recebidas,
+          enviadas,
+          transferenciasRecebidas,
+          notificacoesRecebidas,
+        ]) => {
+          if (!componenteAtivo) {
+            return;
+          }
+
+          setProdutos(
+            Array.isArray(produtosRecebidos)
+              ? produtosRecebidos
+              : []
+          );
+
+          setUnidades(
+            Array.isArray(unidadesRecebidas)
+              ? unidadesRecebidas
+              : []
+          );
+
+          setSolicitacoesRecebidas(
+            Array.isArray(recebidas)
+              ? recebidas
+              : []
+          );
+
+          setSolicitacoesEnviadas(
+            Array.isArray(enviadas)
+              ? enviadas
+              : []
+          );
+
+          setTransferencias(
+            Array.isArray(
+              transferenciasRecebidas
+            )
+              ? transferenciasRecebidas
+              : []
+          );
+
+          setNotificacoes(
+            Array.isArray(
+              notificacoesRecebidas
+            )
+              ? notificacoesRecebidas
+              : []
+          );
+
+          setErroCarregamento('');
+        }
+      )
+      .catch((error) => {
+        if (!componenteAtivo) {
+          return;
+        }
+
+        console.error(
+          'Erro ao carregar dados de transferência:',
+          error
+        );
+
+        setErroCarregamento(
+          obterMensagemErro(error)
+        );
+      })
+      .finally(() => {
+        if (componenteAtivo) {
+          setCarregandoDados(false);
+        }
+      });
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, [obterMensagemErro]);
 
   const carregarResumoEstoque = useCallback(
     async (unidade) => {
@@ -454,20 +542,6 @@ function TransferenciaFenoRacao({
     ]
   );
 
-  useEffect(() => {
-    setProdutoId('');
-    setQuantidadeSolicitada('');
-    setResumoEstoque([]);
-
-    if (unidadeOrigem) {
-      carregarResumoEstoque(
-        unidadeOrigem
-      );
-    }
-  }, [
-    unidadeOrigem,
-    carregarResumoEstoque,
-  ]);
 
   const limparFormulario = () => {
     setProdutoId('');
@@ -1039,10 +1113,23 @@ function TransferenciaFenoRacao({
                 id="unidadeOrigemTransferencia"
                 value={unidadeOrigem}
                 onChange={(event) => {
+                  const novaUnidade =
+                    event.target.value;
+
                   setUnidadeOrigem(
-                    event.target.value
+                    novaUnidade
                   );
+
+                  setProdutoId('');
+                  setQuantidadeSolicitada('');
+                  setResumoEstoque([]);
                   setMensagemSolicitacao('');
+
+                  if (novaUnidade) {
+                    carregarResumoEstoque(
+                      novaUnidade
+                    );
+                  }
                 }}
               >
                 <option value="">

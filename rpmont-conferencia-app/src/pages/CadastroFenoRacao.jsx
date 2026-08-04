@@ -1,4 +1,10 @@
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
   FaArrowLeft,
   FaBoxesStacked,
@@ -13,9 +19,19 @@ import {
 
 import { GiGrain } from 'react-icons/gi';
 
-import '../styles/CadastroFenoRacao.css';
+import ModalMensagem from '../components/ModalMensagem';
 
-const STORAGE_KEY_ENTRADAS = 'entradasAlimentacaoEquina';
+import {
+  cadastrarEntradaFenoRacao,
+  cancelarEntradaFenoRacao,
+  listarEstoqueFenoRacao,
+} from '../services/fenoRacaoEstoqueService';
+
+import {
+  listarProdutosFenoRacao,
+} from '../services/produtoFenoRacaoService';
+
+import '../styles/CadastroFenoRacao.css';
 
 const NIVEIS_USUARIO = {
   ADMIN_MASTER: 1,
@@ -56,30 +72,19 @@ const PRODUTOS = [
   },
 ];
 
-const gerarId = () => {
-  if (window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
 const dataHoje = () => {
-  return new Date().toISOString().slice(0, 10);
-};
+  const agora = new Date();
 
-const carregarEntradas = () => {
-  const dadosSalvos = localStorage.getItem(STORAGE_KEY_ENTRADAS);
+  const ano = agora.getFullYear();
+  const mes = String(
+    agora.getMonth() + 1
+  ).padStart(2, '0');
 
-  if (!dadosSalvos) return [];
+  const dia = String(
+    agora.getDate()
+  ).padStart(2, '0');
 
-  try {
-    const dadosConvertidos = JSON.parse(dadosSalvos);
-
-    return Array.isArray(dadosConvertidos) ? dadosConvertidos : [];
-  } catch {
-    return [];
-  }
+  return `${ano}-${mes}-${dia}`;
 };
 
 const normalizarTexto = (valor) => {
@@ -95,7 +100,11 @@ const normalizarTexto = (valor) => {
 };
 
 const obterUnidadeUsuario = (usuario) => {
-  return usuario?.unidade ?? usuario?.UNIDADE ?? 'RPMont';
+  return (
+    usuario?.unidade ??
+    usuario?.UNIDADE ??
+    ''
+  );
 };
 
 const obterNivelUsuario = (usuario) => {
@@ -109,7 +118,10 @@ const obterNivelUsuario = (usuario) => {
 };
 
 const usuarioEhAdminMaster = (usuario) => {
-  return obterNivelUsuario(usuario) === NIVEIS_USUARIO.ADMIN_MASTER;
+  return (
+    obterNivelUsuario(usuario) ===
+    NIVEIS_USUARIO.ADMIN_MASTER
+  );
 };
 
 const formatarNumero = (valor) => {
@@ -122,131 +134,414 @@ const formatarNumero = (valor) => {
 const formatarData = (valor) => {
   if (!valor) return '-';
 
-  const [ano, mes, dia] = valor.split('-');
+  const dataSemHorario = String(valor).split('T')[0];
+  const [ano, mes, dia] = dataSemHorario.split('-');
 
-  if (!ano || !mes || !dia) return valor;
+  if (!ano || !mes || !dia) {
+    return String(valor);
+  }
 
   return `${dia}/${mes}/${ano}`;
 };
 
-function CadastroFenoRacao({ usuario, onVoltar }) {
-  const [entradas, setEntradas] = useState(carregarEntradas);
+const obterMensagemErro = (
+  erro,
+  mensagemPadrao
+) => {
+  const dados =
+    erro?.response?.data ??
+    erro?.data ??
+    erro?.body ??
+    erro?.erro ??
+    null;
 
-  const [tipoProduto, setTipoProduto] = useState('');
-  const [pesoSelecionado, setPesoSelecionado] = useState('');
-  const [novoPeso, setNovoPeso] = useState('');
-  const [quantidade, setQuantidade] = useState('');
-  const [dataEntrada, setDataEntrada] = useState(dataHoje());
-  const [fornecedor, setFornecedor] = useState('');
+  if (
+    typeof dados === 'string' &&
+    dados.trim()
+  ) {
+    return dados.trim();
+  }
+
+  const mensagem =
+    dados?.message ??
+    dados?.mensagem ??
+    dados?.error ??
+    erro?.message ??
+    erro?.mensagem;
+
+  if (
+    typeof mensagem === 'string' &&
+    mensagem.trim()
+  ) {
+    return mensagem.trim();
+  }
+
+  if (
+    dados?.fields &&
+    typeof dados.fields === 'object'
+  ) {
+    const mensagensCampos = Object.values(
+      dados.fields
+    )
+      .flat()
+      .filter(Boolean)
+      .map((valor) => String(valor).trim())
+      .filter(Boolean);
+
+    if (mensagensCampos.length > 0) {
+      return mensagensCampos.join(' ');
+    }
+  }
+
+  return mensagemPadrao;
+};
+
+
+const extrairListaEstoque = (resposta) => {
+  if (Array.isArray(resposta)) {
+    return resposta;
+  }
+
+  if (Array.isArray(resposta?.content)) {
+    return resposta.content;
+  }
+
+  if (Array.isArray(resposta?.dados)) {
+    return resposta.dados;
+  }
+
+  if (Array.isArray(resposta?.itens)) {
+    return resposta.itens;
+  }
+
+  return [];
+};
+
+const extrairListaProdutos = (resposta) => {
+  if (Array.isArray(resposta)) {
+    return resposta;
+  }
+
+  if (Array.isArray(resposta?.content)) {
+    return resposta.content;
+  }
+
+  if (Array.isArray(resposta?.dados)) {
+    return resposta.dados;
+  }
+
+  if (Array.isArray(resposta?.itens)) {
+    return resposta.itens;
+  }
+
+  return [];
+};
+
+function CadastroFenoRacao({
+  usuario,
+  onVoltar,
+}) {
+  const [entradas, setEntradas] = useState([]);
+
+  const [modalMensagem, setModalMensagem] =
+    useState({
+      aberto: false,
+      tipo: 'erro',
+      titulo: '',
+      mensagem: '',
+    });
+
+  const [
+    produtosCadastrados,
+    setProdutosCadastrados,
+  ] = useState([]);
+
+  const [tipoProduto, setTipoProduto] =
+    useState('');
+
+  const [
+    pesoSelecionado,
+    setPesoSelecionado,
+  ] = useState('');
+
+  const [novoPeso, setNovoPeso] =
+    useState('');
+
+  const [quantidade, setQuantidade] =
+    useState('');
+
+  const [dataEntrada, setDataEntrada] =
+    useState(dataHoje());
+
+  const [fornecedor, setFornecedor] =
+    useState('');
+
   const [lote, setLote] = useState('');
-  const [validade, setValidade] = useState('');
 
-  const [responsavel, setResponsavel] = useState(
-    usuario?.nomeExibicao ||
-      `${usuario?.postGrad || usuario?.POSTGRAD || ''} ${
-        usuario?.nome || usuario?.NOME || ''
-      }`.trim()
+  const [validade, setValidade] =
+    useState('');
+
+  const [
+    numeroDocumento,
+    setNumeroDocumento,
+  ] = useState('');
+
+  const [responsavel, setResponsavel] =
+    useState(
+      usuario?.nomeExibicao ||
+        `${
+          usuario?.postGrad ||
+          usuario?.POSTGRAD ||
+          ''
+        } ${
+          usuario?.nome ||
+          usuario?.NOME ||
+          ''
+        }`.trim()
+    );
+
+  const [observacao, setObservacao] =
+    useState('');
+
+  const [mensagem, setMensagem] =
+    useState('');
+
+  const [
+    carregandoEstoque,
+    setCarregandoEstoque,
+  ] = useState(true);
+
+  const [
+    salvandoEntrada,
+    setSalvandoEntrada,
+  ] = useState(false);
+
+  const [
+    cancelandoEntrada,
+    setCancelandoEntrada,
+  ] = useState(false);
+
+  const [
+    entradaParaExcluir,
+    setEntradaParaExcluir,
+  ] = useState(null);
+
+  const [
+    motivoCancelamento,
+    setMotivoCancelamento,
+  ] = useState('');
+
+  const [
+    entradaCadastrada,
+    setEntradaCadastrada,
+  ] = useState(null);
+
+  const unidadeUsuario =
+    obterUnidadeUsuario(usuario);
+
+  const adminMaster =
+    usuarioEhAdminMaster(usuario);
+
+  const abrirModalMensagem = ({
+    tipo = 'erro',
+    titulo,
+    mensagem,
+  }) => {
+    setModalMensagem({
+      aberto: true,
+      tipo,
+      titulo,
+      mensagem,
+    });
+  };
+
+  const fecharModalMensagem = () => {
+    setModalMensagem((estadoAtual) => ({
+      ...estadoAtual,
+      aberto: false,
+    }));
+  };
+
+  const mostrarMensagem = useCallback(
+    (texto) => {
+      setMensagem(texto);
+
+      window.setTimeout(() => {
+        setMensagem('');
+      }, 4000);
+    },
+    []
   );
 
-  const [observacao, setObservacao] = useState('');
+  const carregarEstoque = useCallback(
+    async () => {
+      setCarregandoEstoque(true);
 
-  const [mensagem, setMensagem] = useState('');
-  const [entradaParaExcluir, setEntradaParaExcluir] = useState(null);
-  const [entradaCadastrada, setEntradaCadastrada] = useState(null);
+      try {
+        const resposta =
+          await listarEstoqueFenoRacao();
 
-  const unidadeUsuario = obterUnidadeUsuario(usuario);
-  const adminMaster = usuarioEhAdminMaster(usuario);
+        const lista =
+          extrairListaEstoque(resposta);
+
+        setEntradas(lista);
+      } catch (erro) {
+        setEntradas([]);
+
+        mostrarMensagem(
+          obterMensagemErro(
+            erro,
+            'Não foi possível carregar o estoque.'
+          )
+        );
+      } finally {
+        setCarregandoEstoque(false);
+      }
+    },
+    [mostrarMensagem]
+  );
+
+  useEffect(() => {
+    let componenteAtivo = true;
+
+    const carregarDadosIniciais = async () => {
+      try {
+        const [
+          respostaEstoque,
+          respostaProdutos,
+        ] = await Promise.all([
+          listarEstoqueFenoRacao(),
+          listarProdutosFenoRacao({
+            situacao: 'ATIVO',
+          }),
+        ]);
+
+        if (!componenteAtivo) {
+          return;
+        }
+
+        setEntradas(
+          extrairListaEstoque(
+            respostaEstoque
+          )
+        );
+
+        setProdutosCadastrados(
+          extrairListaProdutos(
+            respostaProdutos
+          )
+        );
+      } catch (erro) {
+        if (!componenteAtivo) {
+          return;
+        }
+
+        setEntradas([]);
+        setProdutosCadastrados([]);
+
+        mostrarMensagem(
+          obterMensagemErro(
+            erro,
+            'Não foi possível carregar os dados de Feno e Ração.'
+          )
+        );
+      } finally {
+        if (componenteAtivo) {
+          setCarregandoEstoque(false);
+        }
+      }
+    };
+
+    void carregarDadosIniciais();
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, [mostrarMensagem]);
 
   const entradasVisiveis = useMemo(() => {
-    if (adminMaster) return entradas;
+    if (adminMaster) {
+      return entradas;
+    }
 
-    return entradas.filter(
-      (entrada) =>
-        normalizarTexto(entrada.unidade) === normalizarTexto(unidadeUsuario)
-    );
-  }, [entradas, adminMaster, unidadeUsuario]);
+    return entradas.filter((entrada) => {
+      return (
+        normalizarTexto(entrada.unidade) ===
+        normalizarTexto(unidadeUsuario)
+      );
+    });
+  }, [
+    entradas,
+    adminMaster,
+    unidadeUsuario,
+  ]);
 
   const produtoSelecionado = useMemo(() => {
-    return PRODUTOS.find((produto) => produto.valor === tipoProduto) || null;
+    return (
+      PRODUTOS.find(
+        (produto) =>
+          produto.valor === tipoProduto
+      ) || null
+    );
   }, [tipoProduto]);
 
   const pesosCadastrados = useMemo(() => {
-    if (!tipoProduto) return [];
+    if (!tipoProduto) {
+      return [];
+    }
 
-    const pesos = entradasVisiveis
-      .filter((entrada) => entrada.tipoProduto === tipoProduto)
-      .map((entrada) => Number(entrada.pesoUnidadeKg))
-      .filter((peso) => Number.isFinite(peso) && peso > 0);
+    const pesos = produtosCadastrados
+      .filter((produto) => {
+        const mesmoTipo =
+          produto.tipoProduto ===
+          tipoProduto;
 
-    return [...new Set(pesos)].sort((a, b) => a - b);
-  }, [entradasVisiveis, tipoProduto]);
+        const produtoAtivo =
+          !produto.situacao ||
+          normalizarTexto(
+            produto.situacao
+          ) === 'ATIVO';
 
-  const usandoNovoPeso = pesoSelecionado === 'NOVO';
+        return (
+          mesmoTipo &&
+          produtoAtivo
+        );
+      })
+      .map((produto) =>
+        Number(
+          produto.pesoUnidadeKg
+        )
+      )
+      .filter(
+        (peso) =>
+          Number.isFinite(peso) &&
+          peso > 0
+      );
+
+    return [...new Set(pesos)].sort(
+      (a, b) => a - b
+    );
+  }, [
+    produtosCadastrados,
+    tipoProduto,
+  ]);
+
+  const usandoNovoPeso =
+    pesoSelecionado === 'NOVO';
 
   const pesoUtilizado = usandoNovoPeso
     ? Number(novoPeso)
     : Number(pesoSelecionado);
 
-  const quantidadeNumerica = Number(quantidade);
+  const quantidadeNumerica =
+    Number(quantidade);
 
   const pesoTotalKg =
-    pesoUtilizado > 0 && quantidadeNumerica > 0
-      ? pesoUtilizado * quantidadeNumerica
+    pesoUtilizado > 0 &&
+    quantidadeNumerica > 0
+      ? pesoUtilizado *
+        quantidadeNumerica
       : 0;
-
-  const mostrarMensagem = (texto) => {
-    setMensagem(texto);
-
-    window.setTimeout(() => {
-      setMensagem('');
-    }, 3000);
-  };
-
-  const salvarNovaEntrada = (novaEntrada) => {
-    setEntradas((entradasAtuais) => {
-      const entradasAtualizadas = [novaEntrada, ...entradasAtuais];
-
-      localStorage.setItem(
-        STORAGE_KEY_ENTRADAS,
-        JSON.stringify(entradasAtualizadas)
-      );
-
-      return entradasAtualizadas;
-    });
-  };
-
-  const excluirEntrada = (idEntrada) => {
-    const entradaEncontrada = entradas.find(
-      (entrada) => entrada.id === idEntrada
-    );
-
-    if (!entradaEncontrada) return;
-
-    if (
-      !adminMaster &&
-      normalizarTexto(entradaEncontrada.unidade) !==
-        normalizarTexto(unidadeUsuario)
-    ) {
-      mostrarMensagem(
-        'Acesso negado. Você só pode excluir entradas da sua unidade.'
-      );
-      setEntradaParaExcluir(null);
-      return;
-    }
-
-    setEntradas((entradasAtuais) => {
-      const entradasAtualizadas = entradasAtuais.filter(
-        (entrada) => entrada.id !== idEntrada
-      );
-
-      localStorage.setItem(
-        STORAGE_KEY_ENTRADAS,
-        JSON.stringify(entradasAtualizadas)
-      );
-
-      return entradasAtualizadas;
-    });
-  };
 
   const limparFormulario = () => {
     setTipoProduto('');
@@ -257,41 +552,114 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     setFornecedor('');
     setLote('');
     setValidade('');
+    setNumeroDocumento('');
     setObservacao('');
   };
 
-  const handleProdutoChange = (event) => {
-    setTipoProduto(event.target.value);
-    setPesoSelecionado('');
+  const handleProdutoChange = (
+    event
+  ) => {
+    const novoTipoProduto =
+      event.target.value;
+
+    const pesosDoProduto =
+      produtosCadastrados
+        .filter((produto) => {
+          const mesmoTipo =
+            produto.tipoProduto ===
+            novoTipoProduto;
+
+          const produtoAtivo =
+            !produto.situacao ||
+            normalizarTexto(
+              produto.situacao
+            ) === 'ATIVO';
+
+          return (
+            mesmoTipo &&
+            produtoAtivo
+          );
+        })
+        .map((produto) =>
+          Number(
+            produto.pesoUnidadeKg
+          )
+        )
+        .filter(
+          (peso) =>
+            Number.isFinite(peso) &&
+            peso > 0
+        );
+
+    const pesosUnicos = [
+      ...new Set(pesosDoProduto),
+    ].sort((a, b) => a - b);
+
+    setTipoProduto(
+      novoTipoProduto
+    );
+
+    setPesoSelecionado(
+      pesosUnicos.length === 1
+        ? String(pesosUnicos[0])
+        : ''
+    );
+
     setNovoPeso('');
     setQuantidade('');
     setMensagem('');
   };
 
-  const handleSalvar = (event) => {
+  const handleSalvar = async (
+    event
+  ) => {
     event.preventDefault();
 
+    if (salvandoEntrada) {
+      return;
+    }
+
     if (!produtoSelecionado) {
-      mostrarMensagem('Selecione o produto.');
+      mostrarMensagem(
+        'Selecione o produto.'
+      );
       return;
     }
 
     if (!pesoSelecionado) {
-      mostrarMensagem('Selecione ou cadastre o peso por unidade.');
+      mostrarMensagem(
+        'Selecione ou cadastre o peso por unidade.'
+      );
       return;
     }
 
-    if (!Number.isFinite(pesoUtilizado) || pesoUtilizado <= 0) {
-      mostrarMensagem('Informe um peso válido.');
+    if (
+      !Number.isFinite(pesoUtilizado) ||
+      pesoUtilizado <= 0
+    ) {
+      mostrarMensagem(
+        'Informe um peso válido.'
+      );
       return;
     }
 
-    if (!Number.isFinite(quantidadeNumerica) || quantidadeNumerica <= 0) {
-      mostrarMensagem('Informe uma quantidade válida.');
+    if (
+      !Number.isFinite(
+        quantidadeNumerica
+      ) ||
+      quantidadeNumerica <= 0
+    ) {
+      mostrarMensagem(
+        'Informe uma quantidade válida.'
+      );
       return;
     }
 
-    if (!Number.isInteger(quantidadeNumerica)) {
+    if (
+      !Number.isInteger(
+        quantidadeNumerica
+      )
+    ) {
       mostrarMensagem(
         `A quantidade de ${produtoSelecionado.unidadePlural} deve ser inteira.`
       );
@@ -299,51 +667,222 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     }
 
     if (!dataEntrada) {
-      mostrarMensagem('Informe a data da entrada.');
+      mostrarMensagem(
+        'Informe a data da entrada.'
+      );
       return;
     }
 
-    const loteTratado = lote.trim();
+    if (!responsavel.trim()) {
+      mostrarMensagem(
+        'Informe o responsável pelo recebimento.'
+      );
+      return;
+    }
 
-    const novaEntrada = {
-      id: gerarId(),
-      tipoProduto: produtoSelecionado.valor,
-      nomeProduto: produtoSelecionado.nome,
-      unidadeControle: produtoSelecionado.unidade.toUpperCase(),
-      pesoUnidadeKg: pesoUtilizado,
+    if (!unidadeUsuario) {
+      mostrarMensagem(
+        'A unidade do usuário não foi identificada.'
+      );
+      return;
+    }
 
-      quantidadeEntrada: quantidadeNumerica,
-      quantidadeInicial: quantidadeNumerica,
-      quantidade: quantidadeNumerica,
-      quantidadeAtual: quantidadeNumerica,
+    const payload = {
+      tipoProduto:
+        produtoSelecionado.valor,
 
-      pesoTotalKg,
+      pesoUnidadeKg:
+        pesoUtilizado,
+
+      quantidadeInicial:
+        quantidadeNumerica,
+
       dataEntrada,
-      fornecedor: fornecedor.trim(),
-      lote: loteTratado,
-      validade,
-      responsavel: responsavel.trim(),
-      observacao: observacao.trim(),
-      unidade: unidadeUsuario,
-      dataCadastro: new Date().toISOString(),
-      userModificador: usuario?.id || usuario?.ID || 1,
+
+      codigoLote:
+        lote.trim() || null,
+
+      fornecedor:
+        fornecedor.trim() || null,
+
+      validade:
+        validade || null,
+
+      numeroDocumento:
+        numeroDocumento.trim() || null,
+
+      responsavelRecebimento:
+        responsavel.trim(),
+
+      observacao:
+        observacao.trim() || null,
+
+      unidade:
+        unidadeUsuario,
     };
 
-    salvarNovaEntrada(novaEntrada);
-    limparFormulario();
-    setEntradaCadastrada(novaEntrada);
+    setSalvandoEntrada(true);
+    setMensagem('');
+
+    try {
+      const resposta =
+        await cadastrarEntradaFenoRacao(
+          payload
+        );
+
+      const entradaSalva = {
+        ...payload,
+        ...resposta,
+
+        nomeProduto:
+          resposta?.nomeProduto ||
+          produtoSelecionado.nome,
+
+        tipoProduto:
+          resposta?.tipoProduto ||
+          payload.tipoProduto,
+
+        pesoUnidadeKg:
+          resposta?.pesoUnidadeKg ??
+          payload.pesoUnidadeKg,
+
+        quantidadeInicial:
+          resposta?.quantidadeInicial ??
+          payload.quantidadeInicial,
+
+        quantidadeAtual:
+          resposta?.quantidadeAtual ??
+          payload.quantidadeInicial,
+
+        pesoTotalKg:
+          resposta?.pesoTotalKg ??
+          pesoTotalKg,
+
+        codigoLote:
+          resposta?.codigoLote ??
+          payload.codigoLote,
+
+        responsavelRecebimento:
+          resposta?.responsavelRecebimento ??
+          payload.responsavelRecebimento,
+
+        unidade:
+          resposta?.unidade ??
+          payload.unidade,
+      };
+
+      setEntradaCadastrada(
+        entradaSalva
+      );
+
+      limparFormulario();
+
+      await carregarEstoque();
+    } catch (erro) {
+      const mensagemErro =
+        obterMensagemErro(
+          erro,
+          'Não foi possível cadastrar a entrada.'
+        );
+
+      abrirModalMensagem({
+        tipo: 'erro',
+        titulo: 'Cadastro não realizado',
+        mensagem: mensagemErro,
+      });
+    } finally {
+      setSalvandoEntrada(false);
+    }
   };
 
-  const confirmarExclusao = () => {
-    if (!entradaParaExcluir) return;
+  const abrirCancelamento = (
+    entrada
+  ) => {
+    if (
+      !adminMaster &&
+      normalizarTexto(
+        entrada.unidade
+      ) !==
+        normalizarTexto(
+          unidadeUsuario
+        )
+    ) {
+      mostrarMensagem(
+        'Acesso negado. Você só pode cancelar entradas da sua unidade.'
+      );
+      return;
+    }
 
-    excluirEntrada(entradaParaExcluir.id);
-    setEntradaParaExcluir(null);
-
-    mostrarMensagem('Entrada excluída com sucesso.');
+    setEntradaParaExcluir(entrada);
+    setMotivoCancelamento('');
   };
 
-  const renderizarIconeProduto = (tipo) => {
+  const confirmarExclusao =
+    async () => {
+      if (
+        !entradaParaExcluir ||
+        cancelandoEntrada
+      ) {
+        return;
+      }
+
+      const loteId =
+        entradaParaExcluir.id ??
+        entradaParaExcluir.loteId;
+
+      if (
+        !Number.isInteger(
+          Number(loteId)
+        ) ||
+        Number(loteId) <= 0
+      ) {
+        mostrarMensagem(
+          'O identificador do lote é inválido.'
+        );
+        return;
+      }
+
+      const motivoTratado =
+        motivoCancelamento.trim();
+
+      if (!motivoTratado) {
+        mostrarMensagem(
+          'Informe o motivo do cancelamento.'
+        );
+        return;
+      }
+
+      setCancelandoEntrada(true);
+
+      try {
+        await cancelarEntradaFenoRacao(
+          Number(loteId),
+          motivoTratado
+        );
+
+        setEntradaParaExcluir(null);
+        setMotivoCancelamento('');
+
+        mostrarMensagem(
+          'Entrada cancelada com sucesso.'
+        );
+
+        await carregarEstoque();
+      } catch (erro) {
+        mostrarMensagem(
+          obterMensagemErro(
+            erro,
+            'Não foi possível cancelar a entrada.'
+          )
+        );
+      } finally {
+        setCancelandoEntrada(false);
+      }
+    };
+
+  const renderizarIconeProduto = (
+    tipo
+  ) => {
     if (tipo === 'FENO') {
       return <FaWheatAwn />;
     }
@@ -351,25 +890,103 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
     return <GiGrain />;
   };
 
-  const obterClasseIconeProduto = (tipo) => {
+  const obterClasseIconeProduto = (
+    tipo
+  ) => {
     if (tipo === 'FENO') {
       return 'icone-feno';
     }
-  
+
     if (
-      tipo === 'RACAO_POTRO_PREMIUM' ||
-      tipo === 'RACAO_POTRO_MANUTENCAO'
+      tipo ===
+        'RACAO_POTRO_PREMIUM' ||
+      tipo ===
+        'RACAO_POTRO_MANUTENCAO'
     ) {
       return 'icone-racao-potro';
     }
-  
+
     return 'icone-racao-adulto';
   };
 
-  const obterUnidadeProduto = (entrada) => {
-    const produto = PRODUTOS.find((item) => item.valor === entrada.tipoProduto);
+  const obterProdutoPorTipo = (
+    tipo
+  ) => {
+    return PRODUTOS.find(
+      (produto) =>
+        produto.valor === tipo
+    );
+  };
 
-    return produto?.unidadePlural || 'unidades';
+  const obterNomeProduto = (
+    entrada
+  ) => {
+    return (
+      entrada.nomeProduto ||
+      obterProdutoPorTipo(
+        entrada.tipoProduto
+      )?.nome ||
+      entrada.tipoProduto ||
+      'Produto'
+    );
+  };
+
+  const obterUnidadeProduto = (
+    entrada
+  ) => {
+    const produto =
+      obterProdutoPorTipo(
+        entrada.tipoProduto
+      );
+
+    return (
+      produto?.unidadePlural ||
+      'unidades'
+    );
+  };
+
+  const obterQuantidadeInicial = (
+    entrada
+  ) => {
+    return Number(
+      entrada.quantidadeInicial ??
+        entrada.quantidadeEntrada ??
+        entrada.quantidade ??
+        0
+    );
+  };
+
+  const obterQuantidadeAtual = (
+    entrada
+  ) => {
+    return Number(
+      entrada.quantidadeAtual ??
+        entrada.saldoAtual ??
+        entrada.quantidadeInicial ??
+        entrada.quantidadeEntrada ??
+        entrada.quantidade ??
+        0
+    );
+  };
+
+  const obterCodigoLote = (
+    entrada
+  ) => {
+    return (
+      entrada.codigoLote ||
+      entrada.lote ||
+      ''
+    );
+  };
+
+  const entradaEstaCancelada = (
+    entrada
+  ) => {
+    return (
+      normalizarTexto(
+        entrada.situacao
+      ) === 'CANCELADO'
+    );
   };
 
   return (
@@ -385,13 +1002,17 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
           </button>
 
           <div>
-            <span>Alimentação equina</span>
+            <span>
+              Alimentação equina
+            </span>
+
             <h1>Feno e Ração</h1>
 
             <p>
               {adminMaster
                 ? 'Admin Master - Todas as unidades'
-                : unidadeUsuario || 'Controle de estoque'}
+                : unidadeUsuario ||
+                  'Controle de estoque'}
             </p>
           </div>
         </header>
@@ -402,8 +1023,13 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
           </div>
 
           <div>
-            <span>Entrada de estoque</span>
-            <h2>Cadastrar Feno e Ração</h2>
+            <span>
+              Entrada de estoque
+            </span>
+
+            <h2>
+              Cadastrar Feno e Ração
+            </h2>
 
             <p>
               {adminMaster
@@ -414,7 +1040,9 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
         </section>
 
         {mensagem && (
-          <div className="cadastro-alimentacao-mensagem">{mensagem}</div>
+          <div className="cadastro-alimentacao-mensagem">
+            {mensagem}
+          </div>
         )}
 
         <section className="cadastro-alimentacao-card">
@@ -423,66 +1051,117 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
             <div>
               <h2>Nova entrada</h2>
+
               <p>
-                Informe os dados recebidos no estoque da unidade{' '}
-                <strong>{unidadeUsuario}</strong>.
+                Informe os dados recebidos
+                no estoque da unidade{' '}
+                <strong>
+                  {unidadeUsuario}
+                </strong>
+                .
               </p>
             </div>
           </div>
 
-          <form className="cadastro-alimentacao-form" onSubmit={handleSalvar}>
+          <form
+            className="cadastro-alimentacao-form"
+            onSubmit={handleSalvar}
+          >
             <div className="cadastro-alimentacao-form-group">
-              <label htmlFor="tipoProduto">Produto</label>
+              <label htmlFor="tipoProduto">
+                Produto
+              </label>
 
               <select
                 id="tipoProduto"
                 value={tipoProduto}
-                onChange={handleProdutoChange}
+                onChange={
+                  handleProdutoChange
+                }
+                disabled={
+                  salvandoEntrada
+                }
               >
-                <option value="">Selecione o produto</option>
+                <option value="">
+                  Selecione o produto
+                </option>
 
-                {PRODUTOS.map((produto) => (
-                  <option key={produto.valor} value={produto.valor}>
-                    {produto.nome}
-                  </option>
-                ))}
+                {PRODUTOS.map(
+                  (produto) => (
+                    <option
+                      key={
+                        produto.valor
+                      }
+                      value={
+                        produto.valor
+                      }
+                    >
+                      {produto.nome}
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             <div className="cadastro-alimentacao-form-group">
               <label htmlFor="pesoUnidade">
-                Peso por {produtoSelecionado?.unidade || 'unidade'}
+                Peso por{' '}
+                {produtoSelecionado?.unidade ||
+                  'unidade'}
               </label>
 
               <select
                 id="pesoUnidade"
-                value={pesoSelecionado}
+                value={
+                  pesoSelecionado
+                }
                 onChange={(event) => {
-                  setPesoSelecionado(event.target.value);
+                  setPesoSelecionado(
+                    event.target.value
+                  );
+
                   setNovoPeso('');
                   setMensagem('');
                 }}
-                disabled={!tipoProduto}
+                disabled={
+                  !tipoProduto ||
+                  salvandoEntrada
+                }
               >
                 <option value="">
                   {tipoProduto
-                    ? 'Selecione o peso'
+                    ? pesosCadastrados.length > 0
+                      ? 'Selecione o peso'
+                      : 'Nenhum peso cadastrado'
                     : 'Selecione o produto primeiro'}
                 </option>
 
-                {pesosCadastrados.map((peso) => (
-                  <option key={peso} value={peso}>
-                    {formatarNumero(peso)} kg
-                  </option>
-                ))}
+                {pesosCadastrados.map(
+                  (peso) => (
+                    <option
+                      key={peso}
+                      value={peso}
+                    >
+                      {formatarNumero(
+                        peso
+                      )}{' '}
+                      kg
+                    </option>
+                  )
+                )}
 
-                <option value="NOVO">+ Cadastrar novo peso</option>
+                <option value="NOVO">
+                  + Cadastrar novo peso
+                </option>
               </select>
             </div>
 
             {usandoNovoPeso && (
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="novoPeso">Novo peso em quilogramas</label>
+                <label htmlFor="novoPeso">
+                  Novo peso em
+                  quilogramas
+                </label>
 
                 <div className="cadastro-alimentacao-input-unidade">
                   <input
@@ -493,8 +1172,17 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                     inputMode="decimal"
                     value={novoPeso}
                     placeholder="Ex.: 10"
-                    onChange={(event) => {
-                      setNovoPeso(event.target.value);
+                    disabled={
+                      salvandoEntrada
+                    }
+                    onChange={(
+                      event
+                    ) => {
+                      setNovoPeso(
+                        event.target
+                          .value
+                      );
+
                       setMensagem('');
                     }}
                   />
@@ -506,7 +1194,9 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
 
             <div className="cadastro-alimentacao-form-group">
               <label htmlFor="quantidade">
-                Quantidade de {produtoSelecionado?.unidadePlural || 'unidades'}
+                Quantidade de{' '}
+                {produtoSelecionado?.unidadePlural ||
+                  'unidades'}
               </label>
 
               <input
@@ -521,127 +1211,242 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                     ? `Ex.: 350 ${produtoSelecionado.unidadePlural}`
                     : 'Informe a quantidade'
                 }
+                disabled={
+                  !tipoProduto ||
+                  salvandoEntrada
+                }
                 onChange={(event) => {
-                  setQuantidade(event.target.value);
+                  setQuantidade(
+                    event.target.value
+                  );
+
                   setMensagem('');
                 }}
-                disabled={!tipoProduto}
               />
             </div>
 
             <div className="cadastro-alimentacao-resumo">
               <div>
-                <span>Peso por unidade</span>
+                <span>
+                  Peso por unidade
+                </span>
 
                 <strong>
                   {pesoUtilizado > 0
-                    ? `${formatarNumero(pesoUtilizado)} kg`
+                    ? `${formatarNumero(
+                        pesoUtilizado
+                      )} kg`
                     : '0 kg'}
                 </strong>
               </div>
 
               <div>
-                <span>Quantidade</span>
+                <span>
+                  Quantidade
+                </span>
 
                 <strong>
                   {quantidadeNumerica > 0
-                    ? `${formatarNumero(quantidadeNumerica)} ${
-                        produtoSelecionado?.unidadePlural || 'unidades'
+                    ? `${formatarNumero(
+                        quantidadeNumerica
+                      )} ${
+                        produtoSelecionado?.unidadePlural ||
+                        'unidades'
                       }`
                     : '0'}
                 </strong>
               </div>
 
               <div className="cadastro-alimentacao-resumo-total">
-                <span>Peso total recebido</span>
+                <span>
+                  Peso total recebido
+                </span>
 
-                <strong>{formatarNumero(pesoTotalKg)} kg</strong>
+                <strong>
+                  {formatarNumero(
+                    pesoTotalKg
+                  )}{' '}
+                  kg
+                </strong>
               </div>
             </div>
 
             <div className="cadastro-alimentacao-grid">
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="dataEntrada">Data da entrada</label>
+                <label htmlFor="dataEntrada">
+                  Data da entrada
+                </label>
 
                 <input
                   id="dataEntrada"
                   type="date"
                   value={dataEntrada}
-                  onChange={(event) => setDataEntrada(event.target.value)}
+                  disabled={
+                    salvandoEntrada
+                  }
+                  onChange={(event) =>
+                    setDataEntrada(
+                      event.target.value
+                    )
+                  }
                 />
               </div>
 
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="validade">Validade</label>
+                <label htmlFor="validade">
+                  Validade
+                </label>
 
                 <input
                   id="validade"
                   type="date"
                   value={validade}
-                  onChange={(event) => setValidade(event.target.value)}
+                  disabled={
+                    salvandoEntrada
+                  }
+                  onChange={(event) =>
+                    setValidade(
+                      event.target.value
+                    )
+                  }
                 />
               </div>
             </div>
 
             <div className="cadastro-alimentacao-grid">
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="fornecedor">Fornecedor</label>
+                <label htmlFor="fornecedor">
+                  Fornecedor
+                </label>
 
                 <input
                   id="fornecedor"
                   type="text"
+                  maxLength={150}
                   value={fornecedor}
                   placeholder="Nome do fornecedor"
-                  onChange={(event) => setFornecedor(event.target.value)}
+                  disabled={
+                    salvandoEntrada
+                  }
+                  onChange={(event) =>
+                    setFornecedor(
+                      event.target.value
+                    )
+                  }
                 />
               </div>
 
               <div className="cadastro-alimentacao-form-group">
-                <label htmlFor="lote">Lote</label>
+                <label htmlFor="numeroDocumento">
+                  Número do documento
+                </label>
 
                 <input
-                  id="lote"
+                  id="numeroDocumento"
                   type="text"
-                  value={lote}
-                  placeholder="Ex.: Lote 001, NF 1234 ou entrega 16/06"
-                  onChange={(event) => setLote(event.target.value)}
+                  maxLength={100}
+                  value={
+                    numeroDocumento
+                  }
+                  placeholder="Ex.: NF-1234"
+                  disabled={
+                    salvandoEntrada
+                  }
+                  onChange={(event) =>
+                    setNumeroDocumento(
+                      event.target.value
+                    )
+                  }
                 />
-
-                <small className="cadastro-alimentacao-ajuda">
-                  O lote identifica a entrada recebida no estoque. Ele ajuda a
-                  separar feno de 10 kg, 12 kg, 20 kg ou sacos de ração
-                  recebidos em datas diferentes, evitando mistura de saldos e
-                  facilitando saídas, extravios e conferência no relatório.
-                </small>
               </div>
             </div>
 
             <div className="cadastro-alimentacao-form-group">
-              <label htmlFor="responsavel">Responsável</label>
+              <label htmlFor="lote">
+                Lote
+              </label>
+
+              <input
+                id="lote"
+                type="text"
+                maxLength={100}
+                value={lote}
+                placeholder="Ex.: RAP-2026-001"
+                disabled={
+                  salvandoEntrada
+                }
+                onChange={(event) =>
+                  setLote(
+                    event.target.value
+                  )
+                }
+              />
+
+              <small className="cadastro-alimentacao-ajuda">
+                O lote identifica a
+                entrada recebida no
+                estoque e mantém os
+                saldos separados por
+                produto, peso, validade
+                e data de recebimento.
+              </small>
+            </div>
+
+            <div className="cadastro-alimentacao-form-group">
+              <label htmlFor="responsavel">
+                Responsável
+              </label>
 
               <input
                 id="responsavel"
                 type="text"
+                maxLength={150}
                 value={responsavel}
                 placeholder="Responsável pelo recebimento"
-                onChange={(event) => setResponsavel(event.target.value)}
+                disabled={
+                  salvandoEntrada
+                }
+                onChange={(event) =>
+                  setResponsavel(
+                    event.target.value
+                  )
+                }
               />
             </div>
 
             <div className="cadastro-alimentacao-form-group">
-              <label htmlFor="observacao">Observação</label>
+              <label htmlFor="observacao">
+                Observação
+              </label>
 
               <textarea
                 id="observacao"
+                maxLength={500}
                 value={observacao}
                 placeholder="Informações adicionais sobre a entrada"
-                onChange={(event) => setObservacao(event.target.value)}
+                disabled={
+                  salvandoEntrada
+                }
+                onChange={(event) =>
+                  setObservacao(
+                    event.target.value
+                  )
+                }
               />
             </div>
 
-            <button type="submit" className="cadastro-alimentacao-salvar">
+            <button
+              type="submit"
+              className="cadastro-alimentacao-salvar"
+              disabled={
+                salvandoEntrada
+              }
+            >
               <FaPlus />
-              Cadastrar entrada
+
+              {salvandoEntrada
+                ? 'Cadastrando...'
+                : 'Cadastrar entrada'}
             </button>
           </form>
         </section>
@@ -649,91 +1454,203 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
         <section className="cadastro-alimentacao-card">
           <div className="cadastro-alimentacao-lista-header">
             <div>
-              <span>Estoque registrado</span>
+              <span>
+                Estoque registrado
+              </span>
 
               <h2>
                 {adminMaster
-                  ? 'Entradas cadastradas em todas as unidades'
-                  : `Entradas cadastradas - ${unidadeUsuario}`}
+                  ? 'Lotes cadastrados em todas as unidades'
+                  : `Lotes cadastrados - ${unidadeUsuario}`}
               </h2>
             </div>
 
-            <strong>{entradasVisiveis.length}</strong>
+            <strong>
+              {entradasVisiveis.length}
+            </strong>
           </div>
 
-          {entradasVisiveis.length === 0 ? (
+          {carregandoEstoque ? (
             <div className="cadastro-alimentacao-vazio">
               <FaBoxesStacked />
-              <p>Nenhuma entrada cadastrada para esta unidade.</p>
+
+              <p>
+                Carregando estoque...
+              </p>
+            </div>
+          ) : entradasVisiveis.length ===
+            0 ? (
+            <div className="cadastro-alimentacao-vazio">
+              <FaBoxesStacked />
+
+              <p>
+                Nenhuma entrada
+                cadastrada para esta
+                unidade.
+              </p>
             </div>
           ) : (
             <div className="cadastro-alimentacao-lista">
-              {entradasVisiveis.map((entrada) => {
-                const produto = PRODUTOS.find(
-                  (item) => item.valor === entrada.tipoProduto
-                );
+              {entradasVisiveis.map(
+                (entrada) => {
+                  const produto =
+                    obterProdutoPorTipo(
+                      entrada.tipoProduto
+                    );
 
-                const quantidadeExibida =
-                  entrada.quantidadeEntrada ||
-                  entrada.quantidadeInicial ||
-                  entrada.quantidade ||
-                  0;
+                  const quantidadeInicial =
+                    obterQuantidadeInicial(
+                      entrada
+                    );
 
-                const pesoTotalExibido =
-                  entrada.pesoTotalKg ||
-                  Number(quantidadeExibida || 0) *
-                    Number(entrada.pesoUnidadeKg || 0);
+                  const quantidadeAtual =
+                    obterQuantidadeAtual(
+                      entrada
+                    );
 
-                return (
-                  <article
-                    key={entrada.id}
-                    className="cadastro-alimentacao-item"
-                  >
-                    <div
-                      className={`cadastro-alimentacao-item-icon ${obterClasseIconeProduto(
-                        entrada.tipoProduto
-                      )}`}
+                  const pesoTotalAtual =
+                    quantidadeAtual *
+                    Number(
+                      entrada.pesoUnidadeKg ||
+                        0
+                    );
+
+                  const cancelada =
+                    entradaEstaCancelada(
+                      entrada
+                    );
+
+                  return (
+                    <article
+                      key={
+                        entrada.id ??
+                        entrada.loteId ??
+                        `${entrada.tipoProduto}-${obterCodigoLote(
+                          entrada
+                        )}-${entrada.dataEntrada}`
+                      }
+                      className="cadastro-alimentacao-item"
                     >
-                      {renderizarIconeProduto(entrada.tipoProduto)}
-                    </div>
+                      <div
+                        className={`cadastro-alimentacao-item-icon ${obterClasseIconeProduto(
+                          entrada.tipoProduto
+                        )}`}
+                      >
+                        {renderizarIconeProduto(
+                          entrada.tipoProduto
+                        )}
+                      </div>
 
-                    <div className="cadastro-alimentacao-item-info">
-                      <span>{entrada.nomeProduto}</span>
-
-                      <h3>
-                        {formatarNumero(quantidadeExibida)}{' '}
-                        {produto?.unidadePlural || 'unidades'} de{' '}
-                        {formatarNumero(entrada.pesoUnidadeKg)} kg
-                      </h3>
-
-                      <p>
-                        Peso total:{' '}
-                        <strong>{formatarNumero(pesoTotalExibido)} kg</strong>
-                      </p>
-
-                      <div className="cadastro-alimentacao-item-detalhes">
+                      <div className="cadastro-alimentacao-item-info">
                         <span>
-                          <FaCalendarDays />
-                          {formatarData(entrada.dataEntrada)}
+                          {obterNomeProduto(
+                            entrada
+                          )}
                         </span>
 
-                        {entrada.lote && <span>Lote: {entrada.lote}</span>}
+                        <h3>
+                          {formatarNumero(
+                            quantidadeAtual
+                          )}{' '}
+                          {produto?.unidadePlural ||
+                            'unidades'}{' '}
+                          disponíveis de{' '}
+                          {formatarNumero(
+                            entrada.pesoUnidadeKg
+                          )}{' '}
+                          kg
+                        </h3>
 
-                        {entrada.unidade && <span>{entrada.unidade}</span>}
+                        <p>
+                          Quantidade
+                          inicial:{' '}
+                          <strong>
+                            {formatarNumero(
+                              quantidadeInicial
+                            )}
+                          </strong>
+                        </p>
+
+                        <p>
+                          Peso atual:{' '}
+                          <strong>
+                            {formatarNumero(
+                              pesoTotalAtual
+                            )}{' '}
+                            kg
+                          </strong>
+                        </p>
+
+                        {entrada.situacao && (
+                          <p>
+                            Situação:{' '}
+                            <strong>
+                              {
+                                entrada.situacao
+                              }
+                            </strong>
+                          </p>
+                        )}
+
+                        <div className="cadastro-alimentacao-item-detalhes">
+                          <span>
+                            <FaCalendarDays />
+
+                            {formatarData(
+                              entrada.dataEntrada
+                            )}
+                          </span>
+
+                          {obterCodigoLote(
+                            entrada
+                          ) && (
+                            <span>
+                              Lote:{' '}
+                              {obterCodigoLote(
+                                entrada
+                              )}
+                            </span>
+                          )}
+
+                          {entrada.validade && (
+                            <span>
+                              Validade:{' '}
+                              {formatarData(
+                                entrada.validade
+                              )}
+                            </span>
+                          )}
+
+                          {entrada.unidade && (
+                            <span>
+                              {
+                                entrada.unidade
+                              }
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <button
-                      type="button"
-                      className="cadastro-alimentacao-excluir"
-                      onClick={() => setEntradaParaExcluir(entrada)}
-                      aria-label={`Excluir entrada de ${entrada.nomeProduto}`}
-                    >
-                      <FaTrashCan />
-                    </button>
-                  </article>
-                );
-              })}
+                      {!cancelada && (
+                        <button
+                          type="button"
+                          className="cadastro-alimentacao-excluir"
+                          onClick={() =>
+                            abrirCancelamento(
+                              entrada
+                            )
+                          }
+                          aria-label={`Cancelar entrada de ${obterNomeProduto(
+                            entrada
+                          )}`}
+                        >
+                          <FaTrashCan />
+                        </button>
+                      )}
+                    </article>
+                  );
+                }
+              )}
             </div>
           )}
         </section>
@@ -745,61 +1662,150 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                 <FaBoxesStacked />
               </div>
 
-              <h2>Entrada cadastrada com sucesso!</h2>
+              <h2>
+                Entrada cadastrada com
+                sucesso!
+              </h2>
 
               <p>
-                O registro de <strong>{entradaCadastrada.nomeProduto}</strong>{' '}
-                foi lançado no estoque da unidade{' '}
-                <strong>{entradaCadastrada.unidade}</strong>.
+                O registro de{' '}
+                <strong>
+                  {obterNomeProduto(
+                    entradaCadastrada
+                  )}
+                </strong>{' '}
+                foi lançado no estoque
+                da unidade{' '}
+                <strong>
+                  {
+                    entradaCadastrada.unidade
+                  }
+                </strong>
+                .
               </p>
 
               <div className="cadastro-alimentacao-modal-resumo">
                 <span>Produto</span>
-                <strong>{entradaCadastrada.nomeProduto}</strong>
+
+                <strong>
+                  {obterNomeProduto(
+                    entradaCadastrada
+                  )}
+                </strong>
 
                 <span>Unidade</span>
-                <strong>{entradaCadastrada.unidade || '-'}</strong>
 
-                <span>Data da entrada</span>
-                <strong>{formatarData(entradaCadastrada.dataEntrada)}</strong>
+                <strong>
+                  {entradaCadastrada.unidade ||
+                    '-'}
+                </strong>
 
-                <span>Quantidade cadastrada</span>
+                <span>
+                  Data da entrada
+                </span>
+
+                <strong>
+                  {formatarData(
+                    entradaCadastrada.dataEntrada
+                  )}
+                </strong>
+
+                <span>
+                  Quantidade cadastrada
+                </span>
+
                 <strong>
                   {formatarNumero(
-                    entradaCadastrada.quantidadeEntrada ||
-                      entradaCadastrada.quantidadeInicial ||
-                      entradaCadastrada.quantidade ||
-                      0
+                    obterQuantidadeInicial(
+                      entradaCadastrada
+                    )
                   )}{' '}
-                  {obterUnidadeProduto(entradaCadastrada)}
+                  {obterUnidadeProduto(
+                    entradaCadastrada
+                  )}
                 </strong>
 
-                <span>Peso por unidade</span>
+                <span>
+                  Peso por unidade
+                </span>
+
                 <strong>
-                  {formatarNumero(entradaCadastrada.pesoUnidadeKg)} kg
+                  {formatarNumero(
+                    entradaCadastrada.pesoUnidadeKg
+                  )}{' '}
+                  kg
                 </strong>
 
-                <span>Peso total recebido</span>
-                <strong>{formatarNumero(entradaCadastrada.pesoTotalKg)} kg</strong>
+                <span>
+                  Peso total recebido
+                </span>
+
+                <strong>
+                  {formatarNumero(
+                    Number(
+                      entradaCadastrada.pesoUnidadeKg ||
+                        0
+                    ) *
+                      obterQuantidadeInicial(
+                        entradaCadastrada
+                      )
+                  )}{' '}
+                  kg
+                </strong>
 
                 <span>Lote</span>
-                <strong>{entradaCadastrada.lote || '-'}</strong>
 
-                <span>Fornecedor</span>
-                <strong>{entradaCadastrada.fornecedor || '-'}</strong>
+                <strong>
+                  {obterCodigoLote(
+                    entradaCadastrada
+                  ) || '-'}
+                </strong>
+
+                <span>
+                  Fornecedor
+                </span>
+
+                <strong>
+                  {entradaCadastrada.fornecedor ||
+                    '-'}
+                </strong>
+
+                <span>
+                  Documento
+                </span>
+
+                <strong>
+                  {entradaCadastrada.numeroDocumento ||
+                    '-'}
+                </strong>
 
                 <span>Validade</span>
-                <strong>{formatarData(entradaCadastrada.validade)}</strong>
 
-                <span>Responsável</span>
-                <strong>{entradaCadastrada.responsavel || '-'}</strong>
+                <strong>
+                  {formatarData(
+                    entradaCadastrada.validade
+                  )}
+                </strong>
+
+                <span>
+                  Responsável
+                </span>
+
+                <strong>
+                  {entradaCadastrada.responsavelRecebimento ||
+                    '-'}
+                </strong>
               </div>
 
               <div className="cadastro-alimentacao-modal-actions">
                 <button
                   type="button"
                   className="cadastro-alimentacao-confirmar-exclusao"
-                  onClick={() => setEntradaCadastrada(null)}
+                  onClick={() =>
+                    setEntradaCadastrada(
+                      null
+                    )
+                  }
                 >
                   <FaPlus />
                   Cadastrar nova entrada
@@ -808,7 +1814,11 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                 <button
                   type="button"
                   className="cadastro-alimentacao-cancelar-exclusao"
-                  onClick={() => setEntradaCadastrada(null)}
+                  onClick={() =>
+                    setEntradaCadastrada(
+                      null
+                    )
+                  }
                 >
                   <FaXmark />
                   Fechar
@@ -825,74 +1835,134 @@ function CadastroFenoRacao({ usuario, onVoltar }) {
                 <FaTriangleExclamation />
               </div>
 
-              <h2>Excluir entrada?</h2>
+              <h2>
+                Cancelar entrada?
+              </h2>
 
               <p>
-                Deseja excluir o registro de{' '}
-                <strong>{entradaParaExcluir.nomeProduto}</strong>?
+                Deseja cancelar o lote de{' '}
+                <strong>
+                  {obterNomeProduto(
+                    entradaParaExcluir
+                  )}
+                </strong>
+                ?
               </p>
 
               <div className="cadastro-alimentacao-modal-resumo">
                 <span>Unidade</span>
 
-                <strong>{entradaParaExcluir.unidade || '-'}</strong>
+                <strong>
+                  {entradaParaExcluir.unidade ||
+                    '-'}
+                </strong>
 
-                <span>Quantidade</span>
+                <span>Lote</span>
+
+                <strong>
+                  {obterCodigoLote(
+                    entradaParaExcluir
+                  ) || '-'}
+                </strong>
+
+                <span>
+                  Quantidade atual
+                </span>
 
                 <strong>
                   {formatarNumero(
-                    entradaParaExcluir.quantidadeEntrada ||
-                      entradaParaExcluir.quantidadeInicial ||
-                      entradaParaExcluir.quantidade ||
-                      0
+                    obterQuantidadeAtual(
+                      entradaParaExcluir
+                    )
                   )}{' '}
-                  {obterUnidadeProduto(entradaParaExcluir)}
+                  {obterUnidadeProduto(
+                    entradaParaExcluir
+                  )}
                 </strong>
 
-                <span>Peso por unidade</span>
-
-                <strong>
-                  {formatarNumero(entradaParaExcluir.pesoUnidadeKg)} kg
-                </strong>
-
-                <span>Peso total</span>
+                <span>
+                  Peso por unidade
+                </span>
 
                 <strong>
                   {formatarNumero(
-                    entradaParaExcluir.pesoTotalKg ||
-                      Number(
-                        entradaParaExcluir.quantidadeEntrada ||
-                          entradaParaExcluir.quantidadeInicial ||
-                          entradaParaExcluir.quantidade ||
-                          0
-                      ) * Number(entradaParaExcluir.pesoUnidadeKg || 0)
+                    entradaParaExcluir.pesoUnidadeKg
                   )}{' '}
                   kg
                 </strong>
+              </div>
+
+              <div className="cadastro-alimentacao-form-group">
+                <label htmlFor="motivoCancelamento">
+                  Motivo do cancelamento
+                </label>
+
+                <textarea
+                  id="motivoCancelamento"
+                  value={
+                    motivoCancelamento
+                  }
+                  maxLength={500}
+                  placeholder="Informe por que esta entrada está sendo cancelada"
+                  disabled={
+                    cancelandoEntrada
+                  }
+                  onChange={(event) =>
+                    setMotivoCancelamento(
+                      event.target.value
+                    )
+                  }
+                />
               </div>
 
               <div className="cadastro-alimentacao-modal-actions">
                 <button
                   type="button"
                   className="cadastro-alimentacao-confirmar-exclusao"
-                  onClick={confirmarExclusao}
+                  disabled={
+                    cancelandoEntrada
+                  }
+                  onClick={
+                    confirmarExclusao
+                  }
                 >
                   <FaTrashCan />
-                  Sim, excluir
+
+                  {cancelandoEntrada
+                    ? 'Cancelando...'
+                    : 'Sim, cancelar entrada'}
                 </button>
 
                 <button
                   type="button"
                   className="cadastro-alimentacao-cancelar-exclusao"
-                  onClick={() => setEntradaParaExcluir(null)}
+                  disabled={
+                    cancelandoEntrada
+                  }
+                  onClick={() => {
+                    setEntradaParaExcluir(
+                      null
+                    );
+
+                    setMotivoCancelamento(
+                      ''
+                    );
+                  }}
                 >
                   <FaXmark />
-                  Cancelar
+                  Voltar
                 </button>
               </div>
             </div>
           </div>
         )}
+        <ModalMensagem
+          aberto={modalMensagem.aberto}
+          tipo={modalMensagem.tipo}
+          titulo={modalMensagem.titulo}
+          mensagem={modalMensagem.mensagem}
+          onFechar={fecharModalMensagem}
+        />
       </section>
     </main>
   );

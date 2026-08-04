@@ -83,7 +83,10 @@ export async function lerCodigoNativo() {
     );
 
     throw new Error(
-      'Não foi possível abrir o leitor. Verifique a permissão da câmera.'
+      'Não foi possível abrir o leitor. Verifique a permissão da câmera.',
+      {
+        cause: error,
+      }
     );
   }
 }

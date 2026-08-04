@@ -1,0 +1,208 @@
+.modal-mensagem-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 7000;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-mensagem-card {
+  position: relative;
+  width: min(430px, 100%);
+  padding: 28px 22px 22px;
+  border: 2px solid #242424;
+  border-radius: 24px;
+  background: linear-gradient(
+    160deg,
+    #fffdf4 0%,
+    #ffffff 55%,
+    #f7f4ea 100%
+  );
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  animation: modal-mensagem-entrada 0.2s ease-out;
+}
+
+.modal-mensagem-fechar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 13px;
+  background: #111111;
+  color: #ffe600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.modal-mensagem-icone {
+  width: 66px;
+  height: 66px;
+  margin: 4px auto 13px;
+  border-radius: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+.modal-mensagem-subtitulo {
+  display: block;
+  color: #df1b24;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.modal-mensagem-card h2 {
+  margin: 4px 42px 12px;
+  color: #222222;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.modal-mensagem-card p {
+  margin: 0;
+  padding: 14px;
+  border-radius: 15px;
+  color: #444444;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.modal-mensagem-confirmar {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 16px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.modal-mensagem-erro {
+  border-color: #c92832;
+}
+
+.modal-mensagem-erro .modal-mensagem-icone {
+  background: #fff0f1;
+  color: #b4232c;
+}
+
+.modal-mensagem-erro p {
+  border: 1px solid #e7a7ac;
+  background: #fff0f1;
+  color: #8f151d;
+}
+
+.modal-mensagem-erro .modal-mensagem-confirmar {
+  border: 1px solid #b4232c;
+  background: #b4232c;
+  color: #ffffff;
+}
+
+.modal-mensagem-sucesso {
+  border-color: #247a44;
+}
+
+.modal-mensagem-sucesso .modal-mensagem-icone {
+  background: #e2f6e9;
+  color: #247a44;
+}
+
+.modal-mensagem-sucesso p {
+  border: 1px solid #9ad3ad;
+  background: #e9f8ee;
+  color: #176333;
+}
+
+.modal-mensagem-sucesso .modal-mensagem-confirmar {
+  border: 1px solid #247a44;
+  background: #247a44;
+  color: #ffffff;
+}
+
+.modal-mensagem-aviso {
+  border-color: #d9a514;
+}
+
+.modal-mensagem-aviso .modal-mensagem-icone {
+  background: #fff4c7;
+  color: #8a6400;
+}
+
+.modal-mensagem-aviso p {
+  border: 1px solid #e4c95f;
+  background: #fff9e6;
+  color: #735100;
+}
+
+.modal-mensagem-aviso .modal-mensagem-confirmar {
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffe600;
+}
+
+.modal-mensagem-informacao {
+  border-color: #2878b8;
+}
+
+.modal-mensagem-informacao .modal-mensagem-icone {
+  background: #e5f2ff;
+  color: #175d91;
+}
+
+.modal-mensagem-informacao p {
+  border: 1px solid #9fc7e4;
+  background: #eef7ff;
+  color: #145a8b;
+}
+
+.modal-mensagem-informacao .modal-mensagem-confirmar {
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffe600;
+}
+
+@keyframes modal-mensagem-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 430px) {
+  .modal-mensagem-overlay {
+    padding: 16px;
+  }
+
+  .modal-mensagem-card {
+    padding: 26px 18px 20px;
+    border-radius: 22px;
+  }
+
+  .modal-mensagem-card h2 {
+    margin-inline: 36px;
+    font-size: 20px;
+  }
+}

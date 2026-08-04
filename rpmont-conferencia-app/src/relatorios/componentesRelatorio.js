@@ -72,10 +72,26 @@ export const formatarDataRelatorio = (valor) => {
   return `${dia}/${mes}/${ano}`;
 };
 
-export const obterNomeProdutoRelatorio = (tipo) => {
-  if (tipo === 'FENO') return 'Feno';
-  if (tipo === 'RACAO_ADULTO') return 'Ração Adulto';
-  if (tipo === 'RACAO_POTRO') return 'Ração Potro';
+export const obterNomeProdutoRelatorio = (
+  tipo
+) => {
+  switch (tipo) {
+    case 'FENO':
+      return 'Feno';
 
-  return tipo || '-';
+    case 'RACAO_ADULTO_PREMIUM':
+      return 'Ração Adulto Premium';
+
+    case 'RACAO_ADULTO_MANUTENCAO':
+      return 'Ração Adulto Manutenção';
+
+    case 'RACAO_POTRO_PREMIUM':
+      return 'Ração Potro Premium';
+
+    case 'RACAO_POTRO_MANUTENCAO':
+      return 'Ração Potro Manutenção';
+
+    default:
+      return tipo || '-';
+  }
 };

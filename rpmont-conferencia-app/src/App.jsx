@@ -13,6 +13,7 @@ import SaidaFenoRacao from './pages/SaidaFenoRacao';
 import RelatorioFenoRacao from './pages/RelatorioFenoRacao';
 import ExtravioFenoRacao from './pages/ExtravioFenoRacao';
 import TransferenciaFenoRacao from './pages/TransferenciaFenoRacao';
+import ConsultaEstoqueFenoRacao from './pages/ConsultaEstoqueFenoRacao';
 import SolicitarAcesso from './pages/SolicitarAcesso';
 import RecuperarSenha from './pages/RecuperarSenha';
 
@@ -80,6 +81,11 @@ function App() {
   const [
     abrirTransferenciaFenoRacao,
     setAbrirTransferenciaFenoRacao,
+  ] = useState(false);
+
+  const [
+    abrirConsultaEstoqueFenoRacao,
+    setAbrirConsultaEstoqueFenoRacao,
   ] = useState(false);
 
   const [
@@ -498,6 +504,7 @@ function App() {
     setAbrirExtravioFenoRacao(false);
     setAbrirRelatorioFenoRacao(false);
     setAbrirTransferenciaFenoRacao(false);
+    setAbrirConsultaEstoqueFenoRacao(false);
     setAbrirModalFenoRacao(false);
     setCadastroPendente(null);
     setMaterialEmEdicao(null);
@@ -595,7 +602,10 @@ function App() {
       );
   
       throw new Error(
-        obterMensagemErro(error)
+        obterMensagemErro(error),
+        {
+          cause: error,
+        }
       );
     }
   };
@@ -1028,6 +1038,24 @@ function App() {
     setAbrirTransferenciaFenoRacao(true);
   };
 
+  const abrirTelaConsultaEstoqueFenoRacao = () => {
+    if (
+      !usuarioPodeAcessarFenoRacao(
+        usuarioLogado
+      )
+    ) {
+      window.alert(
+        'Você não tem permissão para consultar o estoque de Feno e Ração.'
+      );
+
+      return;
+    }
+
+    fecharTelasSecundarias();
+
+    setAbrirConsultaEstoqueFenoRacao(true);
+  };
+
   const voltarDoCadastroAlimentacao = () => {
     setAbrirCadastroAlimentacao(false);
     setConfiguracaoConferencia(null);
@@ -1051,6 +1079,12 @@ function App() {
   const voltarDaTransferenciaFenoRacao =
     () => {
       setAbrirTransferenciaFenoRacao(false);
+      setConfiguracaoConferencia(null);
+    };
+
+  const voltarDaConsultaEstoqueFenoRacao =
+    () => {
+      setAbrirConsultaEstoqueFenoRacao(false);
       setConfiguracaoConferencia(null);
     };
 
@@ -1126,6 +1160,17 @@ function App() {
           setAbrirSolicitarAcesso(false);
           setAbrirRecuperarSenha(true);
         }}
+      />
+    );
+  }
+
+  if (abrirConsultaEstoqueFenoRacao) {
+    return (
+      <ConsultaEstoqueFenoRacao
+        usuario={usuarioLogado}
+        onVoltar={
+          voltarDaConsultaEstoqueFenoRacao
+        }
       />
     );
   }
@@ -1363,6 +1408,16 @@ function App() {
                     Cadastrar Feno e Ração
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  className="modal-feno-racao-btn modal-feno-racao-btn-consulta"
+                  onClick={
+                    abrirTelaConsultaEstoqueFenoRacao
+                  }
+                >
+                  Consultar Estoque de Feno e Ração
+                </button>
 
                 <button
                   type="button"
