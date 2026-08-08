@@ -36,6 +36,7 @@ O projeto foi construído com foco em regras de negócio reais, segurança, rast
 
 - Capacitor
 - Android
+- iOS
 - Leitura de QR Code
 - Leitura de código de barras
 
@@ -149,7 +150,7 @@ O sistema registra individualmente os saldos anteriores e posteriores de cada lo
 
 ## Aplicação Mobile
 
-O frontend também pode ser executado como aplicativo Android utilizando Capacitor.
+O frontend também pode ser executado como aplicação mobile utilizando Capacitor, com suporte para Android e iOS.
 
 A integração mobile permite utilizar a câmera do dispositivo para realizar leitura de:
 
@@ -223,7 +224,7 @@ conferencia-de-material---app
 Fluxo simplificado da aplicação:
 
 ```text
-React / Aplicação Android
+React / Aplicação Mobile
           |
           v
        REST API
@@ -273,7 +274,7 @@ Responsável por:
 - consultas;
 - formulários;
 - relatórios;
-- integração com Android;
+- integração com aplicações mobile Android e iOS;
 - leitura de QR Code e código de barras.
 
 ---
