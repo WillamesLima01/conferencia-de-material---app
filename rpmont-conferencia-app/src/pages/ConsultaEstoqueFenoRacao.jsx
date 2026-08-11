@@ -197,48 +197,64 @@ const obterUnidadesDaResposta = (
 
   const mapa = new Map();
 
-  unidadesRecebidas.forEach((unidade) => {
-    const nomeUnidade = String(
-      unidade?.sigla ??
-        unidade?.nome ??
-        unidade?.unidade ??
-        unidade?.descricao ??
-        ''
-    ).trim();
+unidadesRecebidas.forEach((unidade) => {
+  const nomeUnidade = String(
+    unidade?.sigla ??
+      unidade?.nome ??
+      unidade?.unidade ??
+      unidade?.descricao ??
+      ''
+  ).trim();
 
-    if (!nomeUnidade) {
-      return;
-    }
+  if (!nomeUnidade) {
+    return;
+  }
 
-    const situacao = normalizarTexto(
-      unidade?.situacao ??
-        unidade?.status ??
-        ''
-    );
+  const unidadesPermitidas = [
+    'RPMONT',
+    '3EPMONT',
+  ];
 
-    const ativoInformado =
-      unidade?.ativo ??
-      unidade?.ATIVO;
+  const unidadeNormalizada =
+    normalizarTexto(nomeUnidade);
 
-    const unidadeAtiva =
-      ativoInformado === undefined ||
-      ativoInformado === null ||
-      ativoInformado === true ||
-      Number(ativoInformado) === 1 ||
-      situacao === 'ATIVO';
+  if (
+    !unidadesPermitidas.includes(
+      unidadeNormalizada
+    )
+  ) {
+    return;
+  }
 
-    if (!unidadeAtiva) {
-      return;
-    }
+  const situacao = normalizarTexto(
+    unidade?.situacao ??
+      unidade?.status ??
+      ''
+  );
 
-    const chave = normalizarTexto(
-      nomeUnidade
-    );
+  const ativoInformado =
+    unidade?.ativo ??
+    unidade?.ATIVO;
 
-    if (!mapa.has(chave)) {
-      mapa.set(chave, nomeUnidade);
-    }
-  });
+  const unidadeAtiva =
+    ativoInformado === undefined ||
+    ativoInformado === null ||
+    ativoInformado === true ||
+    Number(ativoInformado) === 1 ||
+    situacao === 'ATIVO';
+
+  if (!unidadeAtiva) {
+    return;
+  }
+
+  const chave = normalizarTexto(
+    nomeUnidade
+  );
+
+  if (!mapa.has(chave)) {
+    mapa.set(chave, nomeUnidade);
+  }
+});
 
   const unidadeUsuarioNormalizada =
     String(unidadeUsuario || '').trim();
@@ -367,30 +383,30 @@ function ConsultaEstoqueFenoRacao({
 
   const carregarDados =
     useCallback(async () => {
+      const unidadeConsulta =
+        podeSelecionarUnidade
+          ? unidadeSelecionada
+          : unidadeUsuario;
+
+      if (!unidadeConsulta) {
+        setEstoque([]);
+        return;
+      }
+
       try {
         setCarregando(true);
         setErro('');
 
-        const [
-          respostaEstoque,
-          respostaUnidades,
-        ] = await Promise.all([
-          listarEstoqueFenoRacao(),
-          listarUnidadesAtivas(),
-        ]);
+        const respostaEstoque =
+          await listarEstoqueFenoRacao({
+            unidade: unidadeConsulta,
+          });
 
         setEstoque(
           ordenarRegistros(
             obterEstoqueDaResposta(
               respostaEstoque
             )
-          )
-        );
-
-        setUnidades(
-          obterUnidadesDaResposta(
-            respostaUnidades,
-            unidadeUsuario
           )
         );
       } catch (error) {
@@ -404,46 +420,83 @@ function ConsultaEstoqueFenoRacao({
         );
 
         setEstoque([]);
-        setUnidades([]);
       } finally {
         setCarregando(false);
       }
-    }, [unidadeUsuario]);
+    }, [
+      podeSelecionarUnidade,
+      unidadeSelecionada,
+      unidadeUsuario,
+    ]);
 
   useEffect(() => {
     let componenteAtivo = true;
 
-    Promise.all([
-      listarEstoqueFenoRacao(),
-      listarUnidadesAtivas(),
-    ])
-      .then(
-        ([
-          respostaEstoque,
-          respostaUnidades,
-        ]) => {
-          if (!componenteAtivo) {
-            return;
-          }
-
-          setEstoque(
-            ordenarRegistros(
-              obterEstoqueDaResposta(
-                respostaEstoque
-              )
-            )
-          );
-
-          setUnidades(
-            obterUnidadesDaResposta(
-              respostaUnidades,
-              unidadeUsuario
-            )
-          );
-
-          setErro('');
+    listarUnidadesAtivas()
+      .then((respostaUnidades) => {
+        if (!componenteAtivo) {
+          return;
         }
-      )
+
+        setUnidades(
+          obterUnidadesDaResposta(
+            respostaUnidades,
+            unidadeUsuario
+          )
+        );
+      })
+      .catch((error) => {
+        if (!componenteAtivo) {
+          return;
+        }
+
+        console.error(
+          'Erro ao carregar unidades:',
+          error
+        );
+
+        setUnidades(
+          unidadeUsuario
+            ? [unidadeUsuario]
+            : []
+        );
+      });
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, [unidadeUsuario]);
+
+  useEffect(() => {
+    const unidadeConsulta =
+      podeSelecionarUnidade
+        ? unidadeSelecionada
+        : unidadeUsuario;
+
+    if (!unidadeConsulta) {
+      return undefined;
+    }
+
+    let componenteAtivo = true;
+
+    listarEstoqueFenoRacao({
+      unidade: unidadeConsulta,
+    })
+      .then((respostaEstoque) => {
+        if (!componenteAtivo) {
+          return;
+        }
+
+        setEstoque(
+          ordenarRegistros(
+            obterEstoqueDaResposta(
+              respostaEstoque
+            )
+          )
+        );
+
+        setErro('');
+      })
       .catch((error) => {
         if (!componenteAtivo) {
           return;
@@ -459,7 +512,6 @@ function ConsultaEstoqueFenoRacao({
         );
 
         setEstoque([]);
-        setUnidades([]);
       })
       .finally(() => {
         if (componenteAtivo) {
@@ -470,7 +522,12 @@ function ConsultaEstoqueFenoRacao({
     return () => {
       componenteAtivo = false;
     };
-  }, [unidadeUsuario]);
+  }, [
+    podeSelecionarUnidade,
+    unidadeSelecionada,
+    unidadeUsuario,
+  ]);
+
 
   const unidadeFoiInformada =
     !podeSelecionarUnidade ||
@@ -613,6 +670,14 @@ function ConsultaEstoqueFenoRacao({
     setLotePesquisado('');
     setDataInicial('');
     setDataFinal('');
+    setErro('');
+
+    if (
+      normalizarTexto(unidadeSelecionada) !==
+      normalizarTexto(unidadeUsuario)
+    ) {
+      setCarregando(true);
+    }
 
     setUnidadeSelecionada(
       unidadeUsuario
@@ -676,11 +741,14 @@ function ConsultaEstoqueFenoRacao({
                 <select
                   id="estoqueUnidade"
                   value={unidadeSelecionada}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    setCarregando(true);
+                    setErro('');
+
                     setUnidadeSelecionada(
                       event.target.value
-                    )
-                  }
+                    );
+                  }}
                 >
                   <option value="">
                     Selecione uma unidade

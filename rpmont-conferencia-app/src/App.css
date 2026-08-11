@@ -93,6 +93,15 @@
   background: linear-gradient(135deg, #15803d, #22c55e);
 }
 
+.modal-feno-racao-btn-consulta {
+  background: linear-gradient(
+    135deg,
+    #0f766e,
+    #14b8a6
+  );
+  color: #ffffff;
+}
+
 .modal-feno-racao-btn-saida {
   background: linear-gradient(135deg, #b45309, #f59e0b);
 }

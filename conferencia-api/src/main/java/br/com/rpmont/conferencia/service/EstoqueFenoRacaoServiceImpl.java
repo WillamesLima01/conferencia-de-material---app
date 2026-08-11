@@ -1627,10 +1627,51 @@ public class EstoqueFenoRacaoServiceImpl
             String unidadeInformada,
             Usuario usuario
     ) {
-        return definirUnidadeOperacao(
-                unidadeInformada,
-                usuario
-        );
+        String unidadeUsuario =
+                normalizarTextoObrigatorio(
+                        usuario.getUnidade(),
+                        "O usuário não possui unidade cadastrada."
+                );
+
+        String unidadeNormalizada =
+                normalizarTextoOpcional(
+                        unidadeInformada
+                );
+
+        /*
+         * ADMIN_MASTER e ADMIN podem consultar
+         * estoque de qualquer unidade.
+         */
+        if (
+                usuario.getNivel() != null &&
+                        (
+                                usuario.getNivel() == NIVEL_ADMIN_MASTER ||
+                                        usuario.getNivel() == NIVEL_ADMIN
+                        )
+        ) {
+            if (unidadeNormalizada == null) {
+                return unidadeUsuario;
+            }
+
+            if (
+                    !unidadeRepository
+                            .existsBySiglaIgnoreCaseAndAtivoTrue(
+                                    unidadeNormalizada
+                            )
+            ) {
+                throw new ResourceNotFoundException(
+                        "A unidade informada não existe ou está inativa."
+                );
+            }
+
+            return unidadeNormalizada;
+        }
+
+        /*
+         * USUÁRIO_COMUM permanece restrito
+         * à própria unidade.
+         */
+        return unidadeUsuario;
     }
 
     /*

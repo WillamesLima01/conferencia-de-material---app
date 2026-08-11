@@ -51,7 +51,7 @@ export const listarMovimentacoesFenoRacao = async (
   filtros = {}
 ) => {
   return api(
-    `/feno-racao/estoque/movimentacoes${montarQueryString(
+    `/feno-racao/movimentacoes${montarQueryString(
       filtros
     )}`
   );

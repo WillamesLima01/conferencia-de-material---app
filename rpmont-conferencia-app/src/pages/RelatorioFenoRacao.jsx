@@ -416,12 +416,18 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
         setCarregandoDados(true);
         setErroCarregamento('');
 
-        const [respostaEstoque, respostaMovimentacoes, respostaTransferencias] =
-          await Promise.all([
-            listarEstoqueFenoRacao(),
-            listarMovimentacoesFenoRacao(),
-            listarTransferencias(),
-          ]);
+        const [
+          respostaEstoque,
+          respostaMovimentacoes,
+          respostaTransferencias,
+        ] = await Promise.all([
+          listarEstoqueFenoRacao(),
+          listarMovimentacoesFenoRacao({
+            dataInicial,
+            dataFinal,
+          }),
+          listarTransferencias(),
+        ]);
 
         if (!componenteAtivo) return;
 
@@ -467,7 +473,10 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     return () => {
       componenteAtivo = false;
     };
-  }, []);
+  }, [
+    dataInicial,
+    dataFinal,
+  ]);
 
   const produtoAtual = PRODUTOS.find(
     (produto) => produto.valor === produtoSelecionado
