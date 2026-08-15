@@ -73,29 +73,15 @@ function AdminSetores({ usuario, onVoltar }) {
     return [];
   };
 
-  const filtrarUnidadesPermitidas = (lista) => {
-    if (usuarioEhAdminMaster) {
-      return lista;
-    }
-
-    const unidadeUsuario = String(usuario?.unidade || '')
-      .trim()
-      .toLowerCase();
-
-    return lista.filter((unidade) => {
-      const nome = String(unidade?.nome || '').trim().toLowerCase();
-      const sigla = String(unidade?.sigla || '').trim().toLowerCase();
-
-      return nome === unidadeUsuario || sigla === unidadeUsuario;
-    });
-  };
-
   useEffect(() => {
     let componenteAtivo = true;
 
     const carregarDadosIniciais = async () => {
       try {
-        const [respostaUnidades, respostaSetores] = await Promise.all([
+        const [
+          respostaUnidades,
+          respostaSetores,
+        ] = await Promise.all([
           listarUnidadesAtivas(),
           listarSetores(),
         ]);
@@ -104,15 +90,59 @@ function AdminSetores({ usuario, onVoltar }) {
           return;
         }
 
-        const unidadesPermitidas = filtrarUnidadesPermitidas(
-          normalizarLista(respostaUnidades)
-        );
+        const listaUnidades =
+          normalizarLista(respostaUnidades);
+
+        const adminMaster =
+          Number(usuario?.nivel) === 1;
+
+        let unidadesPermitidas =
+          listaUnidades;
+
+        if (!adminMaster) {
+          const unidadeUsuario =
+            String(usuario?.unidade || '')
+              .trim()
+              .toLowerCase();
+
+          unidadesPermitidas =
+            listaUnidades.filter(
+              (unidade) => {
+                const nome =
+                  String(unidade?.nome || '')
+                    .trim()
+                    .toLowerCase();
+
+                const sigla =
+                  String(unidade?.sigla || '')
+                    .trim()
+                    .toLowerCase();
+
+                return (
+                  nome === unidadeUsuario ||
+                  sigla === unidadeUsuario
+                );
+              }
+            );
+        }
 
         setUnidades(unidadesPermitidas);
-        setSetores(normalizarLista(respostaSetores));
 
-        if (!usuarioEhAdminMaster && unidadesPermitidas.length === 1) {
-          setUnidadeSelecionadaId(String(unidadesPermitidas[0].id));
+        setSetores(
+          normalizarLista(
+            respostaSetores
+          )
+        );
+
+        if (
+          !adminMaster &&
+          unidadesPermitidas.length === 1
+        ) {
+          setUnidadeSelecionadaId(
+            String(
+              unidadesPermitidas[0].id
+            )
+          );
         }
       } catch (erro) {
         if (componenteAtivo) {
@@ -133,7 +163,10 @@ function AdminSetores({ usuario, onVoltar }) {
     return () => {
       componenteAtivo = false;
     };
-  }, [usuario?.nivel, usuario?.unidade]);
+  }, [
+    usuario?.nivel,
+    usuario?.unidade,
+  ]);
 
   const recarregarSetores = async () => {
     const resposta = await listarSetores();

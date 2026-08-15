@@ -1,6 +1,13 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import { Capacitor } from '@capacitor/core';
+import {
+  Filesystem,
+  Directory,
+} from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+
 import brasaoRPMont from '../assets/RPMont.png';
 
 const formatarNumero = (valor) => {
@@ -13,9 +20,15 @@ const formatarNumero = (valor) => {
 const formatarData = (valor) => {
   if (!valor) return '-';
 
-  const [ano, mes, dia] = String(valor).split('-');
+  const texto = String(valor).trim();
 
-  if (!ano || !mes || !dia) return valor;
+  const apenasData = texto.split('T')[0];
+
+  const [ano, mes, dia] = apenasData.split('-');
+
+  if (!ano || !mes || !dia) {
+    return texto;
+  }
 
   return `${dia}/${mes}/${ano}`;
 };
@@ -164,6 +177,52 @@ const carregarImagemBase64 = (src) => {
   });
 };
 
+const salvarOuCompartilharPdf = async (
+  doc,
+  nomeArquivo
+) => {
+  if (!Capacitor.isNativePlatform()) {
+    doc.save(nomeArquivo);
+
+    return;
+  }
+
+  const pdfDataUri =
+    doc.output('datauristring');
+
+  const pdfBase64 =
+    pdfDataUri.split(',')[1];
+
+  if (!pdfBase64) {
+    throw new Error(
+      'Não foi possível gerar os dados do PDF.'
+    );
+  }
+
+  const arquivoSalvo =
+    await Filesystem.writeFile({
+      path: nomeArquivo,
+      data: pdfBase64,
+      directory: Directory.Cache,
+    });
+
+  const uriArquivo =
+    arquivoSalvo.uri;
+
+  if (!uriArquivo) {
+    throw new Error(
+      'Não foi possível obter o endereço do PDF gerado.'
+    );
+  }
+
+  await Share.share({
+    title: 'Relatório de Feno e Ração',
+    text: 'Relatório de Feno e Ração gerado pelo sistema.',
+    files: [uriArquivo],
+    dialogTitle: 'Compartilhar relatório',
+  });
+};
+
 export const gerarRelatorioFenoRacaoPdf = async ({
   usuario,
   filtros,
@@ -173,16 +232,18 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   entradasFiltradas,
   saidasFiltradas,
   extraviosFiltrados = [],
-  transferenciasFiltradas = [], 
+  transferenciasFiltradas = [],
 }) => {
   const doc = new jsPDF('l', 'mm', 'a4');
 
-  const dataAtual = new Date().toLocaleDateString('pt-BR');
+  const dataAtual =
+    new Date().toLocaleDateString('pt-BR');
 
-  const horaAtual = new Date().toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const horaAtual =
+    new Date().toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   const unidadeUsuario =
     usuario?.unidade ||
@@ -204,35 +265,56 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     usuario?.NOME ||
     '-';
 
-  const larguraPagina = doc.internal.pageSize.getWidth();
+  const larguraPagina =
+    doc.internal.pageSize.getWidth();
 
-  const centroPagina = larguraPagina / 2;
+  const centroPagina =
+    larguraPagina / 2;
 
-  const adicionarRodape = () => {
+  const adicionarRodapes = () => {
     const quantidadePaginas =
       doc.internal.getNumberOfPages();
 
-    const paginaAtual =
-      doc.internal.getCurrentPageInfo().pageNumber;
+    for (
+      let pagina = 1;
+      pagina <= quantidadePaginas;
+      pagina += 1
+    ) {
+      doc.setPage(pagina);
 
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
 
-    doc.text(
-      `Página ${paginaAtual} de ${quantidadePaginas}`,
-      larguraPagina - 20,
-      200,
-      {
-        align: 'right',
-      }
-    );
+      doc.setFont(
+        'helvetica',
+        'normal'
+      );
+
+      doc.setTextColor(
+        0,
+        0,
+        0
+      );
+
+      doc.text(
+        `Página ${pagina} de ${quantidadePaginas}`,
+        larguraPagina - 20,
+        200,
+        {
+          align: 'right',
+        }
+      );
+    }
   };
 
   const verificarEspaco = (
     posicaoAtual,
     espacoNecessario = 34
   ) => {
-    if (posicaoAtual + espacoNecessario > 190) {
+    if (
+      posicaoAtual +
+        espacoNecessario >
+      190
+    ) {
       doc.addPage();
 
       return 18;
@@ -248,7 +330,10 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     cor = [31, 41, 55]
   ) => {
     const posicaoCorrigida =
-      verificarEspaco(posicao, 26);
+      verificarEspaco(
+        posicao,
+        26
+      );
 
     doc.setFillColor(
       cor[0],
@@ -266,9 +351,17 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       'F'
     );
 
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(
+      'helvetica',
+      'bold'
+    );
+
     doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(
+      255,
+      255,
+      255
+    );
 
     doc.text(
       titulo,
@@ -276,9 +369,17 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       posicaoCorrigida + 6.5
     );
 
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(
+      'helvetica',
+      'normal'
+    );
+
     doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
+    doc.setTextColor(
+      71,
+      85,
+      105
+    );
 
     const descricaoQuebrada =
       doc.splitTextToSize(
@@ -292,9 +393,15 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       posicaoCorrigida + 16
     );
 
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(
+      0,
+      0,
+      0
+    );
 
-    return posicaoCorrigida + 21;
+    return (
+      posicaoCorrigida + 21
+    );
   };
 
   try {
@@ -318,7 +425,11 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     );
   }
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
+
   doc.setFontSize(12);
 
   doc.text(
@@ -342,7 +453,11 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   );
 
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+
+  doc.setFont(
+    'helvetica',
+    'normal'
+  );
 
   doc.text(
     `Unidade do relatório: ${unidadeRelatorio}`,
@@ -362,7 +477,10 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     77
   );
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
 
   doc.text(
     'Filtros aplicados:',
@@ -370,7 +488,10 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     89
   );
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(
+    'helvetica',
+    'normal'
+  );
 
   doc.text(
     `Período: ${formatarData(
@@ -400,7 +521,10 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     108
   );
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
 
   doc.text(
     'Resumo geral:',
@@ -408,7 +532,10 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     89
   );
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(
+    'helvetica',
+    'normal'
+  );
 
   doc.text(
     `Entradas: ${formatarNumero(
@@ -493,14 +620,17 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   }
 
   let posicaoY =
-    relatorioGeral ? 130 : 136;
+    relatorioGeral
+      ? 130
+      : 136;
 
-  posicaoY = adicionarTituloSecao(
-    '1. RESUMO POR PRODUTO',
-    'Mostra separadamente Feno, Ração Adulto Premium, Ração Adulto Manutenção, Ração Potro Premium e Ração Potro Manutenção, com saldo atual, saídas, extravios e transferências no período filtrado.',
-    posicaoY,
-    [223, 27, 36]
-  );
+  posicaoY =
+    adicionarTituloSecao(
+      '1. RESUMO POR PRODUTO',
+      'Mostra separadamente Feno, Ração Adulto Premium, Ração Adulto Manutenção, Ração Potro Premium e Ração Potro Manutenção, com saldo atual, saídas, extravios e transferências no período filtrado.',
+      posicaoY,
+      [223, 27, 36]
+    );
 
   autoTable(doc, {
     startY: posicaoY,
@@ -529,7 +659,9 @@ export const gerarRelatorioFenoRacaoPdf = async ({
         ],
 
     body:
-      !Array.isArray(resumoPorProduto) ||
+      !Array.isArray(
+        resumoPorProduto
+      ) ||
       resumoPorProduto.length === 0
         ? relatorioGeral
           ? [
@@ -555,7 +687,9 @@ export const gerarRelatorioFenoRacaoPdf = async ({
             ]
         : resumoPorProduto.map(
             (produto) => {
-              if (relatorioGeral) {
+              if (
+                relatorioGeral
+              ) {
                 return [
                   produto.nome,
                   formatarNumero(
@@ -607,32 +741,44 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     },
 
     headStyles: {
-      fillColor: [223, 27, 36],
-      textColor: [255, 255, 255],
+      fillColor: [
+        223,
+        27,
+        36,
+      ],
+      textColor: [
+        255,
+        255,
+        255,
+      ],
       fontStyle: 'bold',
     },
 
     alternateRowStyles: {
-      fillColor: [245, 245, 245],
+      fillColor: [
+        245,
+        245,
+        245,
+      ],
     },
 
     margin: {
       left: 14,
       right: 14,
     },
-
-    didDrawPage: adicionarRodape,
   });
 
   posicaoY =
-    doc.lastAutoTable.finalY + 10;
+    doc.lastAutoTable.finalY +
+    10;
 
-  posicaoY = adicionarTituloSecao(
-    '2. ESTOQUE ATUAL',
-    'Mostra o saldo existente no estoque neste momento, por produto e por lote. Este bloco não representa entrada nem saída, representa o saldo atual.',
-    posicaoY,
-    [31, 41, 55]
-  );
+  posicaoY =
+    adicionarTituloSecao(
+      '2. ESTOQUE ATUAL',
+      'Mostra o saldo existente no estoque neste momento, por produto e por lote. Este bloco não representa entrada nem saída, representa o saldo atual.',
+      posicaoY,
+      [31, 41, 55]
+    );
 
   autoTable(doc, {
     startY: posicaoY,
@@ -664,7 +810,8 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       !Array.isArray(
         estoqueAtualFiltrado
       ) ||
-      estoqueAtualFiltrado.length === 0
+      estoqueAtualFiltrado
+        .length === 0
         ? relatorioGeral
           ? [
               [
@@ -717,7 +864,9 @@ export const gerarRelatorioFenoRacaoPdf = async ({
                 )} kg`,
               ];
 
-              if (relatorioGeral) {
+              if (
+                relatorioGeral
+              ) {
                 return [
                   obterUnidadeRegistro(
                     entrada
@@ -737,32 +886,44 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     },
 
     headStyles: {
-      fillColor: [31, 41, 55],
-      textColor: [255, 255, 255],
+      fillColor: [
+        31,
+        41,
+        55,
+      ],
+      textColor: [
+        255,
+        255,
+        255,
+      ],
       fontStyle: 'bold',
     },
 
     alternateRowStyles: {
-      fillColor: [245, 245, 245],
+      fillColor: [
+        245,
+        245,
+        245,
+      ],
     },
 
     margin: {
       left: 14,
       right: 14,
     },
-
-    didDrawPage: adicionarRodape,
   });
 
   posicaoY =
-    doc.lastAutoTable.finalY + 10;
+    doc.lastAutoTable.finalY +
+    10;
 
-  posicaoY = adicionarTituloSecao(
-    '3. ENTRADAS NO PERÍODO',
-    'Mostra os cadastros de estoque realizados dentro do período filtrado. Aqui entram os lotes cadastrados de Feno, Ração Adulto Premium, Ração Adulto Manutenção, Ração Potro Premium e Ração Potro Manutenção.',
-    posicaoY,
-    [21, 128, 61]
-  );
+  posicaoY =
+    adicionarTituloSecao(
+      '3. ENTRADAS NO PERÍODO',
+      'Mostra os cadastros de estoque realizados dentro do período filtrado. Aqui entram os lotes cadastrados de Feno, Ração Adulto Premium, Ração Adulto Manutenção, Ração Potro Premium e Ração Potro Manutenção.',
+      posicaoY,
+      [21, 128, 61]
+    );
 
   autoTable(doc, {
     startY: posicaoY,
@@ -796,7 +957,8 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       !Array.isArray(
         entradasFiltradas
       ) ||
-      entradasFiltradas.length === 0
+      entradasFiltradas.length ===
+        0
         ? relatorioGeral
           ? [
               [
@@ -823,11 +985,12 @@ export const gerarRelatorioFenoRacaoPdf = async ({
             ]
         : entradasFiltradas.map(
             (entrada) => {
-              const quantidade = Number(
-                entrada.quantidadeInicial ??
-                  entrada.quantidade ??
-                  0
-              );
+              const quantidade =
+                Number(
+                  entrada.quantidadeInicial ??
+                    entrada.quantidade ??
+                    0
+                );
 
               const linha = [
                 formatarData(
@@ -839,8 +1002,11 @@ export const gerarRelatorioFenoRacaoPdf = async ({
                 entrada.lote ||
                   entrada.codigoLote ||
                   '-',
-                entrada.fornecedor || '-',
-                formatarNumero(quantidade),
+                entrada.fornecedor ||
+                  '-',
+                formatarNumero(
+                  quantidade
+                ),
                 `${formatarNumero(
                   entrada.pesoUnidadeKg
                 )} kg`,
@@ -853,7 +1019,9 @@ export const gerarRelatorioFenoRacaoPdf = async ({
                 )} kg`,
               ];
 
-              if (relatorioGeral) {
+              if (
+                relatorioGeral
+              ) {
                 return [
                   obterUnidadeRegistro(
                     entrada
@@ -873,32 +1041,44 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     },
 
     headStyles: {
-      fillColor: [21, 128, 61],
-      textColor: [255, 255, 255],
+      fillColor: [
+        21,
+        128,
+        61,
+      ],
+      textColor: [
+        255,
+        255,
+        255,
+      ],
       fontStyle: 'bold',
     },
 
     alternateRowStyles: {
-      fillColor: [245, 245, 245],
+      fillColor: [
+        245,
+        245,
+        245,
+      ],
     },
 
     margin: {
       left: 14,
       right: 14,
     },
-
-    didDrawPage: adicionarRodape,
   });
 
   posicaoY =
-    doc.lastAutoTable.finalY + 10;
+    doc.lastAutoTable.finalY +
+    10;
 
-  posicaoY = adicionarTituloSecao(
-    '4. SAÍDAS NO PERÍODO',
-    'Mostra as retiradas normais para consumo ou serviço registradas dentro do período filtrado. Este bloco não inclui extravios nem transferências.',
-    posicaoY,
-    [180, 83, 9]
-  );
+  posicaoY =
+    adicionarTituloSecao(
+      '4. SAÍDAS NO PERÍODO',
+      'Mostra as retiradas normais para consumo ou serviço registradas dentro do período filtrado. Este bloco não inclui extravios nem transferências.',
+      posicaoY,
+      [180, 83, 9]
+    );
 
   autoTable(doc, {
     startY: posicaoY,
@@ -929,7 +1109,9 @@ export const gerarRelatorioFenoRacaoPdf = async ({
         ],
 
     body:
-      !Array.isArray(saidasFiltradas) ||
+      !Array.isArray(
+        saidasFiltradas
+      ) ||
       saidasFiltradas.length === 0
         ? relatorioGeral
           ? [
@@ -966,7 +1148,8 @@ export const gerarRelatorioFenoRacaoPdf = async ({
                   obterNomeProduto(
                     saida.tipoProduto
                   ),
-                saida.servico || '-',
+                saida.servico ||
+                  '-',
                 saida.lote ||
                   saida.codigoLote ||
                   '-',
@@ -978,10 +1161,13 @@ export const gerarRelatorioFenoRacaoPdf = async ({
                   saida.pesoLiberadoKg ??
                     saida.pesoMovimentadoKg
                 )} kg`,
-                saida.responsavel || '-',
+                saida.responsavel ||
+                  '-',
               ];
 
-              if (relatorioGeral) {
+              if (
+                relatorioGeral
+              ) {
                 return [
                   obterUnidadeRegistro(
                     saida
@@ -1001,32 +1187,44 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     },
 
     headStyles: {
-      fillColor: [180, 83, 9],
-      textColor: [255, 255, 255],
+      fillColor: [
+        180,
+        83,
+        9,
+      ],
+      textColor: [
+        255,
+        255,
+        255,
+      ],
       fontStyle: 'bold',
     },
 
     alternateRowStyles: {
-      fillColor: [245, 245, 245],
+      fillColor: [
+        245,
+        245,
+        245,
+      ],
     },
 
     margin: {
       left: 14,
       right: 14,
     },
-
-    didDrawPage: adicionarRodape,
   });
 
   posicaoY =
-    doc.lastAutoTable.finalY + 10;
+    doc.lastAutoTable.finalY +
+    10;
 
-  posicaoY = adicionarTituloSecao(
-    '5. TRANSFERÊNCIAS NO PERÍODO',
-    'Mostra as transferências aprovadas entre unidades. Para relatório por unidade, identifica o que foi recebido e o que foi enviado.',
-    posicaoY,
-    [37, 99, 235]
-  );
+  posicaoY =
+    adicionarTituloSecao(
+      '5. TRANSFERÊNCIAS NO PERÍODO',
+      'Mostra as transferências aprovadas entre unidades. Para relatório por unidade, identifica o que foi recebido e o que foi enviado.',
+      posicaoY,
+      [37, 99, 235]
+    );
 
   autoTable(doc, {
     startY: posicaoY,
@@ -1049,7 +1247,8 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       !Array.isArray(
         transferenciasFiltradas
       ) ||
-      transferenciasFiltradas.length === 0
+      transferenciasFiltradas
+        .length === 0
         ? [
             [
               'Nenhuma transferência aprovada encontrada',
@@ -1119,33 +1318,45 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     },
 
     headStyles: {
-      fillColor: [37, 99, 235],
-      textColor: [255, 255, 255],
+      fillColor: [
+        37,
+        99,
+        235,
+      ],
+      textColor: [
+        255,
+        255,
+        255,
+      ],
       fontStyle: 'bold',
     },
 
     alternateRowStyles: {
-      fillColor: [245, 245, 245],
+      fillColor: [
+        245,
+        245,
+        245,
+      ],
     },
 
     margin: {
       left: 14,
       right: 14,
     },
-
-    didDrawPage: adicionarRodape,
   });
 
   posicaoY =
-    doc.lastAutoTable.finalY + 10;
+    doc.lastAutoTable.finalY +
+    10;
 
   if (!relatorioGeral) {
-    posicaoY = adicionarTituloSecao(
-      '6. RESUMO DAS TRANSFERÊNCIAS DA UNIDADE',
-      'Separa as transferências recebidas e enviadas pela unidade selecionada no período filtrado.',
-      posicaoY,
-      [30, 64, 175]
-    );
+    posicaoY =
+      adicionarTituloSecao(
+        '6. RESUMO DAS TRANSFERÊNCIAS DA UNIDADE',
+        'Separa as transferências recebidas e enviadas pela unidade selecionada no período filtrado.',
+        posicaoY,
+        [30, 64, 175]
+      );
 
     autoTable(doc, {
       startY: posicaoY,
@@ -1186,35 +1397,47 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       },
 
       headStyles: {
-        fillColor: [30, 64, 175],
-        textColor: [255, 255, 255],
+        fillColor: [
+          30,
+          64,
+          175,
+        ],
+        textColor: [
+          255,
+          255,
+          255,
+        ],
         fontStyle: 'bold',
       },
 
       alternateRowStyles: {
-        fillColor: [245, 245, 245],
+        fillColor: [
+          245,
+          245,
+          245,
+        ],
       },
 
       margin: {
         left: 14,
         right: 14,
       },
-
-      didDrawPage: adicionarRodape,
     });
 
     posicaoY =
-      doc.lastAutoTable.finalY + 10;
+      doc.lastAutoTable.finalY +
+      10;
   }
 
-  posicaoY = adicionarTituloSecao(
-    relatorioGeral
-      ? '6. EXTRAVIOS NO PERÍODO'
-      : '7. EXTRAVIOS NO PERÍODO',
-    'Mostra perdas, danos, desvios ou baixas justificadas registradas dentro do período filtrado. Este bloco é separado das saídas normais.',
-    posicaoY,
-    [153, 27, 27]
-  );
+  posicaoY =
+    adicionarTituloSecao(
+      relatorioGeral
+        ? '6. EXTRAVIOS NO PERÍODO'
+        : '7. EXTRAVIOS NO PERÍODO',
+      'Mostra perdas, danos, desvios ou baixas justificadas registradas dentro do período filtrado. Este bloco é separado das saídas normais.',
+      posicaoY,
+      [153, 27, 27]
+    );
 
   autoTable(doc, {
     startY: posicaoY,
@@ -1248,7 +1471,8 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       !Array.isArray(
         extraviosFiltrados
       ) ||
-      extraviosFiltrados.length === 0
+      extraviosFiltrados.length ===
+        0
         ? relatorioGeral
           ? [
               [
@@ -1300,12 +1524,16 @@ export const gerarRelatorioFenoRacaoPdf = async ({
                     extravio.pesoMovimentadoKg
                 )} kg`,
 
-                extravio.responsavel || '-',
+                extravio.responsavel ||
+                  '-',
 
-                extravio.motivo || '-',
+                extravio.motivo ||
+                  '-',
               ];
 
-              if (relatorioGeral) {
+              if (
+                relatorioGeral
+              ) {
                 return [
                   obterUnidadeRegistro(
                     extravio
@@ -1325,35 +1553,49 @@ export const gerarRelatorioFenoRacaoPdf = async ({
     },
 
     headStyles: {
-      fillColor: [153, 27, 27],
-      textColor: [255, 255, 255],
+      fillColor: [
+        153,
+        27,
+        27,
+      ],
+      textColor: [
+        255,
+        255,
+        255,
+      ],
       fontStyle: 'bold',
     },
 
     alternateRowStyles: {
-      fillColor: [245, 245, 245],
+      fillColor: [
+        245,
+        245,
+        245,
+      ],
     },
 
     margin: {
       left: 14,
       right: 14,
     },
-
-    didDrawPage: adicionarRodape,
   });
 
-  adicionarRodape();
+  adicionarRodapes();
 
-  const unidadeArquivo = String(
-    unidadeRelatorio ||
-      unidadeUsuario
-  )
-    .replace(
-      /[^\wÀ-ÿ\s-]/g,
-      ''
+  const unidadeArquivo =
+    String(
+      unidadeRelatorio ||
+        unidadeUsuario
     )
-    .replace(/\s+/g, '-')
-    .toLowerCase();
+      .replace(
+        /[^\wÀ-ÿ\s-]/g,
+        ''
+      )
+      .replace(
+        /\s+/g,
+        '-'
+      )
+      .toLowerCase();
 
   const nomeArquivo =
     `relatorio-feno-racao-${unidadeArquivo}-${dataAtual.replace(
@@ -1361,5 +1603,8 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       '-'
     )}.pdf`;
 
-  doc.save(nomeArquivo);
+  await salvarOuCompartilharPdf(
+    doc,
+    nomeArquivo
+  );
 };

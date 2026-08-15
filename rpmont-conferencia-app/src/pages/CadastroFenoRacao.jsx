@@ -342,6 +342,17 @@ function CadastroFenoRacao({
   const adminMaster =
     usuarioEhAdminMaster(usuario);
 
+  const nivelUsuario =
+    obterNivelUsuario(usuario);
+
+  const usuarioEhAdmin =
+    nivelUsuario ===
+    NIVEIS_USUARIO.ADMIN;
+
+  const podeAlterarEstoque =
+    adminMaster ||
+    usuarioEhAdmin;
+
   const abrirModalMensagem = ({
     tipo = 'erro',
     titulo,
@@ -615,6 +626,14 @@ function CadastroFenoRacao({
   ) => {
     event.preventDefault();
 
+    if (!podeAlterarEstoque) {
+      mostrarMensagem(
+        'Acesso negado. Apenas administradores podem cadastrar entradas de estoque.'
+      );
+
+      return;
+}
+
     if (salvandoEntrada) {
       return;
     }
@@ -798,6 +817,14 @@ function CadastroFenoRacao({
   const abrirCancelamento = (
     entrada
   ) => {
+    if (!podeAlterarEstoque) {
+      mostrarMensagem(
+        'Acesso negado. Apenas administradores podem cancelar entradas.'
+      );
+
+      return;
+    }
+
     if (
       !adminMaster &&
       normalizarTexto(
@@ -810,6 +837,7 @@ function CadastroFenoRacao({
       mostrarMensagem(
         'Acesso negado. Você só pode cancelar entradas da sua unidade.'
       );
+
       return;
     }
 

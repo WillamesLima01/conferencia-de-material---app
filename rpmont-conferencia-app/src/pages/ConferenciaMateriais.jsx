@@ -135,50 +135,55 @@ function ConferenciaMateriais({
     material?.Conferido === true ||
     material?.Conferido === 1;
 
-  const materialEstaAtivo = (material) =>
-    normalizarTexto(material?.situacao) !==
-    'inativo';
+const materialEstaAtivo = (material) =>
+  normalizarTexto(material?.situacao) !==
+  'inativo';
 
-  const materiaisDaConferencia =
-    useMemo(() => {
-      return materiais.filter((material) => {
-        const mesmaUnidade =
-          normalizarTexto(
-            material?.unidade
-          ) ===
-          normalizarTexto(
-            usuario?.unidade
-          );
+const materiaisDaConferencia =
+  useMemo(() => {
+    return materiais.filter((material) => {
+      const materialAtivo =
+        normalizarTexto(
+          material?.situacao
+        ) !== 'inativo';
 
-        if (
-          !materialEstaAtivo(material) ||
-          !mesmaUnidade
-        ) {
-          return false;
-        }
-
-        if (
-          configuracao?.tipo === 'TODOS'
-        ) {
-          return true;
-        }
-
-        return (
-          configuracao?.tipo === 'SETOR' &&
-          normalizarTexto(
-            material?.setor
-          ) ===
-            normalizarTexto(
-              configuracao?.setor
-            )
+      const mesmaUnidade =
+        normalizarTexto(
+          material?.unidade
+        ) ===
+        normalizarTexto(
+          usuario?.unidade
         );
-      });
-    }, [
-      materiais,
-      usuario?.unidade,
-      configuracao?.tipo,
-      configuracao?.setor,
-    ]);
+
+      if (
+        !materialAtivo ||
+        !mesmaUnidade
+      ) {
+        return false;
+      }
+
+      if (
+        configuracao?.tipo === 'TODOS'
+      ) {
+        return true;
+      }
+
+      return (
+        configuracao?.tipo === 'SETOR' &&
+        normalizarTexto(
+          material?.setor
+        ) ===
+          normalizarTexto(
+            configuracao?.setor
+          )
+      );
+    });
+  }, [
+    materiais,
+    usuario?.unidade,
+    configuracao?.tipo,
+    configuracao?.setor,
+  ]);
 
   const total =
     materiaisDaConferencia.length;
