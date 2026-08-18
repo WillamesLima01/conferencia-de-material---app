@@ -61,6 +61,126 @@ export const registrarExtravioFenoRacao = async (
   );
 };
 
+/*
+ * ==========================================
+ * ANÁLISE ADMINISTRATIVA DE EXTRAVIO
+ * ==========================================
+ */
+
+export const confirmarExtravioFenoRacao = async (
+  movimentacaoId
+) => {
+  const idNormalizado = Number(
+    movimentacaoId
+  );
+
+  if (
+    !Number.isInteger(idNormalizado) ||
+    idNormalizado <= 0
+  ) {
+    throw new Error(
+      'O extravio informado para confirmação é inválido.'
+    );
+  }
+
+  return api(
+    `/feno-racao/movimentacoes/${idNormalizado}/extravio/confirmar`,
+    {
+      method: 'PATCH',
+    }
+  );
+};
+
+export const ajustarExtravioFenoRacao = async (
+  movimentacaoId,
+  dados
+) => {
+  const idNormalizado = Number(
+    movimentacaoId
+  );
+
+  if (
+    !Number.isInteger(idNormalizado) ||
+    idNormalizado <= 0
+  ) {
+    throw new Error(
+      'O extravio informado para ajuste é inválido.'
+    );
+  }
+
+  const quantidadeConfirmada = Number(
+    dados?.quantidadeConfirmada
+  );
+
+  const motivo = String(
+    dados?.motivo ?? ''
+  ).trim();
+
+  if (
+    !Number.isInteger(quantidadeConfirmada) ||
+    quantidadeConfirmada <= 0
+  ) {
+    throw new Error(
+      'A quantidade confirmada deve ser um número inteiro maior que zero.'
+    );
+  }
+
+  if (!motivo) {
+    throw new Error(
+      'O motivo do ajuste é obrigatório.'
+    );
+  }
+
+  return api(
+    `/feno-racao/movimentacoes/${idNormalizado}/extravio/ajustar`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        quantidadeConfirmada,
+        motivo,
+      }),
+    }
+  );
+};
+
+export const cancelarExtravioFenoRacao = async (
+  movimentacaoId,
+  dados
+) => {
+  const idNormalizado = Number(
+    movimentacaoId
+  );
+
+  if (
+    !Number.isInteger(idNormalizado) ||
+    idNormalizado <= 0
+  ) {
+    throw new Error(
+      'O extravio informado para cancelamento é inválido.'
+    );
+  }
+
+  const motivo = String(
+    dados?.motivo ?? ''
+  ).trim();
+
+  if (!motivo) {
+    throw new Error(
+      'O motivo do cancelamento é obrigatório.'
+    );
+  }
+
+  return api(
+    `/feno-racao/movimentacoes/${idNormalizado}/extravio/cancelar`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        motivo,
+      }),
+    }
+  );
+};
+
 export const listarEstoqueFenoRacao = async (
   filtros = {}
 ) => {
@@ -85,7 +205,9 @@ export const cancelarEntradaFenoRacao = async (
   loteId,
   motivo
 ) => {
-  const idNormalizado = Number(loteId);
+  const idNormalizado = Number(
+    loteId
+  );
 
   const motivoNormalizado = String(
     motivo ?? ''

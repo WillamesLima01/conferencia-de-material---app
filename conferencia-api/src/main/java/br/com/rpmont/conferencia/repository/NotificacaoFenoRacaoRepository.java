@@ -94,6 +94,12 @@ public interface NotificacaoFenoRacaoRepository
     );
 
     List<NotificacaoFenoRacao>
+    findByMovimentacaoIdAndLida(
+            Long movimentacaoId,
+            Boolean lida
+    );
+
+    List<NotificacaoFenoRacao>
     findByLidaOrderByDataCriacaoDesc(
             Boolean lida
     );

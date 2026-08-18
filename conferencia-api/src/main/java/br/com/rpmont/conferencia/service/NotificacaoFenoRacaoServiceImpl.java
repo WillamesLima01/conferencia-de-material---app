@@ -313,6 +313,73 @@ public class NotificacaoFenoRacaoServiceImpl
 
     /*
      * ==========================================
+     * CONCLUIR NOTIFICAÇÕES DE EXTRAVIO
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public void concluirNotificacoesExtravio(
+            Long movimentacaoId,
+            Long usuarioAnaliseId
+    ) {
+        if (
+                movimentacaoId == null ||
+                        movimentacaoId <= 0
+        ) {
+            throw new BusinessException(
+                    "O ID da movimentação é obrigatório."
+            );
+        }
+
+        if (
+                usuarioAnaliseId == null ||
+                        usuarioAnaliseId <= 0
+        ) {
+            throw new BusinessException(
+                    "O usuário responsável pela análise é obrigatório."
+            );
+        }
+
+        List<NotificacaoFenoRacao> notificacoes =
+                notificacaoRepository
+                        .findByMovimentacaoIdAndLida(
+                                movimentacaoId,
+                                false
+                        );
+
+        if (
+                notificacoes == null ||
+                        notificacoes.isEmpty()
+        ) {
+            return;
+        }
+
+        LocalDateTime dataLeitura =
+                LocalDateTime.now();
+
+        for (NotificacaoFenoRacao notificacao : notificacoes) {
+
+            notificacao.setLida(
+                    true
+            );
+
+            notificacao.setDataLeitura(
+                    dataLeitura
+            );
+
+            notificacao.setUsuarioLeituraId(
+                    usuarioAnaliseId
+            );
+        }
+
+        notificacaoRepository.saveAll(
+                notificacoes
+        );
+    }
+
+    /*
+     * ==========================================
      * MARCAR COMO LIDA
      * ==========================================
      */
@@ -535,6 +602,8 @@ public class NotificacaoFenoRacaoServiceImpl
 
             return;
         }
+
+
 
         /*
          * NOTIFICAÇÃO GERAL

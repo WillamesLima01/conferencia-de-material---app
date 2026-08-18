@@ -23,4 +23,9 @@ public interface NotificacaoFenoRacaoService {
             Long notificacaoId,
             String matriculaUsuario
     );
+
+    void concluirNotificacoesExtravio(
+            Long movimentacaoId,
+            Long usuarioAnaliseId
+    );
 }

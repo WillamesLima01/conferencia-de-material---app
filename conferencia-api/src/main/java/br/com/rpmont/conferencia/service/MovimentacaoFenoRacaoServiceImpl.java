@@ -10,21 +10,21 @@ import br.com.rpmont.conferencia.enums.SituacaoAnaliseExtravioFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoLoteFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoMovimentacaoFenoRacao;
-import br.com.rpmont.conferencia.enums.TipoProdutoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoNotificacaoFenoRacao;
+import br.com.rpmont.conferencia.enums.TipoProdutoFenoRacao;
 import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.exception.ConflictException;
 import br.com.rpmont.conferencia.exception.ForbiddenException;
 import br.com.rpmont.conferencia.exception.ResourceNotFoundException;
 import br.com.rpmont.conferencia.model.LoteFenoRacao;
 import br.com.rpmont.conferencia.model.MovimentacaoFenoRacao;
+import br.com.rpmont.conferencia.model.NotificacaoFenoRacao;
 import br.com.rpmont.conferencia.model.ProdutoFenoRacao;
 import br.com.rpmont.conferencia.model.Usuario;
-import br.com.rpmont.conferencia.model.NotificacaoFenoRacao;
 import br.com.rpmont.conferencia.repository.LoteFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.MovimentacaoFenoRacaoRepository;
-import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import br.com.rpmont.conferencia.repository.NotificacaoFenoRacaoRepository;
+import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -51,6 +51,7 @@ public class MovimentacaoFenoRacaoServiceImpl
     private final UsuarioRepository usuarioRepository;
     private final NotificacaoFenoRacaoRepository notificacaoRepository;
     private final EntityManager entityManager;
+    private final NotificacaoFenoRacaoService notificacaoFenoRacaoService;
 
     /*
      * ==========================================
@@ -435,6 +436,7 @@ public class MovimentacaoFenoRacaoServiceImpl
         );
 
         if (usuarioEhAdministrador(usuarioLogado)) {
+
             movimentacao.setSituacaoAnaliseExtravio(
                     SituacaoAnaliseExtravioFenoRacao.CONFIRMADO
             );
@@ -458,7 +460,9 @@ public class MovimentacaoFenoRacaoServiceImpl
             movimentacao.setMotivoAnalise(
                     "Extravio registrado diretamente por administrador."
             );
+
         } else {
+
             movimentacao.setSituacaoAnaliseExtravio(
                     SituacaoAnaliseExtravioFenoRacao.PENDENTE_ANALISE
             );
@@ -561,6 +565,7 @@ public class MovimentacaoFenoRacaoServiceImpl
                 LocalDateTime.now();
 
         for (Usuario destinatario : destinatarios) {
+
             NotificacaoFenoRacao notificacao =
                     new NotificacaoFenoRacao();
 
@@ -643,7 +648,6 @@ public class MovimentacaoFenoRacaoServiceImpl
                 + movimentacao.getUnidadeOrigem()
                 + ". A ocorrência aguarda análise administrativa.";
     }
-
 
     /*
      * ==========================================
@@ -730,6 +734,12 @@ public class MovimentacaoFenoRacaoServiceImpl
         entityManager.refresh(
                 salva
         );
+
+        notificacaoFenoRacaoService
+                .concluirNotificacoesExtravio(
+                        salva.getId(),
+                        usuarioLogado.getId()
+                );
 
         return converterParaResponse(
                 salva
@@ -879,6 +889,12 @@ public class MovimentacaoFenoRacaoServiceImpl
                 salva
         );
 
+        notificacaoFenoRacaoService
+                .concluirNotificacoesExtravio(
+                        salva.getId(),
+                        usuarioLogado.getId()
+                );
+
         return converterParaResponse(
                 salva
         );
@@ -1014,6 +1030,12 @@ public class MovimentacaoFenoRacaoServiceImpl
                 salva
         );
 
+        notificacaoFenoRacaoService
+                .concluirNotificacoesExtravio(
+                        salva.getId(),
+                        usuarioLogado.getId()
+                );
+
         return converterParaResponse(
                 salva
         );
@@ -1131,6 +1153,7 @@ public class MovimentacaoFenoRacaoServiceImpl
         List<MovimentacaoFenoRacao> movimentacoes;
 
         if (tipoMovimentacao == null) {
+
             movimentacoes =
                     movimentacaoRepository
                             .consultarPorUnidadeEPeriodo(
@@ -1138,7 +1161,9 @@ public class MovimentacaoFenoRacaoServiceImpl
                                     dataInicial,
                                     dataFinal
                             );
+
         } else {
+
             movimentacoes =
                     movimentacaoRepository
                             .consultarPorTipoUnidadeEPeriodo(
@@ -1514,7 +1539,10 @@ public class MovimentacaoFenoRacaoServiceImpl
     private boolean usuarioEhAdministrador(
             Usuario usuario
     ) {
-        if (usuario == null || usuario.getNivel() == null) {
+        if (
+                usuario == null ||
+                        usuario.getNivel() == null
+        ) {
             return false;
         }
 
@@ -1785,7 +1813,6 @@ public class MovimentacaoFenoRacaoServiceImpl
         }
     }
 
-
     private void validarExtravioPendenteAnalise(
             MovimentacaoFenoRacao movimentacao
     ) {
@@ -1890,7 +1917,6 @@ public class MovimentacaoFenoRacaoServiceImpl
                 lote
         );
     }
-
 
     private void restaurarSaldoLoteExtravio(
             LoteFenoRacao lote,
@@ -2194,6 +2220,7 @@ public class MovimentacaoFenoRacaoServiceImpl
                         : movimentacao
                         .getMovimentacaoOrigem()
                         .getId(),
+
                 movimentacao.getTransferenciaId(),
                 movimentacao.getDataCadastro(),
                 movimentacao.getUsuarioModificadorId(),
