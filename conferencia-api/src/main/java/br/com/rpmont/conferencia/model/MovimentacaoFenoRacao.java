@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.model;
 
+import br.com.rpmont.conferencia.enums.SituacaoAnaliseExtravioFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoMovimentacaoFenoRacao;
 import jakarta.persistence.Column;
@@ -155,10 +156,6 @@ public class MovimentacaoFenoRacao {
     )
     private String responsavel;
 
-    /*
-     * Confirme no banco se a coluna é usuarioID
-     * ou usuarioCadastroID.
-     */
     @Column(
             name = "`usuarioID`",
             nullable = false
@@ -179,12 +176,63 @@ public class MovimentacaoFenoRacao {
     )
     private SituacaoMovimentacaoFenoRacao situacao;
 
+    /*
+     * ==========================================
+     * ANÁLISE ADMINISTRATIVA DO EXTRAVIO
+     * ==========================================
+     */
+
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "`situacaoAnaliseExtravio`",
+            length = 30
+    )
+    private SituacaoAnaliseExtravioFenoRacao situacaoAnaliseExtravio;
+
+    @Column(
+            name = "`quantidadeConfirmada`"
+    )
+    private Integer quantidadeConfirmada;
+
+    @Column(
+            name = "`quantidadeDevolvida`"
+    )
+    private Integer quantidadeDevolvida;
+
+    @Column(
+            name = "`usuarioAnaliseID`"
+    )
+    private Long usuarioAnaliseId;
+
+    @Column(
+            name = "`dataAnalise`"
+    )
+    private LocalDateTime dataAnalise;
+
+    @Column(
+            name = "`motivoAnalise`",
+            length = 500
+    )
+    private String motivoAnalise;
+
+    /*
+     * ==========================================
+     * VÍNCULOS ENTRE MOVIMENTAÇÕES
+     * ==========================================
+     */
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "`movimentacaoOrigemID`")
     private MovimentacaoFenoRacao movimentacaoOrigem;
 
     @Column(name = "`transferenciaID`")
     private Long transferenciaId;
+
+    /*
+     * ==========================================
+     * AUDITORIA
+     * ==========================================
+     */
 
     @Column(
             name = "`dataCadastro`",

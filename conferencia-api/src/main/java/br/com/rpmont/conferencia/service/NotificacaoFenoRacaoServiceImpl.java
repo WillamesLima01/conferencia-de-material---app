@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -21,11 +23,20 @@ import java.util.List;
 public class NotificacaoFenoRacaoServiceImpl
         implements NotificacaoFenoRacaoService {
 
+    private static final int NIVEL_ADMIN_MASTER = 1;
+    private static final int NIVEL_ADMIN = 2;
+
     private final NotificacaoFenoRacaoRepository
             notificacaoRepository;
 
     private final UsuarioRepository
             usuarioRepository;
+
+    /*
+     * ==========================================
+     * LISTAR TODAS
+     * ==========================================
+     */
 
     @Override
     @Transactional(readOnly = true)
@@ -43,58 +54,99 @@ public class NotificacaoFenoRacaoServiceImpl
 
         List<NotificacaoFenoRacao> notificacoes;
 
+        /*
+         * ADMIN_MASTER:
+         *
+         * Possui visão global de todas as
+         * notificações.
+         */
         if (usuarioEhAdminMaster(
                 usuario
         )) {
             notificacoes =
-                    notificacaoRepository
-                            .findAll()
-                            .stream()
-                            .sorted((primeira, segunda) -> {
-                                LocalDateTime dataPrimeira =
-                                        primeira.getDataCriacao();
+                    notificacaoRepository.findAll();
 
-                                LocalDateTime dataSegunda =
-                                        segunda.getDataCriacao();
+            ordenarPorDataCriacaoDesc(
+                    notificacoes
+            );
 
-                                if (dataPrimeira == null
-                                        && dataSegunda == null) {
-                                    return 0;
-                                }
-
-                                if (dataPrimeira == null) {
-                                    return 1;
-                                }
-
-                                if (dataSegunda == null) {
-                                    return -1;
-                                }
-
-                                return dataSegunda.compareTo(
-                                        dataPrimeira
-                                );
-                            })
-                            .toList();
-        } else {
-            String unidadeUsuario =
-                    normalizarUnidade(
-                            usuario.getUnidade()
-                    );
-
-            notificacoes =
-                    notificacaoRepository
-                            .findByUnidadeDestinoOrderByDataCriacaoDesc(
-                                    unidadeUsuario
-                            );
+            return converterListaParaResponse(
+                    notificacoes
+            );
         }
 
-        return notificacoes
-                .stream()
-                .map(
-                        this::converterParaResponse
-                )
-                .toList();
+        String unidadeUsuario =
+                normalizarUnidade(
+                        usuario.getUnidade()
+                );
+
+        /*
+         * Notificações gerais da unidade.
+         *
+         * Exemplo:
+         * - transferências;
+         * - respostas de transferências.
+         *
+         * Essas notificações possuem:
+         *
+         * usuarioDestinoID = NULL
+         */
+        List<NotificacaoFenoRacao>
+                notificacoesGerais =
+                notificacaoRepository
+                        .findByUnidadeDestinoAndUsuarioDestinoIdIsNullOrderByDataCriacaoDesc(
+                                unidadeUsuario
+                        );
+
+        /*
+         * Nível 3:
+         *
+         * Continua recebendo somente as
+         * notificações gerais da unidade.
+         *
+         * Não recebe notificações administrativas
+         * individuais de extravio.
+         */
+        if (!usuarioEhAdministrador(
+                usuario
+        )) {
+            return converterListaParaResponse(
+                    notificacoesGerais
+            );
+        }
+
+        /*
+         * ADMIN:
+         *
+         * Recebe:
+         *
+         * 1. notificações gerais da unidade;
+         * 2. notificações individuais destinadas
+         *    especificamente ao seu usuário.
+         */
+        List<NotificacaoFenoRacao>
+                notificacoesIndividuais =
+                notificacaoRepository
+                        .findByUsuarioDestinoIdOrderByDataCriacaoDesc(
+                                usuario.getId()
+                        );
+
+        notificacoes =
+                combinarNotificacoes(
+                        notificacoesGerais,
+                        notificacoesIndividuais
+                );
+
+        return converterListaParaResponse(
+                notificacoes
+        );
     }
+
+    /*
+     * ==========================================
+     * LISTAR NÃO LIDAS
+     * ==========================================
+     */
 
     @Override
     @Transactional(readOnly = true)
@@ -110,37 +162,85 @@ public class NotificacaoFenoRacaoServiceImpl
                 usuario
         );
 
-        List<NotificacaoFenoRacao> notificacoes;
-
+        /*
+         * ADMIN_MASTER:
+         *
+         * Visualiza globalmente todas as
+         * notificações não lidas.
+         */
         if (usuarioEhAdminMaster(
                 usuario
         )) {
-            notificacoes =
-                    notificacaoRepository
-                            .findByLidaOrderByDataCriacaoDesc(
-                                    false
-                            );
-        } else {
-            String unidadeUsuario =
-                    normalizarUnidade(
-                            usuario.getUnidade()
-                    );
-
-            notificacoes =
-                    notificacaoRepository
-                            .findByUnidadeDestinoAndLidaOrderByDataCriacaoDesc(
-                                    unidadeUsuario,
-                                    false
-                            );
+            return notificacaoRepository
+                    .findByLidaOrderByDataCriacaoDesc(
+                            false
+                    )
+                    .stream()
+                    .map(
+                            this::converterParaResponse
+                    )
+                    .toList();
         }
 
-        return notificacoes
-                .stream()
-                .map(
-                        this::converterParaResponse
-                )
-                .toList();
+        String unidadeUsuario =
+                normalizarUnidade(
+                        usuario.getUnidade()
+                );
+
+        /*
+         * Notificações gerais não lidas
+         * da unidade.
+         */
+        List<NotificacaoFenoRacao>
+                notificacoesGerais =
+                notificacaoRepository
+                        .findByUnidadeDestinoAndUsuarioDestinoIdIsNullAndLidaOrderByDataCriacaoDesc(
+                                unidadeUsuario,
+                                false
+                        );
+
+        /*
+         * Nível 3:
+         *
+         * Não recebe notificações individuais
+         * administrativas de extravio.
+         */
+        if (!usuarioEhAdministrador(
+                usuario
+        )) {
+            return converterListaParaResponse(
+                    notificacoesGerais
+            );
+        }
+
+        /*
+         * Notificações individuais não lidas
+         * destinadas ao ADMIN logado.
+         */
+        List<NotificacaoFenoRacao>
+                notificacoesIndividuais =
+                notificacaoRepository
+                        .findByUsuarioDestinoIdAndLidaOrderByDataCriacaoDesc(
+                                usuario.getId(),
+                                false
+                        );
+
+        List<NotificacaoFenoRacao> notificacoes =
+                combinarNotificacoes(
+                        notificacoesGerais,
+                        notificacoesIndividuais
+                );
+
+        return converterListaParaResponse(
+                notificacoes
+        );
     }
+
+    /*
+     * ==========================================
+     * CONTAR NÃO LIDAS
+     * ==========================================
+     */
 
     @Override
     @Transactional(readOnly = true)
@@ -156,6 +256,11 @@ public class NotificacaoFenoRacaoServiceImpl
                 usuario
         );
 
+        /*
+         * ADMIN_MASTER:
+         *
+         * Contagem global.
+         */
         if (usuarioEhAdminMaster(
                 usuario
         )) {
@@ -170,12 +275,47 @@ public class NotificacaoFenoRacaoServiceImpl
                         usuario.getUnidade()
                 );
 
-        return notificacaoRepository
-                .countByUnidadeDestinoAndLida(
-                        unidadeUsuario,
-                        false
-                );
+        long quantidadeGerais =
+                notificacaoRepository
+                        .countByUnidadeDestinoAndUsuarioDestinoIdIsNullAndLida(
+                                unidadeUsuario,
+                                false
+                        );
+
+        /*
+         * Nível 3:
+         *
+         * Conta somente as notificações
+         * gerais da unidade.
+         */
+        if (!usuarioEhAdministrador(
+                usuario
+        )) {
+            return quantidadeGerais;
+        }
+
+        /*
+         * ADMIN:
+         *
+         * Soma notificações gerais +
+         * notificações individuais.
+         */
+        long quantidadeIndividuais =
+                notificacaoRepository
+                        .countByUsuarioDestinoIdAndLida(
+                                usuario.getId(),
+                                false
+                        );
+
+        return quantidadeGerais
+                + quantidadeIndividuais;
     }
+
+    /*
+     * ==========================================
+     * MARCAR COMO LIDA
+     * ==========================================
+     */
 
     @Override
     @Transactional
@@ -201,10 +341,11 @@ public class NotificacaoFenoRacaoServiceImpl
                         .findById(
                                 notificacaoId
                         )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Notificação de feno ou ração não encontrada."
-                                )
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Notificação de feno ou ração não encontrada."
+                                        )
                         );
 
         validarAcessoNotificacao(
@@ -253,12 +394,19 @@ public class NotificacaoFenoRacaoServiceImpl
         );
     }
 
+    /*
+     * ==========================================
+     * USUÁRIO
+     * ==========================================
+     */
+
     private Usuario buscarUsuarioAutenticado(
             String matriculaUsuario
     ) {
-        if (matriculaUsuario == null
-                || matriculaUsuario.isBlank()) {
-
+        if (
+                matriculaUsuario == null ||
+                        matriculaUsuario.isBlank()
+        ) {
             throw new ForbiddenException(
                     "Não foi possível identificar o usuário autenticado."
             );
@@ -268,100 +416,254 @@ public class NotificacaoFenoRacaoServiceImpl
                 .findByMatricula(
                         matriculaUsuario.trim()
                 )
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Usuário autenticado não encontrado."
-                        )
+                .orElseThrow(
+                        () ->
+                                new ResourceNotFoundException(
+                                        "Usuário autenticado não encontrado."
+                                )
                 );
     }
 
     private void validarUsuarioParaOperacao(
             Usuario usuario
     ) {
-        if (!Boolean.TRUE.equals(
-                usuario.getAtivo()
-        )) {
+        if (
+                !Boolean.TRUE.equals(
+                        usuario.getAtivo()
+                )
+        ) {
             throw new ForbiddenException(
                     "O usuário está inativo."
             );
         }
 
-        if (!"LIBERADO".equalsIgnoreCase(
-                usuario.getStatusAcesso()
-        )) {
+        if (
+                usuario.getStatusAcesso() == null ||
+                        !"LIBERADO".equalsIgnoreCase(
+                                usuario
+                                        .getStatusAcesso()
+                                        .trim()
+                        )
+        ) {
             throw new ForbiddenException(
                     "O usuário não possui acesso liberado."
             );
         }
 
-        if (usuario.getUnidade() == null
-                || usuario.getUnidade().isBlank()) {
-
+        if (
+                usuario.getUnidade() == null ||
+                        usuario.getUnidade().isBlank()
+        ) {
             throw new ForbiddenException(
                     "O usuário não possui unidade cadastrada."
             );
         }
     }
 
+    /*
+     * ==========================================
+     * PERMISSÕES
+     * ==========================================
+     */
+
+    private boolean usuarioEhAdminMaster(
+            Usuario usuario
+    ) {
+        return Integer
+                .valueOf(
+                        NIVEL_ADMIN_MASTER
+                )
+                .equals(
+                        usuario.getNivel()
+                );
+    }
+
+    private boolean usuarioEhAdministrador(
+            Usuario usuario
+    ) {
+        return Integer
+                .valueOf(
+                        NIVEL_ADMIN
+                )
+                .equals(
+                        usuario.getNivel()
+                );
+    }
+
+    /*
+     * ==========================================
+     * ACESSO À NOTIFICAÇÃO
+     * ==========================================
+     */
+
     private void validarAcessoNotificacao(
             Usuario usuario,
             NotificacaoFenoRacao notificacao
     ) {
+        /*
+         * ADMIN_MASTER:
+         *
+         * Acesso global.
+         */
         if (usuarioEhAdminMaster(
                 usuario
         )) {
             return;
         }
 
+        Long usuarioDestinoId =
+                notificacao.getUsuarioDestinoId();
+
+        /*
+         * NOTIFICAÇÃO INDIVIDUAL
+         *
+         * Quando existe usuarioDestinoID,
+         * somente aquele usuário pode acessar
+         * e marcar a notificação como lida.
+         */
+        if (usuarioDestinoId != null) {
+
+            if (
+                    !usuarioDestinoId.equals(
+                            usuario.getId()
+                    )
+            ) {
+                throw new ForbiddenException(
+                        "Esta notificação pertence a outro usuário."
+                );
+            }
+
+            return;
+        }
+
+        /*
+         * NOTIFICAÇÃO GERAL
+         *
+         * Quando usuarioDestinoID é NULL,
+         * permanece a regra tradicional
+         * por unidade.
+         */
         String unidadeUsuario =
                 normalizarUnidade(
                         usuario.getUnidade()
                 );
 
-        if (notificacao.getUnidadeDestino() == null
-                || !unidadeUsuario.equalsIgnoreCase(
-                notificacao.getUnidadeDestino()
-        )) {
+        if (
+                notificacao.getUnidadeDestino() == null ||
+                        !unidadeUsuario.equalsIgnoreCase(
+                                notificacao
+                                        .getUnidadeDestino()
+                                        .trim()
+                        )
+        ) {
             throw new ForbiddenException(
                     "O usuário não possui acesso a esta notificação."
             );
         }
     }
 
-    private boolean usuarioEhAdminMaster(
-            Usuario usuario
-    ) {
-        return Integer
-                .valueOf(1)
-                .equals(
-                        usuario.getNivel()
-                );
-    }
+    /*
+     * ==========================================
+     * VALIDAÇÕES
+     * ==========================================
+     */
 
     private void validarIdNotificacao(
             Long notificacaoId
     ) {
-        if (notificacaoId == null
-                || notificacaoId <= 0) {
-
+        if (
+                notificacaoId == null ||
+                        notificacaoId <= 0
+        ) {
             throw new BusinessException(
                     "O ID da notificação deve ser maior que zero."
             );
         }
     }
 
+    /*
+     * ==========================================
+     * UNIDADE
+     * ==========================================
+     */
+
     private String normalizarUnidade(
             String unidade
     ) {
-        if (unidade == null
-                || unidade.isBlank()) {
-
+        if (
+                unidade == null ||
+                        unidade.isBlank()
+        ) {
             throw new BusinessException(
                     "A unidade é obrigatória."
             );
         }
 
         return unidade.trim();
+    }
+
+    /*
+     * ==========================================
+     * LISTAS
+     * ==========================================
+     */
+
+    private List<NotificacaoFenoRacao> combinarNotificacoes(
+            List<NotificacaoFenoRacao> gerais,
+            List<NotificacaoFenoRacao> individuais
+    ) {
+        List<NotificacaoFenoRacao> resultado =
+                new ArrayList<>();
+
+        if (gerais != null) {
+            resultado.addAll(
+                    gerais
+            );
+        }
+
+        if (individuais != null) {
+            resultado.addAll(
+                    individuais
+            );
+        }
+
+        ordenarPorDataCriacaoDesc(
+                resultado
+        );
+
+        return resultado;
+    }
+
+    private void ordenarPorDataCriacaoDesc(
+            List<NotificacaoFenoRacao> notificacoes
+    ) {
+        notificacoes.sort(
+                Comparator.comparing(
+                                NotificacaoFenoRacao::getDataCriacao,
+                                Comparator.nullsLast(
+                                        Comparator.naturalOrder()
+                                )
+                        )
+                        .reversed()
+        );
+    }
+
+    /*
+     * ==========================================
+     * RESPONSE
+     * ==========================================
+     */
+
+    private List<NotificacaoFenoRacaoResponseDTO>
+    converterListaParaResponse(
+            List<NotificacaoFenoRacao> notificacoes
+    ) {
+        return notificacoes
+                .stream()
+                .map(
+                        this::converterParaResponse
+                )
+                .toList();
     }
 
     private NotificacaoFenoRacaoResponseDTO converterParaResponse(
@@ -381,6 +683,8 @@ public class NotificacaoFenoRacaoServiceImpl
                 notificacao.getMensagem(),
                 notificacao.getTipo(),
                 solicitacaoId,
+                notificacao.getUsuarioDestinoId(),
+                notificacao.getMovimentacaoId(),
                 notificacao.getLida(),
                 notificacao.getDataCriacao(),
                 notificacao.getDataLeitura(),

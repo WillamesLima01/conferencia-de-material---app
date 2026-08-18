@@ -1,4 +1,10 @@
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
   FaArrowLeft,
   FaBoxesStacked,
@@ -6,18 +12,22 @@ import {
   FaCircleCheck,
   FaHorse,
   FaMinus,
-  FaPenToSquare,
-  FaTrashCan,
-  FaTriangleExclamation,
   FaWheatAwn,
-  FaXmark,
 } from 'react-icons/fa6';
+
 import { GiGrain } from 'react-icons/gi';
 
-import '../styles/SaidaFenoRacao.css';
+import {
+  listarEstoqueFenoRacao,
+  listarMovimentacoesFenoRacao,
+  registrarSaidaFenoRacao,
+} from '../services/fenoRacaoEstoqueService';
 
-const STORAGE_KEY_ENTRADAS = 'entradasAlimentacaoEquina';
-const STORAGE_KEY_SAIDAS = 'saidasAlimentacaoEquina';
+import {
+  listarProdutosFenoRacao,
+} from '../services/produtoFenoRacaoService';
+
+import '../styles/SaidaFenoRacao.css';
 
 const PRODUTOS = [
   {
@@ -27,112 +37,64 @@ const PRODUTOS = [
     unidadePlural: 'fardos',
   },
   {
-    valor: 'RACAO_ADULTO',
-    nome: 'Ração Adulto',
+    valor: 'RACAO_ADULTO_PREMIUM',
+    nome: 'Ração Adulto Premium',
     unidade: 'saco',
     unidadePlural: 'sacos',
   },
   {
-    valor: 'RACAO_POTRO',
-    nome: 'Ração Potro',
+    valor: 'RACAO_ADULTO_MANUTENCAO',
+    nome: 'Ração Adulto Manutenção',
+    unidade: 'saco',
+    unidadePlural: 'sacos',
+  },
+  {
+    valor: 'RACAO_POTRO_PREMIUM',
+    nome: 'Ração Potro Premium',
+    unidade: 'saco',
+    unidadePlural: 'sacos',
+  },
+  {
+    valor: 'RACAO_POTRO_MANUTENCAO',
+    nome: 'Ração Potro Manutenção',
     unidade: 'saco',
     unidadePlural: 'sacos',
   },
 ];
 
-const gerarId = () => {
-  if (window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
+const dataHoje = () => {
+  const agora = new Date();
 
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const ano = agora.getFullYear();
+  const mes = String(
+    agora.getMonth() + 1
+  ).padStart(2, '0');
+
+  const dia = String(
+    agora.getDate()
+  ).padStart(2, '0');
+
+  return `${ano}-${mes}-${dia}`;
 };
 
-const dataHoje = () => new Date().toISOString().slice(0, 10);
-
-const carregarStorage = (chave) => {
-  const dadosSalvos = localStorage.getItem(chave);
-
-  if (!dadosSalvos) return [];
-
-  try {
-    const dadosConvertidos = JSON.parse(dadosSalvos);
-
-    return Array.isArray(dadosConvertidos) ? dadosConvertidos : [];
-  } catch {
-    return [];
-  }
-};
-
-const normalizarValor = (valor) => {
-  return String(valor || '')
+const normalizarTexto = (valor) => {
+  return String(valor ?? '')
     .trim()
     .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/º/g, '')
+    .replace(/°/g, '')
+    .replace(/\s+/g, '')
     .replace(/[^A-Z0-9]/g, '');
 };
 
-const obterNivelUsuario = (usuario) => {
-  return normalizarValor(
-    usuario?.nivelAcesso ||
-      usuario?.perfil ||
-      usuario?.role ||
-      usuario?.tipo ||
-      usuario?.NIVEL_ACESSO ||
-      usuario?.PERFIL ||
-      usuario?.ROLE ||
-      usuario?.TIPO ||
-      usuario?.nivel ||
-      usuario?.NIVEL
+const obterUnidadeUsuario = (usuario) => {
+  return (
+    usuario?.unidade ??
+    usuario?.UNIDADE ??
+    ''
   );
-};
-
-const usuarioEhAdmin = (usuario) => {
-  const nivel = obterNivelUsuario(usuario);
-
-  return ['ADMIN', 'ADMINP4', 'ADMINMASTER', 'MASTER', '1'].includes(nivel);
-};
-
-const obterIdentificadorUsuario = (usuario) => {
-  return String(
-    usuario?.id ||
-      usuario?.ID ||
-      usuario?.matricula ||
-      usuario?.MATRICULA ||
-      usuario?.email ||
-      usuario?.EMAIL ||
-      ''
-  );
-};
-
-const saidaFoiDoUsuario = (saida, usuario) => {
-  const idUsuario = obterIdentificadorUsuario(usuario);
-
-  const idSaida = String(
-    saida?.usuarioId ||
-      saida?.userModificador ||
-      saida?.userId ||
-      saida?.usuarioCadastroId ||
-      saida?.matricula ||
-      ''
-  );
-
-  return Boolean(idUsuario && idSaida && idUsuario === idSaida);
-};
-
-const saidaEhDaDataAtual = (saida) => {
-  return saida?.dataSaida === dataHoje();
-};
-
-const usuarioPodeEditarSaida = (saida, usuario) => {
-  if (usuarioEhAdmin(usuario)) return true;
-
-  return saidaFoiDoUsuario(saida, usuario) && saidaEhDaDataAtual(saida);
-};
-
-const usuarioPodeCancelarSaida = (usuario) => {
-  return usuarioEhAdmin(usuario);
 };
 
 const formatarNumero = (valor) => {
@@ -143,378 +105,607 @@ const formatarNumero = (valor) => {
 };
 
 const formatarData = (valor) => {
-  if (!valor) return '-';
+  if (!valor) {
+    return '-';
+  }
 
-  const [ano, mes, dia] = valor.split('-');
+  const dataSemHorario =
+    String(valor).split('T')[0];
 
-  if (!ano || !mes || !dia) return valor;
+  const [ano, mes, dia] =
+    dataSemHorario.split('-');
+
+  if (!ano || !mes || !dia) {
+    return String(valor);
+  }
 
   return `${dia}/${mes}/${ano}`;
 };
 
-function SaidaFenoRacao({ usuario, onVoltar }) {
-  const [entradas, setEntradas] = useState(() =>
-    carregarStorage(STORAGE_KEY_ENTRADAS)
-  );
+const obterMensagemErro = (
+  erro,
+  mensagemPadrao
+) => {
+  const dados =
+    erro?.response?.data ??
+    erro?.data ??
+    erro?.body ??
+    null;
 
-  const [saidas, setSaidas] = useState(() =>
-    carregarStorage(STORAGE_KEY_SAIDAS)
-  );
+  if (
+    typeof dados === 'string' &&
+    dados.trim()
+  ) {
+    return dados.trim();
+  }
 
-  const [tipoProduto, setTipoProduto] = useState('');
-  const [estoqueSelecionadoId, setEstoqueSelecionadoId] = useState('');
-  const [quantidadeNecessariaKg, setQuantidadeNecessariaKg] = useState('');
-  const [dataSaida, setDataSaida] = useState(dataHoje());
-  const [servico, setServico] = useState('Serviço de 24 horas');
+  const mensagem =
+    dados?.message ??
+    dados?.mensagem ??
+    dados?.error ??
+    erro?.message ??
+    erro?.mensagem;
 
-  const [responsavel, setResponsavel] = useState(
-    usuario?.nomeExibicao ||
-      `${usuario?.postGrad || ''} ${usuario?.nome || ''}`.trim()
-  );
+  if (
+    typeof mensagem === 'string' &&
+    mensagem.trim()
+  ) {
+    return mensagem.trim();
+  }
 
-  const [observacao, setObservacao] = useState('');
-  const [mensagem, setMensagem] = useState('');
-  const [saidaParaExcluir, setSaidaParaExcluir] = useState(null);
-  const [saidaEmEdicao, setSaidaEmEdicao] = useState(null);
+  if (
+    dados?.fields &&
+    typeof dados.fields === 'object'
+  ) {
+    const mensagensCampos =
+      Object.values(dados.fields)
+        .flat()
+        .filter(Boolean)
+        .map((valor) =>
+          String(valor).trim()
+        )
+        .filter(Boolean);
 
-  const [modalSucessoAberto, setModalSucessoAberto] = useState(false);
-  const [saidaConfirmada, setSaidaConfirmada] = useState(null);
-  const [tipoConfirmacao, setTipoConfirmacao] = useState('REGISTRO');
+    if (mensagensCampos.length > 0) {
+      return mensagensCampos.join(' ');
+    }
+  }
 
-  const usuarioAdmin = usuarioEhAdmin(usuario);
+  return mensagemPadrao;
+};
 
-  const produtoSelecionado = useMemo(() => {
-    return PRODUTOS.find((produto) => produto.valor === tipoProduto) || null;
-  }, [tipoProduto]);
+const extrairLista = (resposta) => {
+  if (Array.isArray(resposta)) {
+    return resposta;
+  }
 
-  const estoquesDoProduto = useMemo(() => {
-    if (!tipoProduto) return [];
+  if (Array.isArray(resposta?.content)) {
+    return resposta.content;
+  }
 
-    return entradas
-      .filter((entrada) => {
-        const quantidadeAtual = Number(entrada.quantidadeAtual || 0);
+  if (Array.isArray(resposta?.data)) {
+    return resposta.data;
+  }
 
-        const ehMesmoEstoqueDaEdicao =
-          saidaEmEdicao &&
-          String(entrada.id) === String(saidaEmEdicao.entradaId);
+  if (Array.isArray(resposta?.dados)) {
+    return resposta.dados;
+  }
 
-        return (
-          entrada.tipoProduto === tipoProduto &&
-          (quantidadeAtual > 0 || ehMesmoEstoqueDaEdicao)
-        );
-      })
-      .sort((a, b) => {
-        const dataA = new Date(a.dataEntrada || 0).getTime();
-        const dataB = new Date(b.dataEntrada || 0).getTime();
+  if (Array.isArray(resposta?.itens)) {
+    return resposta.itens;
+  }
 
-        return dataA - dataB;
-      });
-  }, [entradas, tipoProduto, saidaEmEdicao]);
+  return [];
+};
 
-  const estoqueSelecionado = useMemo(() => {
-    return (
-      entradas.find(
-        (entrada) => String(entrada.id) === String(estoqueSelecionadoId)
-      ) || null
+function SaidaFenoRacao({
+  usuario,
+  onVoltar,
+}) {
+  const unidadeUsuario =
+    obterUnidadeUsuario(usuario);
+
+  const [
+    produtosCadastrados,
+    setProdutosCadastrados,
+  ] = useState([]);
+
+  const [estoque, setEstoque] =
+    useState([]);
+
+  const [saidas, setSaidas] =
+    useState([]);
+
+  const [tipoProduto, setTipoProduto] =
+    useState('');
+
+  const [
+    estoqueSelecionadoId,
+    setEstoqueSelecionadoId,
+  ] = useState('');
+
+  const [
+    quantidadeNecessariaKg,
+    setQuantidadeNecessariaKg,
+  ] = useState('');
+
+  const [dataSaida, setDataSaida] =
+    useState(dataHoje());
+
+  const [servico, setServico] =
+    useState('Serviço de 24 horas');
+
+  const [responsavel, setResponsavel] =
+    useState(
+      usuario?.nomeExibicao ||
+        `${
+          usuario?.postGrad ||
+          usuario?.POSTGRAD ||
+          ''
+        } ${
+          usuario?.nome ||
+          usuario?.NOME ||
+          ''
+        }`.trim()
     );
-  }, [entradas, estoqueSelecionadoId]);
 
-  const pesoUnidadeKg = Number(estoqueSelecionado?.pesoUnidadeKg || 0);
+  const [observacao, setObservacao] =
+    useState('');
 
-  const quantidadeDisponivelReal = Number(
-    estoqueSelecionado?.quantidadeAtual || 0
+  const [mensagem, setMensagem] =
+    useState('');
+
+  const [
+    carregandoDados,
+    setCarregandoDados,
+  ] = useState(true);
+
+  const [
+    registrandoSaida,
+    setRegistrandoSaida,
+  ] = useState(false);
+
+  const [
+    modalSucessoAberto,
+    setModalSucessoAberto,
+  ] = useState(false);
+
+  const [
+    saidaConfirmada,
+    setSaidaConfirmada,
+  ] = useState(null);
+
+  const mostrarMensagem = useCallback(
+    (texto) => {
+      setMensagem(texto);
+
+      window.setTimeout(() => {
+        setMensagem('');
+      }, 4000);
+    },
+    []
   );
+
+  const carregarDados = useCallback(
+    async () => {
+      if (!unidadeUsuario) {
+        setEstoque([]);
+        setSaidas([]);
+
+        mostrarMensagem(
+          'A unidade do usuário não foi identificada.'
+        );
+
+        return;
+      }
+
+      setCarregandoDados(true);
+
+      try {
+        const hoje = dataHoje();
+
+        const [
+          respostaProdutos,
+          respostaEstoque,
+          respostaSaidas,
+        ] = await Promise.all([
+          listarProdutosFenoRacao({
+            situacao: 'ATIVO',
+          }),
+
+          listarEstoqueFenoRacao({
+            unidade: unidadeUsuario,
+            situacao: 'ATIVO',
+          }),
+
+          listarMovimentacoesFenoRacao({
+            dataInicial: hoje,
+            dataFinal: hoje,
+            tipoMovimentacao: 'SAIDA',
+            unidade: unidadeUsuario,
+          }),
+        ]);
+
+        setProdutosCadastrados(
+          extrairLista(respostaProdutos)
+        );
+
+        setEstoque(
+          extrairLista(respostaEstoque)
+        );
+
+        setSaidas(
+          extrairLista(respostaSaidas)
+        );
+      } catch (erro) {
+        setProdutosCadastrados([]);
+        setEstoque([]);
+        setSaidas([]);
+
+        mostrarMensagem(
+          obterMensagemErro(
+            erro,
+            'Não foi possível carregar os dados de saída de Feno e Ração.'
+          )
+        );
+      } finally {
+        setCarregandoDados(false);
+      }
+    },
+    [
+      unidadeUsuario,
+      mostrarMensagem,
+    ]
+  );
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void carregarDados();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [carregarDados]);
+
+  const tiposProdutosDisponiveis =
+    useMemo(() => {
+      const tiposCadastrados =
+        new Set(
+          produtosCadastrados
+            .map(
+              (produto) =>
+                produto?.tipoProduto
+            )
+            .filter(Boolean)
+        );
+
+      const tiposComEstoque =
+        new Set(
+          estoque
+            .filter(
+              (item) =>
+                Number(
+                  item?.quantidadeAtual || 0
+                ) > 0
+            )
+            .map(
+              (item) =>
+                item?.tipoProduto
+            )
+            .filter(Boolean)
+        );
+
+      return PRODUTOS.filter(
+        (produto) =>
+          tiposCadastrados.has(
+            produto.valor
+          ) ||
+          tiposComEstoque.has(
+            produto.valor
+          )
+      );
+    }, [
+      produtosCadastrados,
+      estoque,
+    ]);
+
+  const produtoSelecionado =
+    useMemo(() => {
+      return (
+        PRODUTOS.find(
+          (produto) =>
+            produto.valor ===
+            tipoProduto
+        ) || null
+      );
+    }, [tipoProduto]);
+
+  const estoquesDoProduto =
+    useMemo(() => {
+      if (!tipoProduto) {
+        return [];
+      }
+
+      return estoque
+        .filter((entrada) => {
+          const mesmaUnidade =
+            normalizarTexto(
+              entrada?.unidade
+            ) ===
+            normalizarTexto(
+              unidadeUsuario
+            );
+
+          const mesmoProduto =
+            entrada?.tipoProduto ===
+            tipoProduto;
+
+          const loteAtivo =
+            !entrada?.situacao ||
+            normalizarTexto(
+              entrada?.situacao
+            ) === 'ATIVO';
+
+          const temSaldo =
+            Number(
+              entrada?.quantidadeAtual ||
+              0
+            ) > 0;
+
+          return (
+            mesmaUnidade &&
+            mesmoProduto &&
+            loteAtivo &&
+            temSaldo
+          );
+        })
+        .sort((a, b) => {
+          const dataA =
+            String(
+              a?.dataEntrada || ''
+            );
+
+          const dataB =
+            String(
+              b?.dataEntrada || ''
+            );
+
+          if (dataA !== dataB) {
+            return dataA.localeCompare(
+              dataB
+            );
+          }
+
+          return String(
+            a?.validade || ''
+          ).localeCompare(
+            String(
+              b?.validade || ''
+            )
+          );
+        });
+    }, [
+      estoque,
+      tipoProduto,
+      unidadeUsuario,
+    ]);
+
+  const estoqueSelecionado =
+    useMemo(() => {
+      return (
+        estoque.find(
+          (entrada) =>
+            String(entrada?.id) ===
+            String(
+              estoqueSelecionadoId
+            )
+        ) || null
+      );
+    }, [
+      estoque,
+      estoqueSelecionadoId,
+    ]);
+
+  const pesoUnidadeKg =
+    Number(
+      estoqueSelecionado
+        ?.pesoUnidadeKg || 0
+    );
 
   const quantidadeDisponivel =
-    saidaEmEdicao &&
-    String(saidaEmEdicao.entradaId) === String(estoqueSelecionadoId)
-      ? quantidadeDisponivelReal + Number(saidaEmEdicao.quantidadeRetirada || 0)
-      : quantidadeDisponivelReal;
+    Number(
+      estoqueSelecionado
+        ?.quantidadeAtual || 0
+    );
 
-  const quantidadeNecessariaNumerica = Number(quantidadeNecessariaKg);
+  const quantidadeNecessariaNumerica =
+    Number(
+      quantidadeNecessariaKg
+    );
 
   const unidadesCalculadas =
-    pesoUnidadeKg > 0 && quantidadeNecessariaNumerica > 0
-      ? Math.ceil(quantidadeNecessariaNumerica / pesoUnidadeKg)
+    pesoUnidadeKg > 0 &&
+    quantidadeNecessariaNumerica > 0
+      ? Math.ceil(
+          quantidadeNecessariaNumerica /
+          pesoUnidadeKg
+        )
       : 0;
 
-  const pesoLiberadoKg = unidadesCalculadas * pesoUnidadeKg;
+  const pesoLiberadoKg =
+    unidadesCalculadas *
+    pesoUnidadeKg;
 
   const sobraCalculadaKg =
-    pesoLiberadoKg > quantidadeNecessariaNumerica
-      ? pesoLiberadoKg - quantidadeNecessariaNumerica
+    pesoLiberadoKg >
+    quantidadeNecessariaNumerica
+      ? pesoLiberadoKg -
+        quantidadeNecessariaNumerica
       : 0;
 
-  const saldoAposSaida = quantidadeDisponivel - unidadesCalculadas;
-
-  const mostrarMensagem = (texto) => {
-    setMensagem(texto);
-
-    window.setTimeout(() => {
-      setMensagem('');
-    }, 3500);
-  };
-
-  const salvarEntradas = (novaLista) => {
-    setEntradas(novaLista);
-
-    localStorage.setItem(STORAGE_KEY_ENTRADAS, JSON.stringify(novaLista));
-  };
-
-  const salvarSaidas = (novaLista) => {
-    setSaidas(novaLista);
-
-    localStorage.setItem(STORAGE_KEY_SAIDAS, JSON.stringify(novaLista));
-  };
+  const saldoAposSaida =
+    quantidadeDisponivel -
+    unidadesCalculadas;
 
   const limparFormulario = () => {
     setTipoProduto('');
     setEstoqueSelecionadoId('');
     setQuantidadeNecessariaKg('');
     setDataSaida(dataHoje());
-    setServico('Serviço de 24 horas');
+    setServico(
+      'Serviço de 24 horas'
+    );
     setObservacao('');
-    setSaidaEmEdicao(null);
   };
 
-  const fecharModalSucesso = () => {
-    setModalSucessoAberto(false);
-    setSaidaConfirmada(null);
-    setTipoConfirmacao('REGISTRO');
-  };
+  const handleProdutoChange = (
+    event
+  ) => {
+    setTipoProduto(
+      event.target.value
+    );
 
-  const cancelarEdicao = () => {
-    limparFormulario();
-    mostrarMensagem('Edição cancelada.');
-  };
-
-  const handleProdutoChange = (event) => {
-    setTipoProduto(event.target.value);
     setEstoqueSelecionadoId('');
     setQuantidadeNecessariaKg('');
     setMensagem('');
   };
 
-  const iniciarEdicaoSaida = (saida) => {
-    if (!usuarioPodeEditarSaida(saida, usuario)) {
-      mostrarMensagem(
-        'Você só pode editar saídas registradas por você na data atual.'
-      );
-      return;
-    }
+  const handleRegistrarSaida =
+    async (event) => {
+      event.preventDefault();
 
-    setSaidaEmEdicao(saida);
-    setTipoProduto(saida.tipoProduto || '');
-    setEstoqueSelecionadoId(String(saida.entradaId || ''));
-    setQuantidadeNecessariaKg(String(saida.quantidadeNecessariaKg || ''));
-    setDataSaida(saida.dataSaida || dataHoje());
-    setServico(saida.servico || 'Serviço de 24 horas');
-    setResponsavel(saida.responsavel || responsavel);
-    setObservacao(saida.observacao || '');
-    setMensagem('Modo de edição ativado. Ajuste os dados e salve novamente.');
-  };
-
-  const montarSaida = () => {
-    const usuarioId =
-      usuario?.id ||
-      usuario?.ID ||
-      usuario?.matricula ||
-      usuario?.MATRICULA ||
-      usuario?.email ||
-      usuario?.EMAIL ||
-      null;
-
-    return {
-      id: saidaEmEdicao?.id || gerarId(),
-      entradaId: estoqueSelecionado.id,
-      tipoProduto: produtoSelecionado.valor,
-      nomeProduto: produtoSelecionado.nome,
-      unidadeControle: produtoSelecionado.unidade.toUpperCase(),
-      pesoUnidadeKg,
-      quantidadeRetirada: unidadesCalculadas,
-      quantidadeNecessariaKg: quantidadeNecessariaNumerica,
-      pesoLiberadoKg,
-      sobraCalculadaKg,
-      saldoAnterior: quantidadeDisponivel,
-      saldoPosterior: saldoAposSaida,
-      dataSaida,
-      servico: servico.trim(),
-      lote: estoqueSelecionado.lote || '',
-      fornecedor: estoqueSelecionado.fornecedor || '',
-      responsavel: responsavel.trim(),
-      observacao: observacao.trim(),
-      unidade:
-        usuario?.unidade || usuario?.UNIDADE || estoqueSelecionado.unidade || 'RPMont',
-
-      usuarioId,
-      usuarioNome: usuario?.nomeExibicao || usuario?.nome || usuario?.NOME || '',
-      usuarioSetor: usuario?.setor || usuario?.SETOR || '',
-
-      dataCadastro: saidaEmEdicao?.dataCadastro || new Date().toISOString(),
-      dataRegistro: saidaEmEdicao?.dataRegistro || new Date().toISOString(),
-      dataModificacao: saidaEmEdicao ? new Date().toISOString() : null,
-      userModificador: usuarioId || 1,
-    };
-  };
-
-  const atualizarEstoqueAoRegistrar = (novaSaida) => {
-    if (!saidaEmEdicao) {
-      return entradas.map((entrada) =>
-        entrada.id === estoqueSelecionado.id
-          ? {
-              ...entrada,
-              quantidadeAtual:
-                Number(entrada.quantidadeAtual || 0) - unidadesCalculadas,
-              pesoAtualKg:
-                (Number(entrada.quantidadeAtual || 0) - unidadesCalculadas) *
-                Number(entrada.pesoUnidadeKg || 0),
-              dataModificacao: new Date().toISOString(),
-              userModificador: usuario?.id || usuario?.ID || 1,
-            }
-          : entrada
-      );
-    }
-
-    return entradas.map((entrada) => {
-      let quantidadeAtual = Number(entrada.quantidadeAtual || 0);
-
-      if (String(entrada.id) === String(saidaEmEdicao.entradaId)) {
-        quantidadeAtual += Number(saidaEmEdicao.quantidadeRetirada || 0);
+      if (registrandoSaida) {
+        return;
       }
 
-      if (String(entrada.id) === String(novaSaida.entradaId)) {
-        quantidadeAtual -= Number(novaSaida.quantidadeRetirada || 0);
+      if (!produtoSelecionado) {
+        mostrarMensagem(
+          'Selecione o produto.'
+        );
+        return;
       }
 
-      return {
-        ...entrada,
-        quantidadeAtual,
-        pesoAtualKg: quantidadeAtual * Number(entrada.pesoUnidadeKg || 0),
-        dataModificacao: new Date().toISOString(),
-        userModificador: usuario?.id || usuario?.ID || 1,
+      if (!estoqueSelecionado) {
+        mostrarMensagem(
+          'Selecione o estoque que será utilizado.'
+        );
+        return;
+      }
+
+      if (
+        !Number.isFinite(
+          quantidadeNecessariaNumerica
+        ) ||
+        quantidadeNecessariaNumerica <=
+          0
+      ) {
+        mostrarMensagem(
+          'Informe a quantidade necessária em quilogramas.'
+        );
+        return;
+      }
+
+      if (
+        unidadesCalculadas >
+        quantidadeDisponivel
+      ) {
+        mostrarMensagem(
+          `Estoque insuficiente. Disponível: ${formatarNumero(
+            quantidadeDisponivel
+          )} ${
+            produtoSelecionado
+              .unidadePlural
+          }.`
+        );
+        return;
+      }
+
+      if (!dataSaida) {
+        mostrarMensagem(
+          'Informe a data da saída.'
+        );
+        return;
+      }
+
+      if (!servico.trim()) {
+        mostrarMensagem(
+          'Informe o serviço.'
+        );
+        return;
+      }
+
+      if (!responsavel.trim()) {
+        mostrarMensagem(
+          'Informe o responsável pela retirada.'
+        );
+        return;
+      }
+
+      const loteId =
+        Number(
+          estoqueSelecionado.id
+        );
+
+      if (
+        !Number.isInteger(loteId) ||
+        loteId <= 0
+      ) {
+        mostrarMensagem(
+          'O lote selecionado é inválido.'
+        );
+        return;
+      }
+
+      const payload = {
+        loteId,
+        quantidadeNecessariaKg:
+          quantidadeNecessariaNumerica,
+        dataSaida,
+        servico:
+          servico.trim(),
+        responsavel:
+          responsavel.trim(),
+        numeroDocumento: null,
+        observacao:
+          observacao.trim() || null,
       };
-    });
-  };
 
-  const handleRegistrarSaida = (event) => {
-    event.preventDefault();
+      setRegistrandoSaida(true);
+      setMensagem('');
 
-    if (saidaEmEdicao && !usuarioPodeEditarSaida(saidaEmEdicao, usuario)) {
-      mostrarMensagem(
-        'Você só pode editar saídas registradas por você na data atual.'
-      );
-      return;
-    }
+      try {
+        const resposta =
+          await registrarSaidaFenoRacao(
+            payload
+          );
 
-    if (!produtoSelecionado) {
-      mostrarMensagem('Selecione o produto.');
-      return;
-    }
+        setSaidaConfirmada(
+          resposta
+        );
 
-    if (!estoqueSelecionado) {
-      mostrarMensagem('Selecione o estoque que será utilizado.');
-      return;
-    }
+        setModalSucessoAberto(
+          true
+        );
 
-    if (
-      !Number.isFinite(quantidadeNecessariaNumerica) ||
-      quantidadeNecessariaNumerica <= 0
-    ) {
-      mostrarMensagem('Informe a quantidade necessária em quilogramas.');
-      return;
-    }
+        limparFormulario();
 
-    if (unidadesCalculadas <= 0) {
-      mostrarMensagem('Não foi possível calcular a saída.');
-      return;
-    }
+        await carregarDados();
+      } catch (erro) {
+        mostrarMensagem(
+          obterMensagemErro(
+            erro,
+            'Não foi possível registrar a saída.'
+          )
+        );
+      } finally {
+        setRegistrandoSaida(false);
+      }
+    };
 
-    if (unidadesCalculadas > quantidadeDisponivel) {
-      mostrarMensagem(
-        `Estoque insuficiente. Disponível: ${formatarNumero(
-          quantidadeDisponivel
-        )} ${produtoSelecionado.unidadePlural}.`
-      );
-      return;
-    }
-
-    if (!dataSaida) {
-      mostrarMensagem('Informe a data da saída.');
-      return;
-    }
-
-    if (!usuarioAdmin && dataSaida !== dataHoje()) {
-      mostrarMensagem(
-        'Usuário comum só pode registrar ou editar saída da data atual.'
-      );
-      return;
-    }
-
-    if (!responsavel.trim()) {
-      mostrarMensagem('Informe o responsável pela retirada.');
-      return;
-    }
-
-    const estavaEditando = Boolean(saidaEmEdicao);
-    const novaSaida = montarSaida();
-    const entradasAtualizadas = atualizarEstoqueAoRegistrar(novaSaida);
-
-    const saidasAtualizadas = saidaEmEdicao
-      ? saidas.map((saida) =>
-          saida.id === saidaEmEdicao.id ? novaSaida : saida
-        )
-      : [novaSaida, ...saidas];
-
-    salvarEntradas(entradasAtualizadas);
-    salvarSaidas(saidasAtualizadas);
-
-    limparFormulario();
-
-    setSaidaConfirmada(novaSaida);
-    setTipoConfirmacao(estavaEditando ? 'EDICAO' : 'REGISTRO');
-    setModalSucessoAberto(true);
-    setMensagem('');
-  };
-
-  const confirmarExclusaoSaida = () => {
-    if (!saidaParaExcluir) return;
-
-    if (!usuarioPodeCancelarSaida(usuario)) {
-      setSaidaParaExcluir(null);
-      mostrarMensagem('Usuário comum não tem permissão para cancelar saída.');
-      return;
-    }
-
-    const entradasAtualizadas = entradas.map((entrada) =>
-      entrada.id === saidaParaExcluir.entradaId
-        ? {
-            ...entrada,
-            quantidadeAtual:
-              Number(entrada.quantidadeAtual || 0) +
-              Number(saidaParaExcluir.quantidadeRetirada || 0),
-            pesoAtualKg:
-              (Number(entrada.quantidadeAtual || 0) +
-                Number(saidaParaExcluir.quantidadeRetirada || 0)) *
-              Number(entrada.pesoUnidadeKg || 0),
-            dataModificacao: new Date().toISOString(),
-            userModificador: usuario?.id || usuario?.ID || 1,
-          }
-        : entrada
-    );
-
-    const saidasAtualizadas = saidas.filter(
-      (saida) => saida.id !== saidaParaExcluir.id
-    );
-
-    salvarEntradas(entradasAtualizadas);
-    salvarSaidas(saidasAtualizadas);
-
-    setSaidaParaExcluir(null);
-
-    mostrarMensagem('Saída cancelada e quantidade devolvida ao estoque.');
-  };
-
-  const renderizarIconeProduto = (tipo) => {
+  const renderizarIconeProduto = (
+    tipo
+  ) => {
     if (tipo === 'FENO') {
       return <FaWheatAwn />;
     }
@@ -522,10 +713,19 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
     return <GiGrain />;
   };
 
-  const obterClasseProduto = (tipo) => {
-    if (tipo === 'FENO') return 'saida-icone-feno';
+  const obterClasseProduto = (
+    tipo
+  ) => {
+    if (tipo === 'FENO') {
+      return 'saida-icone-feno';
+    }
 
-    if (tipo === 'RACAO_POTRO') {
+    if (
+      tipo ===
+        'RACAO_POTRO_PREMIUM' ||
+      tipo ===
+        'RACAO_POTRO_MANUTENCAO'
+    ) {
       return 'saida-icone-racao-potro';
     }
 
@@ -545,11 +745,16 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
           </button>
 
           <div>
-            <span>Alimentação equina</span>
-            <h1>Saída de Feno e Ração</h1>
+            <span>
+              Alimentação equina
+            </span>
+
+            <h1>
+              Saída de Feno e Ração
+            </h1>
+
             <p>
-              {usuario?.unidade ||
-                usuario?.UNIDADE ||
+              {unidadeUsuario ||
                 'Controle de estoque'}
             </p>
           </div>
@@ -561,17 +766,27 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
           </div>
 
           <div>
-            <span>Serviço operacional</span>
-            <h2>Retirada para serviço</h2>
+            <span>
+              Serviço operacional
+            </span>
+
+            <h2>
+              Retirada para serviço
+            </h2>
+
             <p>
-              Usuário comum da Baia só pode editar a própria saída do dia
-              atual. Após 00h, a edição fica bloqueada.
+              A saída é registrada no
+              estoque real da unidade e
+              atualiza o saldo no banco de
+              dados.
             </p>
           </div>
         </section>
 
         {mensagem && (
-          <div className="saida-alimentacao-mensagem">{mensagem}</div>
+          <div className="saida-alimentacao-mensagem">
+            {mensagem}
+          </div>
         )}
 
         <section className="saida-alimentacao-card">
@@ -579,114 +794,166 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
             <FaMinus />
 
             <div>
-              <h2>{saidaEmEdicao ? 'Editar saída' : 'Nova saída'}</h2>
+              <h2>Nova saída</h2>
+
               <p>
-                {saidaEmEdicao
-                  ? 'Altere os dados permitidos e salve novamente.'
-                  : 'Selecione o produto e o estoque utilizado.'}
+                Selecione o produto e o
+                lote disponível no estoque.
               </p>
             </div>
           </div>
 
-          {saidaEmEdicao && (
-            <div className="saida-alimentacao-edicao-alerta">
-              <strong>Modo de edição ativo</strong>
-              <span>
-                Você está editando uma saída registrada em{' '}
-                {formatarData(saidaEmEdicao.dataSaida)}.
-              </span>
-
-              <button type="button" onClick={cancelarEdicao}>
-                <FaXmark />
-                Cancelar edição
-              </button>
-            </div>
-          )}
-
           <form
             className="saida-alimentacao-form"
-            onSubmit={handleRegistrarSaida}
+            onSubmit={
+              handleRegistrarSaida
+            }
           >
             <div className="saida-alimentacao-form-group">
-              <label htmlFor="saidaProduto">Produto</label>
+              <label htmlFor="saidaProduto">
+                Produto
+              </label>
 
               <select
                 id="saidaProduto"
                 value={tipoProduto}
-                onChange={handleProdutoChange}
+                onChange={
+                  handleProdutoChange
+                }
+                disabled={
+                  carregandoDados ||
+                  registrandoSaida
+                }
               >
-                <option value="">Selecione o produto</option>
+                <option value="">
+                  Selecione o produto
+                </option>
 
-                {PRODUTOS.map((produto) => (
-                  <option key={produto.valor} value={produto.valor}>
-                    {produto.nome}
-                  </option>
-                ))}
+                {tiposProdutosDisponiveis.map(
+                  (produto) => (
+                    <option
+                      key={
+                        produto.valor
+                      }
+                      value={
+                        produto.valor
+                      }
+                    >
+                      {produto.nome}
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             <div className="saida-alimentacao-form-group">
-              <label htmlFor="saidaEstoque">Peso e estoque disponível</label>
+              <label htmlFor="saidaEstoque">
+                Peso e estoque disponível
+              </label>
 
               <select
                 id="saidaEstoque"
-                value={estoqueSelecionadoId}
-                disabled={!tipoProduto}
+                value={
+                  estoqueSelecionadoId
+                }
+                disabled={
+                  !tipoProduto ||
+                  carregandoDados ||
+                  registrandoSaida
+                }
                 onChange={(event) => {
-                  setEstoqueSelecionadoId(event.target.value);
-                  setQuantidadeNecessariaKg('');
+                  setEstoqueSelecionadoId(
+                    event.target.value
+                  );
+
+                  setQuantidadeNecessariaKg(
+                    ''
+                  );
+
                   setMensagem('');
                 }}
               >
                 <option value="">
                   {!tipoProduto
                     ? 'Selecione o produto primeiro'
-                    : estoquesDoProduto.length === 0
+                    : estoquesDoProduto.length ===
+                        0
                       ? 'Nenhum estoque disponível'
                       : 'Selecione o estoque'}
                 </option>
 
-                {estoquesDoProduto.map((entrada) => {
-                  const ehMesmoEstoqueDaEdicao =
-                    saidaEmEdicao &&
-                    String(entrada.id) === String(saidaEmEdicao.entradaId);
-
-                  const saldoExibido = ehMesmoEstoqueDaEdicao
-                    ? Number(entrada.quantidadeAtual || 0) +
-                      Number(saidaEmEdicao.quantidadeRetirada || 0)
-                    : Number(entrada.quantidadeAtual || 0);
-
-                  return (
-                    <option key={entrada.id} value={entrada.id}>
-                      {formatarNumero(entrada.pesoUnidadeKg)} kg —{' '}
-                      {formatarNumero(saldoExibido)}{' '}
-                      {produtoSelecionado?.unidadePlural}
-                      {entrada.lote ? ` — Lote ${entrada.lote}` : ''}
+                {estoquesDoProduto.map(
+                  (entrada) => (
+                    <option
+                      key={
+                        entrada.id
+                      }
+                      value={
+                        entrada.id
+                      }
+                    >
+                      {formatarNumero(
+                        entrada.pesoUnidadeKg
+                      )}{' '}
+                      kg —{' '}
+                      {formatarNumero(
+                        entrada.quantidadeAtual
+                      )}{' '}
+                      {
+                        produtoSelecionado
+                          ?.unidadePlural
+                      }
+                      {entrada.codigoLote
+                        ? ` — Lote ${entrada.codigoLote}`
+                        : ''}
                     </option>
-                  );
-                })}
+                  )
+                )}
               </select>
             </div>
 
             {estoqueSelecionado && (
               <div className="saida-alimentacao-estoque-info">
                 <div>
-                  <span>Peso por unidade</span>
-                  <strong>{formatarNumero(pesoUnidadeKg)} kg</strong>
-                </div>
+                  <span>
+                    Peso por unidade
+                  </span>
 
-                <div>
-                  <span>Saldo disponível</span>
                   <strong>
-                    {formatarNumero(quantidadeDisponivel)}{' '}
-                    {produtoSelecionado?.unidadePlural}
+                    {formatarNumero(
+                      pesoUnidadeKg
+                    )}{' '}
+                    kg
                   </strong>
                 </div>
 
                 <div>
-                  <span>Peso disponível</span>
+                  <span>
+                    Saldo disponível
+                  </span>
+
                   <strong>
-                    {formatarNumero(quantidadeDisponivel * pesoUnidadeKg)} kg
+                    {formatarNumero(
+                      quantidadeDisponivel
+                    )}{' '}
+                    {
+                      produtoSelecionado
+                        ?.unidadePlural
+                    }
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Peso disponível
+                  </span>
+
+                  <strong>
+                    {formatarNumero(
+                      quantidadeDisponivel *
+                        pesoUnidadeKg
+                    )}{' '}
+                    kg
                   </strong>
                 </div>
               </div>
@@ -694,7 +961,8 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
 
             <div className="saida-alimentacao-form-group">
               <label htmlFor="quantidadeNecessariaKg">
-                Quantidade necessária para o serviço
+                Quantidade necessária
+                para o serviço
               </label>
 
               <div className="saida-alimentacao-input-unidade">
@@ -704,11 +972,19 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
                   min="0.01"
                   step="0.01"
                   inputMode="decimal"
-                  value={quantidadeNecessariaKg}
-                  disabled={!estoqueSelecionado}
+                  value={
+                    quantidadeNecessariaKg
+                  }
+                  disabled={
+                    !estoqueSelecionado ||
+                    registrandoSaida
+                  }
                   placeholder="Ex.: 250"
                   onChange={(event) => {
-                    setQuantidadeNecessariaKg(event.target.value);
+                    setQuantidadeNecessariaKg(
+                      event.target.value
+                    );
+
                     setMensagem('');
                   }}
                 />
@@ -719,90 +995,182 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
 
             <div className="saida-alimentacao-calculo">
               <div>
-                <span>Quantidade necessária</span>
-                <strong>{formatarNumero(quantidadeNecessariaNumerica)} kg</strong>
+                <span>
+                  Quantidade necessária
+                </span>
+
+                <strong>
+                  {formatarNumero(
+                    quantidadeNecessariaNumerica
+                  )}{' '}
+                  kg
+                </strong>
               </div>
 
               <div>
                 <span>
-                  {produtoSelecionado?.unidadePlural || 'Unidades'} calculados
+                  {produtoSelecionado
+                    ?.unidadePlural ||
+                    'Unidades'}{' '}
+                  calculados
                 </span>
 
-                <strong>{formatarNumero(unidadesCalculadas)}</strong>
+                <strong>
+                  {formatarNumero(
+                    unidadesCalculadas
+                  )}
+                </strong>
               </div>
 
               <div>
-                <span>Peso liberado</span>
-                <strong>{formatarNumero(pesoLiberadoKg)} kg</strong>
+                <span>
+                  Peso liberado
+                </span>
+
+                <strong>
+                  {formatarNumero(
+                    pesoLiberadoKg
+                  )}{' '}
+                  kg
+                </strong>
               </div>
 
               <div>
-                <span>Sobra calculada</span>
-                <strong>{formatarNumero(sobraCalculadaKg)} kg</strong>
+                <span>
+                  Sobra calculada
+                </span>
+
+                <strong>
+                  {formatarNumero(
+                    sobraCalculadaKg
+                  )}{' '}
+                  kg
+                </strong>
               </div>
 
               <div className="saida-alimentacao-calculo-saldo">
-                <span>Saldo após a retirada</span>
+                <span>
+                  Saldo após a retirada
+                </span>
 
                 <strong
-                  className={saldoAposSaida < 0 ? 'saldo-insuficiente' : ''}
+                  className={
+                    saldoAposSaida < 0
+                      ? 'saldo-insuficiente'
+                      : ''
+                  }
                 >
-                  {formatarNumero(Math.max(saldoAposSaida, 0))}{' '}
-                  {produtoSelecionado?.unidadePlural || 'unidades'}
+                  {formatarNumero(
+                    Math.max(
+                      saldoAposSaida,
+                      0
+                    )
+                  )}{' '}
+                  {produtoSelecionado
+                    ?.unidadePlural ||
+                    'unidades'}
                 </strong>
               </div>
             </div>
 
             <div className="saida-alimentacao-grid">
               <div className="saida-alimentacao-form-group">
-                <label htmlFor="dataSaida">Data da saída</label>
+                <label htmlFor="dataSaida">
+                  Data da saída
+                </label>
 
                 <input
                   id="dataSaida"
                   type="date"
                   value={dataSaida}
-                  disabled={!usuarioAdmin}
-                  onChange={(event) => setDataSaida(event.target.value)}
+                  onChange={(event) =>
+                    setDataSaida(
+                      event.target.value
+                    )
+                  }
+                  disabled={
+                    registrandoSaida
+                  }
                 />
               </div>
 
               <div className="saida-alimentacao-form-group">
-                <label htmlFor="servico">Serviço</label>
+                <label htmlFor="servico">
+                  Serviço
+                </label>
 
                 <input
                   id="servico"
                   type="text"
+                  maxLength={150}
                   value={servico}
-                  onChange={(event) => setServico(event.target.value)}
+                  onChange={(event) =>
+                    setServico(
+                      event.target.value
+                    )
+                  }
+                  disabled={
+                    registrandoSaida
+                  }
                 />
               </div>
             </div>
 
             <div className="saida-alimentacao-form-group">
-              <label htmlFor="responsavelSaida">Responsável pela retirada</label>
+              <label htmlFor="responsavelSaida">
+                Responsável pela retirada
+              </label>
 
               <input
                 id="responsavelSaida"
                 type="text"
+                maxLength={150}
                 value={responsavel}
-                onChange={(event) => setResponsavel(event.target.value)}
+                onChange={(event) =>
+                  setResponsavel(
+                    event.target.value
+                  )
+                }
+                disabled={
+                  registrandoSaida
+                }
               />
             </div>
 
             <div className="saida-alimentacao-form-group">
-              <label htmlFor="observacaoSaida">Observação</label>
+              <label htmlFor="observacaoSaida">
+                Observação
+              </label>
 
               <textarea
                 id="observacaoSaida"
+                maxLength={500}
                 value={observacao}
                 placeholder="Informações adicionais sobre a retirada"
-                onChange={(event) => setObservacao(event.target.value)}
+                onChange={(event) =>
+                  setObservacao(
+                    event.target.value
+                  )
+                }
+                disabled={
+                  registrandoSaida
+                }
               />
             </div>
 
-            <button type="submit" className="saida-alimentacao-salvar">
+            <button
+              type="submit"
+              className="saida-alimentacao-salvar"
+              disabled={
+                registrandoSaida ||
+                carregandoDados
+              }
+            >
               <FaMinus />
-              {saidaEmEdicao ? 'Salvar alteração da saída' : 'Registrar saída'}
+
+              {registrandoSaida
+                ? 'Registrando...'
+                : 'Registrar saída'}
             </button>
           </form>
         </section>
@@ -810,98 +1178,141 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
         <section className="saida-alimentacao-card">
           <div className="saida-alimentacao-lista-header">
             <div>
-              <span>Movimentações</span>
-              <h2>Saídas registradas</h2>
+              <span>
+                Movimentações
+              </span>
+
+              <h2>
+                Saídas registradas hoje
+              </h2>
             </div>
 
-            <strong>{saidas.length}</strong>
+            <strong>
+              {saidas.length}
+            </strong>
           </div>
 
-          {saidas.length === 0 ? (
+          {carregandoDados ? (
             <div className="saida-alimentacao-vazio">
               <FaBoxesStacked />
-              <p>Nenhuma saída registrada.</p>
+              <p>
+                Carregando saídas...
+              </p>
+            </div>
+          ) : saidas.length === 0 ? (
+            <div className="saida-alimentacao-vazio">
+              <FaBoxesStacked />
+              <p>
+                Nenhuma saída registrada
+                hoje.
+              </p>
             </div>
           ) : (
             <div className="saida-alimentacao-lista">
               {saidas.map((saida) => {
-                const produto = PRODUTOS.find(
-                  (item) => item.valor === saida.tipoProduto
-                );
+                const tipo =
+                  saida?.tipoProduto;
 
-                const podeEditar = usuarioPodeEditarSaida(saida, usuario);
-                const podeCancelar = usuarioPodeCancelarSaida(usuario);
+                const produto =
+                  PRODUTOS.find(
+                    (item) =>
+                      item.valor === tipo
+                  );
+
+                const quantidade =
+                  saida?.quantidadeUnidades ??
+                  saida?.quantidadeRetirada ??
+                  0;
+
+                const peso =
+                  saida?.pesoUnidadeKg ??
+                  0;
+
+                const data =
+                  saida?.dataOperacao ??
+                  saida?.dataSaida;
+
+                const lote =
+                  saida?.codigoLote ??
+                  saida?.lote ??
+                  '-';
 
                 return (
-                  <article key={saida.id} className="saida-alimentacao-item">
+                  <article
+                    key={
+                      saida?.id ??
+                      `${tipo}-${lote}-${data}`
+                    }
+                    className="saida-alimentacao-item"
+                  >
                     <div
                       className={`saida-alimentacao-item-icon ${obterClasseProduto(
-                        saida.tipoProduto
+                        tipo
                       )}`}
                     >
-                      {renderizarIconeProduto(saida.tipoProduto)}
+                      {renderizarIconeProduto(
+                        tipo
+                      )}
                     </div>
 
                     <div className="saida-alimentacao-item-info">
-                      <span>{saida.nomeProduto}</span>
+                      <span>
+                        {saida?.nomeProduto ||
+                          produto?.nome ||
+                          tipo ||
+                          'Produto'}
+                      </span>
 
                       <h3>
-                        {formatarNumero(saida.quantidadeRetirada)}{' '}
-                        {produto?.unidadePlural || 'unidades'} de{' '}
-                        {formatarNumero(saida.pesoUnidadeKg)} kg
+                        {formatarNumero(
+                          quantidade
+                        )}{' '}
+                        {produto
+                          ?.unidadePlural ||
+                          'unidades'}{' '}
+                        de{' '}
+                        {formatarNumero(
+                          peso
+                        )}{' '}
+                        kg
                       </h3>
 
                       <p>
                         Necessário:{' '}
                         <strong>
-                          {formatarNumero(saida.quantidadeNecessariaKg)} kg
+                          {formatarNumero(
+                            saida?.quantidadeSolicitadaKg ??
+                              saida?.quantidadeNecessariaKg ??
+                              0
+                          )}{' '}
+                          kg
                         </strong>
                       </p>
 
                       <p>
                         Liberado:{' '}
-                        <strong>{formatarNumero(saida.pesoLiberadoKg)} kg</strong>
-                      </p>
-
-                      <p>
-                        Responsável:{' '}
                         <strong>
-                          {saida.responsavel || saida.usuarioNome || '-'}
+                          {formatarNumero(
+                            saida?.pesoMovimentadoKg ??
+                              saida?.pesoLiberadoKg ??
+                              0
+                          )}{' '}
+                          kg
                         </strong>
                       </p>
 
                       <div className="saida-alimentacao-item-detalhes">
                         <span>
                           <FaCalendarDays />
-                          {formatarData(saida.dataSaida)}
+                          {formatarData(
+                            data
+                          )}
                         </span>
 
-                        {saida.lote && <span>Lote: {saida.lote}</span>}
+                        <span>
+                          Lote: {lote}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="saida-alimentacao-item-acoes">
-                      {podeEditar && (
-                        <button
-                          type="button"
-                          className="saida-alimentacao-editar"
-                          onClick={() => iniciarEdicaoSaida(saida)}
-                          aria-label="Editar saída"
-                        >
-                          <FaPenToSquare />
-                        </button>
-                      )}
-
-                      {podeCancelar && (
-                        <button
-                          type="button"
-                          className="saida-alimentacao-excluir"
-                          onClick={() => setSaidaParaExcluir(saida)}
-                          aria-label="Cancelar saída"
-                        >
-                          <FaTrashCan />
-                        </button>
-                      )}
                     </div>
                   </article>
                 );
@@ -910,117 +1321,100 @@ function SaidaFenoRacao({ usuario, onVoltar }) {
           )}
         </section>
 
-        {modalSucessoAberto && saidaConfirmada && (
-          <div className="saida-alimentacao-modal-overlay">
-            <div className="saida-alimentacao-modal">
-              <div className="saida-alimentacao-modal-icon sucesso">
-                <FaCircleCheck />
-              </div>
-
-              <h2>
-                {tipoConfirmacao === 'EDICAO'
-                  ? 'Saída atualizada com sucesso!'
-                  : 'Saída registrada com sucesso!'}
-              </h2>
-
-              <p>
-                {tipoConfirmacao === 'EDICAO'
-                  ? 'As alterações foram salvas no sistema.'
-                  : 'A retirada foi salva no sistema. Confira o resumo abaixo.'}
-              </p>
-
-              <div className="saida-alimentacao-modal-resumo sucesso">
-                <span>Produto</span>
-                <strong>{saidaConfirmada.nomeProduto}</strong>
-
-                <span>Lote</span>
-                <strong>{saidaConfirmada.lote || '-'}</strong>
-
-                <span>Quantidade retirada</span>
-                <strong>
-                  {formatarNumero(saidaConfirmada.quantidadeRetirada)}{' '}
-                  {PRODUTOS.find(
-                    (produto) => produto.valor === saidaConfirmada.tipoProduto
-                  )?.unidadePlural || 'unidades'}
-                </strong>
-
-                <span>Peso liberado</span>
-                <strong>{formatarNumero(saidaConfirmada.pesoLiberadoKg)} kg</strong>
-
-                <span>Responsável</span>
-                <strong>
-                  {saidaConfirmada.responsavel ||
-                    saidaConfirmada.usuarioNome ||
-                    '-'}
-                </strong>
-
-                <span>Data</span>
-                <strong>{formatarData(saidaConfirmada.dataSaida)}</strong>
-              </div>
-
-              <div className="saida-alimentacao-modal-actions">
-                <button
-                  type="button"
-                  className="saida-alimentacao-confirmar-sucesso"
-                  onClick={fecharModalSucesso}
-                >
+        {modalSucessoAberto &&
+          saidaConfirmada && (
+            <div className="saida-alimentacao-modal-overlay">
+              <div className="saida-alimentacao-modal">
+                <div className="saida-alimentacao-modal-icon sucesso">
                   <FaCircleCheck />
-                  Entendi
-                </button>
+                </div>
+
+                <h2>
+                  Saída registrada com
+                  sucesso!
+                </h2>
+
+                <p>
+                  A retirada foi registrada
+                  no banco de dados e o
+                  estoque foi atualizado.
+                </p>
+
+                <div className="saida-alimentacao-modal-resumo sucesso">
+                  <span>
+                    Produto
+                  </span>
+
+                  <strong>
+                    {saidaConfirmada
+                      ?.nomeProduto ||
+                      produtoSelecionado
+                        ?.nome ||
+                      '-'}
+                  </strong>
+
+                  <span>
+                    Lote
+                  </span>
+
+                  <strong>
+                    {saidaConfirmada
+                      ?.codigoLote ||
+                      estoqueSelecionado
+                        ?.codigoLote ||
+                      '-'}
+                  </strong>
+
+                  <span>
+                    Quantidade retirada
+                  </span>
+
+                  <strong>
+                    {formatarNumero(
+                      saidaConfirmada
+                        ?.quantidadeUnidades ??
+                        unidadesCalculadas
+                    )}{' '}
+                    {produtoSelecionado
+                      ?.unidadePlural ||
+                      'unidades'}
+                  </strong>
+
+                  <span>
+                    Peso movimentado
+                  </span>
+
+                  <strong>
+                    {formatarNumero(
+                      saidaConfirmada
+                        ?.pesoMovimentadoKg ??
+                        pesoLiberadoKg
+                    )}{' '}
+                    kg
+                  </strong>
+                </div>
+
+                <div className="saida-alimentacao-modal-actions">
+                  <button
+                    type="button"
+                    className="saida-alimentacao-confirmar-sucesso"
+                    onClick={() => {
+                      setModalSucessoAberto(
+                        false
+                      );
+
+                      setSaidaConfirmada(
+                        null
+                      );
+                    }}
+                  >
+                    <FaCircleCheck />
+                    Entendi
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {saidaParaExcluir && (
-          <div className="saida-alimentacao-modal-overlay">
-            <div className="saida-alimentacao-modal">
-              <div className="saida-alimentacao-modal-icon">
-                <FaTriangleExclamation />
-              </div>
-
-              <h2>Cancelar saída?</h2>
-
-              <p>
-                A quantidade retirada será devolvida ao estoque de{' '}
-                <strong>{saidaParaExcluir.nomeProduto}</strong>.
-              </p>
-
-              <div className="saida-alimentacao-modal-resumo">
-                <span>Quantidade retirada</span>
-                <strong>
-                  {formatarNumero(saidaParaExcluir.quantidadeRetirada)} unidades
-                </strong>
-
-                <span>Peso por unidade</span>
-                <strong>{formatarNumero(saidaParaExcluir.pesoUnidadeKg)} kg</strong>
-
-                <span>Peso liberado</span>
-                <strong>{formatarNumero(saidaParaExcluir.pesoLiberadoKg)} kg</strong>
-              </div>
-
-              <div className="saida-alimentacao-modal-actions">
-                <button
-                  type="button"
-                  className="saida-alimentacao-confirmar-exclusao"
-                  onClick={confirmarExclusaoSaida}
-                >
-                  <FaTrashCan />
-                  Cancelar saída
-                </button>
-
-                <button
-                  type="button"
-                  className="saida-alimentacao-cancelar-exclusao"
-                  onClick={() => setSaidaParaExcluir(null)}
-                >
-                  <FaXmark />
-                  Manter registro
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
       </section>
     </main>
   );

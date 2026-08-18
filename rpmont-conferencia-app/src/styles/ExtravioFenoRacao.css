@@ -360,3 +360,34 @@
     text-align: left;
   }
 }
+
+.extravio-alimentacao-status-analise {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.extravio-alimentacao-status-analise.pendente {
+  background: #e8f1ff;
+  color: #245ea8;
+}
+
+.extravio-alimentacao-status-analise.confirmado {
+  background: #e5f7eb;
+  color: #237a3b;
+}
+
+.extravio-alimentacao-status-analise.ajustado {
+  background: #fff1df;
+  color: #a85a00;
+}
+
+.extravio-alimentacao-status-analise.cancelado {
+  background: #fff7cc;
+  color: #7a6200;
+}

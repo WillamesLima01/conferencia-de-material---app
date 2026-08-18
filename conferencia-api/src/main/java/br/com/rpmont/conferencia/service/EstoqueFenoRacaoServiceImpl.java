@@ -265,12 +265,6 @@ public class EstoqueFenoRacaoServiceImpl
                 usuarioLogado
         );
 
-        String unidadeConsulta =
-                definirUnidadeConsulta(
-                        unidade,
-                        usuarioLogado
-                );
-
         BigDecimal pesoNormalizado =
                 pesoUnidadeKg == null
                         ? null
@@ -278,10 +272,49 @@ public class EstoqueFenoRacaoServiceImpl
                         pesoUnidadeKg
                 );
 
-        return loteRepository
-                .findByUnidadeOrderByDataEntradaDesc(
-                        unidadeConsulta
-                )
+        String unidadeNormalizada =
+                normalizarTextoOpcional(
+                        unidade
+                );
+
+        List<LoteFenoRacao> lotes;
+
+        /*
+         * ADMIN_MASTER sem unidade informada:
+         * consulta o estoque de todas as unidades.
+         */
+        if (
+                usuarioEhAdminMaster(usuarioLogado) &&
+                        unidadeNormalizada == null
+        ) {
+            lotes =
+                    loteRepository.findAll();
+        } else {
+            /*
+             * ADMIN_MASTER com unidade:
+             * consulta a unidade escolhida.
+             *
+             * ADMIN:
+             * pode consultar outra unidade quando informada;
+             * sem unidade, consulta a própria unidade.
+             *
+             * USUÁRIO_COMUM:
+             * permanece restrito à própria unidade.
+             */
+            String unidadeConsulta =
+                    definirUnidadeConsulta(
+                            unidadeNormalizada,
+                            usuarioLogado
+                    );
+
+            lotes =
+                    loteRepository
+                            .findByUnidadeOrderByDataEntradaDesc(
+                                    unidadeConsulta
+                            );
+        }
+
+        return lotes
                 .stream()
                 .filter(
                         lote ->
@@ -304,6 +337,14 @@ public class EstoqueFenoRacaoServiceImpl
                                 situacao == null ||
                                         lote.getSituacao() ==
                                                 situacao
+                )
+                .sorted(
+                        Comparator.comparing(
+                                LoteFenoRacao::getDataEntrada,
+                                Comparator.nullsLast(
+                                        Comparator.reverseOrder()
+                                )
+                        )
                 )
                 .map(
                         this::converterParaLoteResponse

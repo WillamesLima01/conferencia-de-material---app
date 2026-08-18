@@ -18,6 +18,10 @@ public record NotificacaoFenoRacaoResponseDTO(
 
         Long solicitacaoId,
 
+        Long usuarioDestinoId,
+
+        Long movimentacaoId,
+
         Boolean lida,
 
         LocalDateTime dataCriacao,

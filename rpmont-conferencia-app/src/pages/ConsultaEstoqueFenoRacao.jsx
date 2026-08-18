@@ -327,6 +327,10 @@ function ConsultaEstoqueFenoRacao({
 
   const unidadeUsuario =
     obterUnidadeUsuario(usuario);
+  
+  const adminMaster =
+  nivelUsuario ===
+  NIVEIS_USUARIO.ADMIN_MASTER;
 
   const podeSelecionarUnidade =
     nivelUsuario ===
@@ -337,7 +341,9 @@ function ConsultaEstoqueFenoRacao({
     unidadeSelecionada,
     setUnidadeSelecionada,
   ] = useState(() => {
-    return unidadeUsuario;
+    return adminMaster
+      ? ''
+      : unidadeUsuario;
   });
 
   const [
@@ -384,23 +390,27 @@ function ConsultaEstoqueFenoRacao({
   const carregarDados =
     useCallback(async () => {
       const unidadeConsulta =
-        podeSelecionarUnidade
+        adminMaster
           ? unidadeSelecionada
-          : unidadeUsuario;
+          : podeSelecionarUnidade
+            ? unidadeSelecionada
+            : unidadeUsuario;
 
-      if (!unidadeConsulta) {
-        setEstoque([]);
-        return;
-      }
+      const filtrosConsulta =
+        unidadeConsulta
+          ? {
+              unidade: unidadeConsulta,
+            }
+          : {};
 
       try {
         setCarregando(true);
         setErro('');
 
         const respostaEstoque =
-          await listarEstoqueFenoRacao({
-            unidade: unidadeConsulta,
-          });
+          await listarEstoqueFenoRacao(
+            filtrosConsulta
+          );
 
         setEstoque(
           ordenarRegistros(
@@ -424,6 +434,7 @@ function ConsultaEstoqueFenoRacao({
         setCarregando(false);
       }
     }, [
+      adminMaster,
       podeSelecionarUnidade,
       unidadeSelecionada,
       unidadeUsuario,
@@ -469,19 +480,24 @@ function ConsultaEstoqueFenoRacao({
 
   useEffect(() => {
     const unidadeConsulta =
-      podeSelecionarUnidade
+      adminMaster
         ? unidadeSelecionada
-        : unidadeUsuario;
+        : podeSelecionarUnidade
+          ? unidadeSelecionada
+          : unidadeUsuario;
 
-    if (!unidadeConsulta) {
-      return undefined;
-    }
+    const filtrosConsulta =
+      unidadeConsulta
+        ? {
+            unidade: unidadeConsulta,
+          }
+        : {};
 
     let componenteAtivo = true;
 
-    listarEstoqueFenoRacao({
-      unidade: unidadeConsulta,
-    })
+    listarEstoqueFenoRacao(
+      filtrosConsulta
+    )
       .then((respostaEstoque) => {
         if (!componenteAtivo) {
           return;
@@ -523,6 +539,7 @@ function ConsultaEstoqueFenoRacao({
       componenteAtivo = false;
     };
   }, [
+    adminMaster,
     podeSelecionarUnidade,
     unidadeSelecionada,
     unidadeUsuario,
@@ -530,6 +547,7 @@ function ConsultaEstoqueFenoRacao({
 
 
   const unidadeFoiInformada =
+    adminMaster ||
     !podeSelecionarUnidade ||
     Boolean(unidadeSelecionada);
 
@@ -587,9 +605,15 @@ function ConsultaEstoqueFenoRacao({
           (!dataFinal ||
             dataEntrada <= dataFinal);
 
+        const unidadeConfere =
+          adminMaster &&
+          !unidadeSelecionada
+            ? true
+            : unidadeItem ===
+              unidadeFiltro;
+
         return (
-          unidadeItem ===
-            unidadeFiltro &&
+          unidadeConfere &&
           produtoConfere &&
           situacaoConfere &&
           loteConfere &&
@@ -599,6 +623,7 @@ function ConsultaEstoqueFenoRacao({
     }, [
       estoque,
       unidadeFoiInformada,
+      adminMaster,
       podeSelecionarUnidade,
       unidadeSelecionada,
       unidadeUsuario,
@@ -680,7 +705,9 @@ function ConsultaEstoqueFenoRacao({
     }
 
     setUnidadeSelecionada(
-      unidadeUsuario
+      adminMaster
+        ? ''
+        : unidadeUsuario
     );
   };
 
@@ -751,7 +778,9 @@ function ConsultaEstoqueFenoRacao({
                   }}
                 >
                   <option value="">
-                    Selecione uma unidade
+                    {adminMaster
+                      ? 'Todas as unidades'
+                      : 'Selecione uma unidade'}
                   </option>
 
                   {unidades.map((unidade) => (

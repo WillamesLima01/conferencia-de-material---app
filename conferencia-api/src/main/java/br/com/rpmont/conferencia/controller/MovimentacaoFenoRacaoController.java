@@ -1,5 +1,7 @@
 package br.com.rpmont.conferencia.controller;
 
+import br.com.rpmont.conferencia.dtos.AjustarExtravioFenoRacaoRequestDTO;
+import br.com.rpmont.conferencia.dtos.CancelarExtravioFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.CancelarMovimentacaoFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.MovimentacaoFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.dtos.RegistrarExtravioFenoRacaoRequestDTO;
@@ -29,6 +31,12 @@ public class MovimentacaoFenoRacaoController {
 
     private final MovimentacaoFenoRacaoService movimentacaoService;
 
+    /*
+     * ==========================================
+     * SAÍDA
+     * ==========================================
+     */
+
     @PostMapping("/saidas")
     @ResponseStatus(HttpStatus.CREATED)
     public MovimentacaoFenoRacaoResponseDTO registrarSaida(
@@ -44,6 +52,12 @@ public class MovimentacaoFenoRacaoController {
         );
     }
 
+    /*
+     * ==========================================
+     * EXTRAVIO
+     * ==========================================
+     */
+
     @PostMapping("/extravios")
     @ResponseStatus(HttpStatus.CREATED)
     public MovimentacaoFenoRacaoResponseDTO registrarExtravio(
@@ -58,6 +72,85 @@ public class MovimentacaoFenoRacaoController {
                 obterMatriculaUsuario(authentication)
         );
     }
+
+    /*
+     * Confirma integralmente um extravio pendente.
+     */
+    @PatchMapping("/{movimentacaoId}/extravio/confirmar")
+    @ResponseStatus(HttpStatus.OK)
+    public MovimentacaoFenoRacaoResponseDTO confirmarExtravio(
+            @PathVariable("movimentacaoId")
+            @Positive(
+                    message =
+                            "O ID da movimentação deve ser maior que zero."
+            )
+            Long movimentacaoId,
+
+            Authentication authentication
+    ) {
+        return movimentacaoService.confirmarExtravio(
+                movimentacaoId,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * Ajusta parcialmente um extravio pendente.
+     */
+    @PatchMapping("/{movimentacaoId}/extravio/ajustar")
+    @ResponseStatus(HttpStatus.OK)
+    public MovimentacaoFenoRacaoResponseDTO ajustarExtravio(
+            @PathVariable("movimentacaoId")
+            @Positive(
+                    message =
+                            "O ID da movimentação deve ser maior que zero."
+            )
+            Long movimentacaoId,
+
+            @Valid
+            @RequestBody
+            AjustarExtravioFenoRacaoRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return movimentacaoService.ajustarExtravio(
+                movimentacaoId,
+                request,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * Cancela integralmente um extravio pendente.
+     */
+    @PatchMapping("/{movimentacaoId}/extravio/cancelar")
+    @ResponseStatus(HttpStatus.OK)
+    public MovimentacaoFenoRacaoResponseDTO cancelarExtravio(
+            @PathVariable("movimentacaoId")
+            @Positive(
+                    message =
+                            "O ID da movimentação deve ser maior que zero."
+            )
+            Long movimentacaoId,
+
+            @Valid
+            @RequestBody
+            CancelarExtravioFenoRacaoRequestDTO request,
+
+            Authentication authentication
+    ) {
+        return movimentacaoService.cancelarExtravio(
+                movimentacaoId,
+                request,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
+     * CONSULTAS
+     * ==========================================
+     */
 
     @GetMapping("/{movimentacaoId}")
     @ResponseStatus(HttpStatus.OK)
@@ -140,6 +233,12 @@ public class MovimentacaoFenoRacaoController {
         );
     }
 
+    /*
+     * ==========================================
+     * CANCELAMENTO DE SAÍDA
+     * ==========================================
+     */
+
     @PatchMapping("/{movimentacaoId}/cancelar")
     @ResponseStatus(HttpStatus.OK)
     public MovimentacaoFenoRacaoResponseDTO cancelar(
@@ -162,6 +261,12 @@ public class MovimentacaoFenoRacaoController {
                 obterMatriculaUsuario(authentication)
         );
     }
+
+    /*
+     * ==========================================
+     * AUTENTICAÇÃO
+     * ==========================================
+     */
 
     private String obterMatriculaUsuario(
             Authentication authentication

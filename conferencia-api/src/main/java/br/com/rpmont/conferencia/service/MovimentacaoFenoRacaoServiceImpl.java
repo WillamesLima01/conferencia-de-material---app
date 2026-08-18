@@ -1,13 +1,17 @@
 package br.com.rpmont.conferencia.service;
 
+import br.com.rpmont.conferencia.dtos.AjustarExtravioFenoRacaoRequestDTO;
+import br.com.rpmont.conferencia.dtos.CancelarExtravioFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.CancelarMovimentacaoFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.MovimentacaoFenoRacaoResponseDTO;
 import br.com.rpmont.conferencia.dtos.RegistrarExtravioFenoRacaoRequestDTO;
 import br.com.rpmont.conferencia.dtos.RegistrarSaidaFenoRacaoRequestDTO;
+import br.com.rpmont.conferencia.enums.SituacaoAnaliseExtravioFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoLoteFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoProdutoFenoRacao;
+import br.com.rpmont.conferencia.enums.TipoNotificacaoFenoRacao;
 import br.com.rpmont.conferencia.exception.BusinessException;
 import br.com.rpmont.conferencia.exception.ConflictException;
 import br.com.rpmont.conferencia.exception.ForbiddenException;
@@ -16,9 +20,11 @@ import br.com.rpmont.conferencia.model.LoteFenoRacao;
 import br.com.rpmont.conferencia.model.MovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.model.ProdutoFenoRacao;
 import br.com.rpmont.conferencia.model.Usuario;
+import br.com.rpmont.conferencia.model.NotificacaoFenoRacao;
 import br.com.rpmont.conferencia.repository.LoteFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.MovimentacaoFenoRacaoRepository;
 import br.com.rpmont.conferencia.repository.UsuarioRepository;
+import br.com.rpmont.conferencia.repository.NotificacaoFenoRacaoRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,11 +43,13 @@ public class MovimentacaoFenoRacaoServiceImpl
 
     private static final int NIVEL_ADMIN_MASTER = 1;
     private static final int NIVEL_ADMIN = 2;
+    private static final int NIVEL_USUARIO_COMUM = 3;
     private static final String STATUS_LIBERADO = "LIBERADO";
 
     private final MovimentacaoFenoRacaoRepository movimentacaoRepository;
     private final LoteFenoRacaoRepository loteRepository;
     private final UsuarioRepository usuarioRepository;
+    private final NotificacaoFenoRacaoRepository notificacaoRepository;
     private final EntityManager entityManager;
 
     /*
@@ -281,7 +289,7 @@ public class MovimentacaoFenoRacaoServiceImpl
                 usuarioLogado
         );
 
-        validarUsuarioAdministrador(
+        validarUsuarioPodeRegistrarExtravio(
                 usuarioLogado
         );
 
@@ -426,6 +434,56 @@ public class MovimentacaoFenoRacaoServiceImpl
                 SituacaoMovimentacaoFenoRacao.ATIVA
         );
 
+        if (usuarioEhAdministrador(usuarioLogado)) {
+            movimentacao.setSituacaoAnaliseExtravio(
+                    SituacaoAnaliseExtravioFenoRacao.CONFIRMADO
+            );
+
+            movimentacao.setQuantidadeConfirmada(
+                    quantidadeExtraviada
+            );
+
+            movimentacao.setQuantidadeDevolvida(
+                    0
+            );
+
+            movimentacao.setUsuarioAnaliseId(
+                    usuarioLogado.getId()
+            );
+
+            movimentacao.setDataAnalise(
+                    LocalDateTime.now()
+            );
+
+            movimentacao.setMotivoAnalise(
+                    "Extravio registrado diretamente por administrador."
+            );
+        } else {
+            movimentacao.setSituacaoAnaliseExtravio(
+                    SituacaoAnaliseExtravioFenoRacao.PENDENTE_ANALISE
+            );
+
+            movimentacao.setQuantidadeConfirmada(
+                    null
+            );
+
+            movimentacao.setQuantidadeDevolvida(
+                    0
+            );
+
+            movimentacao.setUsuarioAnaliseId(
+                    null
+            );
+
+            movimentacao.setDataAnalise(
+                    null
+            );
+
+            movimentacao.setMotivoAnalise(
+                    null
+            );
+        }
+
         LocalDateTime dataAtual =
                 LocalDateTime.now();
 
@@ -444,6 +502,512 @@ public class MovimentacaoFenoRacaoServiceImpl
         MovimentacaoFenoRacao salva =
                 movimentacaoRepository.saveAndFlush(
                         movimentacao
+                );
+
+        entityManager.refresh(
+                salva
+        );
+
+        /*
+         * Usuário comum:
+         *
+         * O extravio fica pendente de análise e
+         * os administradores responsáveis da
+         * unidade recebem notificação individual.
+         */
+        if (
+                salva.getSituacaoAnaliseExtravio() ==
+                        SituacaoAnaliseExtravioFenoRacao.PENDENTE_ANALISE
+        ) {
+            criarNotificacoesExtravioPendente(
+                    salva
+            );
+        }
+
+        return converterParaResponse(
+                salva
+        );
+    }
+
+    /*
+     * ==========================================
+     * NOTIFICAÇÃO DE EXTRAVIO
+     * ==========================================
+     */
+
+    private void criarNotificacoesExtravioPendente(
+            MovimentacaoFenoRacao movimentacao
+    ) {
+        String unidade =
+                normalizarTextoObrigatorio(
+                        movimentacao.getUnidadeOrigem(),
+                        "A unidade do extravio é obrigatória."
+                );
+
+        List<Usuario> destinatarios =
+                usuarioRepository
+                        .buscarAdministradoresResponsaveisPorExtravio(
+                                unidade
+                        );
+
+        if (
+                destinatarios == null ||
+                        destinatarios.isEmpty()
+        ) {
+            return;
+        }
+
+        LocalDateTime dataCriacao =
+                LocalDateTime.now();
+
+        for (Usuario destinatario : destinatarios) {
+            NotificacaoFenoRacao notificacao =
+                    new NotificacaoFenoRacao();
+
+            notificacao.setUnidadeDestino(
+                    unidade
+            );
+
+            notificacao.setTitulo(
+                    "Extravio aguardando análise"
+            );
+
+            notificacao.setMensagem(
+                    montarMensagemNotificacaoExtravio(
+                            movimentacao
+                    )
+            );
+
+            notificacao.setTipo(
+                    TipoNotificacaoFenoRacao.EXTRAVIO_PENDENTE_ANALISE
+            );
+
+            notificacao.setSolicitacao(
+                    null
+            );
+
+            notificacao.setUsuarioDestinoId(
+                    destinatario.getId()
+            );
+
+            notificacao.setMovimentacaoId(
+                    movimentacao.getId()
+            );
+
+            notificacao.setLida(
+                    false
+            );
+
+            notificacao.setDataCriacao(
+                    dataCriacao
+            );
+
+            notificacao.setDataLeitura(
+                    null
+            );
+
+            notificacao.setUsuarioLeituraId(
+                    null
+            );
+
+            notificacaoRepository.save(
+                    notificacao
+            );
+        }
+    }
+
+    private String montarMensagemNotificacaoExtravio(
+            MovimentacaoFenoRacao movimentacao
+    ) {
+        String produto =
+                movimentacao.getProduto() != null
+                        ? movimentacao
+                        .getProduto()
+                        .getNomeProduto()
+                        : "Feno/Ração";
+
+        String lote =
+                movimentacao.getLote() != null
+                        ? movimentacao
+                        .getLote()
+                        .getCodigoLote()
+                        : "não informado";
+
+        return "Foi registrado um extravio de "
+                + movimentacao.getQuantidadeUnidades()
+                + " unidade(s) de "
+                + produto
+                + ", lote "
+                + lote
+                + ", na unidade "
+                + movimentacao.getUnidadeOrigem()
+                + ". A ocorrência aguarda análise administrativa.";
+    }
+
+
+    /*
+     * ==========================================
+     * CONFIRMAR EXTRAVIO
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MovimentacaoFenoRacaoResponseDTO confirmarExtravio(
+            Long movimentacaoId,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoAoModulo(
+                usuarioLogado
+        );
+
+        validarUsuarioAdministrador(
+                usuarioLogado
+        );
+
+        MovimentacaoFenoRacao original =
+                buscarMovimentacaoPorId(
+                        movimentacaoId
+                );
+
+        validarAcessoMovimentacao(
+                original,
+                usuarioLogado
+        );
+
+        validarExtravioPendenteAnalise(
+                original
+        );
+
+        int quantidadeOriginal =
+                original.getQuantidadeUnidades();
+
+        LocalDateTime dataAtual =
+                LocalDateTime.now();
+
+        original.setSituacaoAnaliseExtravio(
+                SituacaoAnaliseExtravioFenoRacao.CONFIRMADO
+        );
+
+        original.setQuantidadeConfirmada(
+                quantidadeOriginal
+        );
+
+        original.setQuantidadeDevolvida(
+                0
+        );
+
+        original.setUsuarioAnaliseId(
+                usuarioLogado.getId()
+        );
+
+        original.setDataAnalise(
+                dataAtual
+        );
+
+        original.setMotivoAnalise(
+                "Extravio confirmado integralmente pelo administrador."
+        );
+
+        original.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        original.setDataModificacao(
+                dataAtual
+        );
+
+        MovimentacaoFenoRacao salva =
+                movimentacaoRepository.saveAndFlush(
+                        original
+                );
+
+        entityManager.refresh(
+                salva
+        );
+
+        return converterParaResponse(
+                salva
+        );
+    }
+
+    /*
+     * ==========================================
+     * AJUSTAR EXTRAVIO
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MovimentacaoFenoRacaoResponseDTO ajustarExtravio(
+            Long movimentacaoId,
+            AjustarExtravioFenoRacaoRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoAoModulo(
+                usuarioLogado
+        );
+
+        validarUsuarioAdministrador(
+                usuarioLogado
+        );
+
+        validarRequestAjusteExtravio(
+                request
+        );
+
+        MovimentacaoFenoRacao original =
+                buscarMovimentacaoPorId(
+                        movimentacaoId
+                );
+
+        validarAcessoMovimentacao(
+                original,
+                usuarioLogado
+        );
+
+        validarExtravioPendenteAnalise(
+                original
+        );
+
+        int quantidadeOriginal =
+                original.getQuantidadeUnidades();
+
+        int quantidadeConfirmada =
+                request.quantidadeConfirmada();
+
+        if (quantidadeConfirmada >= quantidadeOriginal) {
+            throw new BusinessException(
+                    "No ajuste, a quantidade confirmada deve ser menor que a quantidade originalmente informada."
+            );
+        }
+
+        int quantidadeDevolvida =
+                quantidadeOriginal -
+                        quantidadeConfirmada;
+
+        LoteFenoRacao lote =
+                original.getLote();
+
+        int saldoAnterior =
+                lote.getQuantidadeAtual();
+
+        int saldoPosterior =
+                saldoAnterior +
+                        quantidadeDevolvida;
+
+        restaurarSaldoLoteExtravio(
+                lote,
+                saldoPosterior,
+                usuarioLogado
+        );
+
+        LocalDateTime dataAtual =
+                LocalDateTime.now();
+
+        original.setSituacaoAnaliseExtravio(
+                SituacaoAnaliseExtravioFenoRacao.AJUSTADO
+        );
+
+        original.setQuantidadeConfirmada(
+                quantidadeConfirmada
+        );
+
+        original.setQuantidadeDevolvida(
+                quantidadeDevolvida
+        );
+
+        original.setUsuarioAnaliseId(
+                usuarioLogado.getId()
+        );
+
+        original.setDataAnalise(
+                dataAtual
+        );
+
+        original.setMotivoAnalise(
+                normalizarTextoObrigatorio(
+                        request.motivo(),
+                        "O motivo do ajuste é obrigatório."
+                )
+        );
+
+        original.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        original.setDataModificacao(
+                dataAtual
+        );
+
+        movimentacaoRepository.save(
+                original
+        );
+
+        MovimentacaoFenoRacao ajuste =
+                criarMovimentacaoRetornoExtravio(
+                        original,
+                        lote,
+                        TipoMovimentacaoFenoRacao.AJUSTE_EXTRAVIO,
+                        quantidadeDevolvida,
+                        saldoAnterior,
+                        saldoPosterior,
+                        request.motivo(),
+                        usuarioLogado
+                );
+
+        movimentacaoRepository.saveAndFlush(
+                ajuste
+        );
+
+        MovimentacaoFenoRacao salva =
+                movimentacaoRepository.saveAndFlush(
+                        original
+                );
+
+        entityManager.refresh(
+                salva
+        );
+
+        return converterParaResponse(
+                salva
+        );
+    }
+
+    /*
+     * ==========================================
+     * CANCELAR EXTRAVIO
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MovimentacaoFenoRacaoResponseDTO cancelarExtravio(
+            Long movimentacaoId,
+            CancelarExtravioFenoRacaoRequestDTO request,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoAoModulo(
+                usuarioLogado
+        );
+
+        validarUsuarioAdministrador(
+                usuarioLogado
+        );
+
+        validarRequestCancelamentoExtravio(
+                request
+        );
+
+        MovimentacaoFenoRacao original =
+                buscarMovimentacaoPorId(
+                        movimentacaoId
+                );
+
+        validarAcessoMovimentacao(
+                original,
+                usuarioLogado
+        );
+
+        validarExtravioPendenteAnalise(
+                original
+        );
+
+        int quantidadeOriginal =
+                original.getQuantidadeUnidades();
+
+        LoteFenoRacao lote =
+                original.getLote();
+
+        int saldoAnterior =
+                lote.getQuantidadeAtual();
+
+        int saldoPosterior =
+                saldoAnterior +
+                        quantidadeOriginal;
+
+        restaurarSaldoLoteExtravio(
+                lote,
+                saldoPosterior,
+                usuarioLogado
+        );
+
+        LocalDateTime dataAtual =
+                LocalDateTime.now();
+
+        original.setSituacaoAnaliseExtravio(
+                SituacaoAnaliseExtravioFenoRacao.CANCELADO
+        );
+
+        original.setQuantidadeConfirmada(
+                0
+        );
+
+        original.setQuantidadeDevolvida(
+                quantidadeOriginal
+        );
+
+        original.setUsuarioAnaliseId(
+                usuarioLogado.getId()
+        );
+
+        original.setDataAnalise(
+                dataAtual
+        );
+
+        original.setMotivoAnalise(
+                normalizarTextoObrigatorio(
+                        request.motivo(),
+                        "O motivo do cancelamento é obrigatório."
+                )
+        );
+
+        original.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        original.setDataModificacao(
+                dataAtual
+        );
+
+        movimentacaoRepository.save(
+                original
+        );
+
+        MovimentacaoFenoRacao cancelamento =
+                criarMovimentacaoRetornoExtravio(
+                        original,
+                        lote,
+                        TipoMovimentacaoFenoRacao.CANCELAMENTO_EXTRAVIO,
+                        quantidadeOriginal,
+                        saldoAnterior,
+                        saldoPosterior,
+                        request.motivo(),
+                        usuarioLogado
+                );
+
+        movimentacaoRepository.saveAndFlush(
+                cancelamento
+        );
+
+        MovimentacaoFenoRacao salva =
+                movimentacaoRepository.saveAndFlush(
+                        original
                 );
 
         entityManager.refresh(
@@ -947,6 +1511,37 @@ public class MovimentacaoFenoRacaoServiceImpl
         }
     }
 
+    private boolean usuarioEhAdministrador(
+            Usuario usuario
+    ) {
+        if (usuario == null || usuario.getNivel() == null) {
+            return false;
+        }
+
+        return usuario.getNivel() == NIVEL_ADMIN_MASTER ||
+                usuario.getNivel() == NIVEL_ADMIN;
+    }
+
+    private void validarUsuarioPodeRegistrarExtravio(
+            Usuario usuario
+    ) {
+        if (usuario.getNivel() == null) {
+            throw new ForbiddenException(
+                    "O usuário não possui nível de acesso cadastrado."
+            );
+        }
+
+        if (
+                usuario.getNivel() != NIVEL_ADMIN_MASTER &&
+                        usuario.getNivel() != NIVEL_ADMIN &&
+                        usuario.getNivel() != NIVEL_USUARIO_COMUM
+        ) {
+            throw new ForbiddenException(
+                    "O usuário não possui permissão para registrar extravio."
+            );
+        }
+    }
+
     private void validarUsuarioAdministrador(
             Usuario usuario
     ) {
@@ -1190,6 +1785,68 @@ public class MovimentacaoFenoRacaoServiceImpl
         }
     }
 
+
+    private void validarExtravioPendenteAnalise(
+            MovimentacaoFenoRacao movimentacao
+    ) {
+        if (
+                movimentacao.getTipoMovimentacao() !=
+                        TipoMovimentacaoFenoRacao.EXTRAVIO
+        ) {
+            throw new ConflictException(
+                    "A movimentação informada não é um extravio."
+            );
+        }
+
+        if (
+                movimentacao.getSituacaoAnaliseExtravio() !=
+                        SituacaoAnaliseExtravioFenoRacao.PENDENTE_ANALISE
+        ) {
+            throw new ConflictException(
+                    "Este extravio já foi analisado."
+            );
+        }
+    }
+
+    private void validarRequestAjusteExtravio(
+            AjustarExtravioFenoRacaoRequestDTO request
+    ) {
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados do ajuste são obrigatórios."
+            );
+        }
+
+        if (
+                request.quantidadeConfirmada() == null ||
+                        request.quantidadeConfirmada() <= 0
+        ) {
+            throw new BusinessException(
+                    "A quantidade confirmada deve ser maior que zero."
+            );
+        }
+
+        normalizarTextoObrigatorio(
+                request.motivo(),
+                "O motivo do ajuste é obrigatório."
+        );
+    }
+
+    private void validarRequestCancelamentoExtravio(
+            CancelarExtravioFenoRacaoRequestDTO request
+    ) {
+        if (request == null) {
+            throw new BusinessException(
+                    "Os dados do cancelamento do extravio são obrigatórios."
+            );
+        }
+
+        normalizarTextoObrigatorio(
+                request.motivo(),
+                "O motivo do cancelamento é obrigatório."
+        );
+    }
+
     /*
      * ==========================================
      * ESTOQUE
@@ -1232,6 +1889,175 @@ public class MovimentacaoFenoRacaoServiceImpl
         loteRepository.save(
                 lote
         );
+    }
+
+
+    private void restaurarSaldoLoteExtravio(
+            LoteFenoRacao lote,
+            int saldoPosterior,
+            Usuario usuario
+    ) {
+        lote.setQuantidadeAtual(
+                saldoPosterior
+        );
+
+        lote.setPesoTotalAtualKg(
+                lote.getProduto()
+                        .getPesoUnidadeKg()
+                        .multiply(
+                                BigDecimal.valueOf(
+                                        saldoPosterior
+                                )
+                        )
+        );
+
+        lote.setSituacao(
+                SituacaoLoteFenoRacao.ATIVO
+        );
+
+        lote.setUsuarioModificadorId(
+                usuario.getId()
+        );
+
+        lote.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        loteRepository.save(
+                lote
+        );
+    }
+
+    private MovimentacaoFenoRacao criarMovimentacaoRetornoExtravio(
+            MovimentacaoFenoRacao original,
+            LoteFenoRacao lote,
+            TipoMovimentacaoFenoRacao tipoMovimentacao,
+            int quantidadeDevolvida,
+            int saldoAnterior,
+            int saldoPosterior,
+            String motivo,
+            Usuario usuarioLogado
+    ) {
+        BigDecimal pesoMovimentado =
+                original.getPesoUnidadeKg()
+                        .multiply(
+                                BigDecimal.valueOf(
+                                        quantidadeDevolvida
+                                )
+                        );
+
+        MovimentacaoFenoRacao retorno =
+                new MovimentacaoFenoRacao();
+
+        retorno.setProduto(
+                original.getProduto()
+        );
+
+        retorno.setLote(
+                lote
+        );
+
+        retorno.setTipoMovimentacao(
+                tipoMovimentacao
+        );
+
+        retorno.setQuantidadeUnidades(
+                quantidadeDevolvida
+        );
+
+        retorno.setPesoUnidadeKg(
+                original.getPesoUnidadeKg()
+        );
+
+        retorno.setQuantidadeSolicitadaKg(
+                pesoMovimentado
+        );
+
+        retorno.setPesoMovimentadoKg(
+                pesoMovimentado
+        );
+
+        retorno.setSobraCalculadaKg(
+                BigDecimal.ZERO
+        );
+
+        retorno.setSaldoAnterior(
+                saldoAnterior
+        );
+
+        retorno.setSaldoPosterior(
+                saldoPosterior
+        );
+
+        retorno.setUnidadeOrigem(
+                null
+        );
+
+        retorno.setUnidadeDestino(
+                lote.getUnidade()
+        );
+
+        retorno.setDataOperacao(
+                LocalDate.now()
+        );
+
+        retorno.setServico(
+                null
+        );
+
+        retorno.setMotivo(
+                normalizarTextoObrigatorio(
+                        motivo,
+                        "O motivo da análise é obrigatório."
+                )
+        );
+
+        retorno.setObservacao(
+                null
+        );
+
+        retorno.setNumeroDocumento(
+                original.getNumeroDocumento()
+        );
+
+        retorno.setResponsavel(
+                original.getResponsavel()
+        );
+
+        retorno.setUsuarioId(
+                usuarioLogado.getId()
+        );
+
+        retorno.setUsuarioSetor(
+                normalizarTextoOpcional(
+                        usuarioLogado.getSetor()
+                )
+        );
+
+        retorno.setSituacao(
+                SituacaoMovimentacaoFenoRacao.ATIVA
+        );
+
+        retorno.setMovimentacaoOrigem(
+                original
+        );
+
+        LocalDateTime agora =
+                LocalDateTime.now();
+
+        retorno.setDataCadastro(
+                agora
+        );
+
+        retorno.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        retorno.setDataModificacao(
+                agora
+        );
+
+        return retorno;
     }
 
     /*
@@ -1356,6 +2182,13 @@ public class MovimentacaoFenoRacaoServiceImpl
                 movimentacao.getUsuarioId(),
                 movimentacao.getUsuarioSetor(),
                 movimentacao.getSituacao(),
+                movimentacao.getSituacaoAnaliseExtravio(),
+                movimentacao.getQuantidadeConfirmada(),
+                movimentacao.getQuantidadeDevolvida(),
+                movimentacao.getUsuarioAnaliseId(),
+                movimentacao.getDataAnalise(),
+                movimentacao.getMotivoAnalise(),
+
                 movimentacao.getMovimentacaoOrigem() == null
                         ? null
                         : movimentacao

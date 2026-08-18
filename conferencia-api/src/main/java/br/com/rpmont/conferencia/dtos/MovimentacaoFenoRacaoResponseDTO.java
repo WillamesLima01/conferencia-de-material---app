@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.dtos;
 
+import br.com.rpmont.conferencia.enums.SituacaoAnaliseExtravioFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoProdutoFenoRacao;
@@ -62,6 +63,18 @@ public record MovimentacaoFenoRacaoResponseDTO(
         String usuarioSetor,
 
         SituacaoMovimentacaoFenoRacao situacao,
+
+        SituacaoAnaliseExtravioFenoRacao situacaoAnaliseExtravio,
+
+        Integer quantidadeConfirmada,
+
+        Integer quantidadeDevolvida,
+
+        Long usuarioAnaliseId,
+
+        LocalDateTime dataAnalise,
+
+        String motivoAnalise,
 
         Long movimentacaoOrigemId,
 

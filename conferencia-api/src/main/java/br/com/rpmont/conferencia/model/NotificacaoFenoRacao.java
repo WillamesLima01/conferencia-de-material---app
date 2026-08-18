@@ -67,6 +67,24 @@ public class NotificacaoFenoRacao {
     @JoinColumn(name = "`solicitacaoID`")
     private SolicitacaoTransferenciaFenoRacao solicitacao;
 
+    /*
+     * ==========================================
+     * DESTINATÁRIO INDIVIDUAL
+     * ==========================================
+     */
+
+    @Column(name = "`usuarioDestinoID`")
+    private Long usuarioDestinoId;
+
+    /*
+     * ==========================================
+     * VÍNCULO COM MOVIMENTAÇÃO
+     * ==========================================
+     */
+
+    @Column(name = "`movimentacaoID`")
+    private Long movimentacaoId;
+
     @Column(
             name = "`lida`",
             nullable = false

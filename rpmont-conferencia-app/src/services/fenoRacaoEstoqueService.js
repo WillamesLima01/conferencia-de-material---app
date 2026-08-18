@@ -37,6 +37,30 @@ export const cadastrarEntradaFenoRacao = async (
   );
 };
 
+export const registrarSaidaFenoRacao = async (
+  dados
+) => {
+  return api(
+    '/feno-racao/movimentacoes/saidas',
+    {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }
+  );
+};
+
+export const registrarExtravioFenoRacao = async (
+  dados
+) => {
+  return api(
+    '/feno-racao/movimentacoes/extravios',
+    {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }
+  );
+};
+
 export const listarEstoqueFenoRacao = async (
   filtros = {}
 ) => {

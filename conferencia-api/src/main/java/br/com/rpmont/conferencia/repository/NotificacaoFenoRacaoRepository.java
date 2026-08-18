@@ -9,6 +9,12 @@ import java.util.List;
 public interface NotificacaoFenoRacaoRepository
         extends JpaRepository<NotificacaoFenoRacao, Long> {
 
+    /*
+     * ==========================================
+     * NOTIFICAÇÕES GERAIS DA UNIDADE
+     * ==========================================
+     */
+
     List<NotificacaoFenoRacao>
     findByUnidadeDestinoOrderByDataCriacaoDesc(
             String unidadeDestino
@@ -30,6 +36,57 @@ public interface NotificacaoFenoRacaoRepository
             String unidadeDestino,
             Boolean lida
     );
+
+    /*
+     * ==========================================
+     * NOTIFICAÇÕES GERAIS SEM DESTINATÁRIO
+     * INDIVIDUAL
+     * ==========================================
+     */
+
+    List<NotificacaoFenoRacao>
+    findByUnidadeDestinoAndUsuarioDestinoIdIsNullOrderByDataCriacaoDesc(
+            String unidadeDestino
+    );
+
+    List<NotificacaoFenoRacao>
+    findByUnidadeDestinoAndUsuarioDestinoIdIsNullAndLidaOrderByDataCriacaoDesc(
+            String unidadeDestino,
+            Boolean lida
+    );
+
+    long countByUnidadeDestinoAndUsuarioDestinoIdIsNullAndLida(
+            String unidadeDestino,
+            Boolean lida
+    );
+
+    /*
+     * ==========================================
+     * NOTIFICAÇÕES INDIVIDUAIS
+     * ==========================================
+     */
+
+    List<NotificacaoFenoRacao>
+    findByUsuarioDestinoIdOrderByDataCriacaoDesc(
+            Long usuarioDestinoId
+    );
+
+    List<NotificacaoFenoRacao>
+    findByUsuarioDestinoIdAndLidaOrderByDataCriacaoDesc(
+            Long usuarioDestinoId,
+            Boolean lida
+    );
+
+    long countByUsuarioDestinoIdAndLida(
+            Long usuarioDestinoId,
+            Boolean lida
+    );
+
+    /*
+     * ==========================================
+     * OUTRAS CONSULTAS
+     * ==========================================
+     */
 
     List<NotificacaoFenoRacao>
     findBySolicitacaoIdOrderByDataCriacaoDesc(
