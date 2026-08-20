@@ -26,6 +26,10 @@ import {
   zerarConferencia,
 } from './services/materialPatrimonialService';
 
+import {
+  consultarResumoPendenciasAdministrativas,
+} from './services/pendenciasAdministrativasFenoRacaoService';
+
 import './App.css';
 
 const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
@@ -34,6 +38,13 @@ const NIVEIS_USUARIO = {
   ADMIN_MASTER: 1,
   ADMIN: 2,
   USUARIO_COMUM: 3,
+};
+
+const RESUMO_PENDENCIAS_VAZIO = {
+  extraviosPendentes: 0,
+  transferenciasPendentes: 0,
+  totalPendencias: 0,
+  possuiPendencias: false,
 };
 
 function App() {
@@ -45,18 +56,55 @@ function App() {
   ] = useState(null);
 
   const [materiais, setMateriais] = useState([]);
-  const [carregandoMateriais, setCarregandoMateriais] =
-    useState(false);
-  const [erroMateriais, setErroMateriais] = useState('');
 
-  const [abrirConsulta, setAbrirConsulta] = useState(false);
+  const [
+    carregandoMateriais,
+    setCarregandoMateriais,
+  ] = useState(false);
+
+  const [
+    erroMateriais,
+    setErroMateriais,
+  ] = useState('');
+
+  const [
+    abrirConsulta,
+    setAbrirConsulta,
+  ] = useState(false);
 
   const [
     abrirConsultaMovimentacoes,
     setAbrirConsultaMovimentacoes,
   ] = useState(false);
 
-  const [abrirAdmin, setAbrirAdmin] = useState(false);
+  const [
+    abrirAdmin,
+    setAbrirAdmin,
+  ] = useState(false);
+
+  /*
+   * =====================================================
+   * PENDÊNCIAS ADMINISTRATIVAS
+   * =====================================================
+   */
+
+  const [
+    pendenciasAdministrativas,
+    setPendenciasAdministrativas,
+  ] = useState({
+    ...RESUMO_PENDENCIAS_VAZIO,
+  });
+
+  const [
+    abrirAvisoPendencias,
+    setAbrirAvisoPendencias,
+  ] = useState(false);
+
+  /*
+   * =====================================================
+   * TELAS DE FENO E RAÇÃO
+   * =====================================================
+   */
 
   const [
     abrirCadastroAlimentacao,
@@ -93,11 +141,21 @@ function App() {
     setAbrirModalFenoRacao,
   ] = useState(false);
 
-  const [cadastroPendente, setCadastroPendente] =
-    useState(null);
+  /*
+   * =====================================================
+   * OUTROS ESTADOS
+   * =====================================================
+   */
 
-  const [materialEmEdicao, setMaterialEmEdicao] =
-    useState(null);
+  const [
+    cadastroPendente,
+    setCadastroPendente,
+  ] = useState(null);
+
+  const [
+    materialEmEdicao,
+    setMaterialEmEdicao,
+  ] = useState(null);
 
   const [
     abrirSolicitarAcesso,
@@ -115,6 +173,12 @@ function App() {
     );
   });
 
+  /*
+   * =====================================================
+   * RECUPERAÇÃO DE SENHA
+   * =====================================================
+   */
+
   useEffect(() => {
     if (abrirRecuperarSenha) {
       sessionStorage.setItem(
@@ -130,8 +194,15 @@ function App() {
     );
   }, [abrirRecuperarSenha]);
 
+  /*
+   * =====================================================
+   * UTILITÁRIOS
+   * =====================================================
+   */
+
   const obterMensagemErro = (error) => {
     return (
+      error?.data?.message ||
       error?.response?.data?.message ||
       error?.message ||
       'Não foi possível concluir a operação.'
@@ -156,6 +227,12 @@ function App() {
       .replace(/\s+/g, '')
       .replace(/[^A-Z0-9]/g, '');
   };
+
+  /*
+   * =====================================================
+   * USUÁRIO
+   * =====================================================
+   */
 
   const obterNivelUsuario = (usuario) => {
     return Number(
@@ -191,7 +268,8 @@ function App() {
   };
 
   const usuarioEhAdmin = (usuario) => {
-    const nivel = obterNivelUsuario(usuario);
+    const nivel =
+      obterNivelUsuario(usuario);
 
     return (
       nivel === NIVEIS_USUARIO.ADMIN_MASTER ||
@@ -215,10 +293,17 @@ function App() {
   };
 
   const usuarioEhUnidadeEquina = (usuario) => {
-    const unidade = obterUnidadeUsuario(usuario);
+    const unidade =
+      obterUnidadeUsuario(usuario);
 
     return UNIDADES_EQUINAS.includes(unidade);
   };
+
+  /*
+   * =====================================================
+   * PERMISSÕES
+   * =====================================================
+   */
 
   const usuarioPodeAcessarPatrimonio = (usuario) => {
     return usuarioEhP4(usuario);
@@ -244,6 +329,12 @@ function App() {
       usuarioEhAdmin(usuario)
     );
   };
+
+  /*
+   * =====================================================
+   * MATERIAIS
+   * =====================================================
+   */
 
   const carregarMateriais = async (
     usuario,
@@ -300,11 +391,18 @@ function App() {
     }
   };
 
+  /*
+   * =====================================================
+   * NORMALIZAÇÃO DO USUÁRIO
+   * =====================================================
+   */
+
   const normalizarUsuarioLogado = (usuario) => {
-    const matriculaLimpa = limparNumeros(
-      usuario?.matricula ??
-        usuario?.MATRICULA
-    );
+    const matriculaLimpa =
+      limparNumeros(
+        usuario?.matricula ??
+          usuario?.MATRICULA
+      );
 
     const usuarioWillamesTeste =
       matriculaLimpa === '5257093';
@@ -315,19 +413,24 @@ function App() {
         NIVEIS_USUARIO.USUARIO_COMUM
     );
 
-    const nivelFinal = usuarioWillamesTeste
-      ? NIVEIS_USUARIO.ADMIN_MASTER
-      : nivelRecebido;
+    const nivelFinal =
+      usuarioWillamesTeste
+        ? NIVEIS_USUARIO.ADMIN_MASTER
+        : nivelRecebido;
 
     const unidadeFinal =
       usuario?.unidade ??
       usuario?.UNIDADE ??
-      (usuarioWillamesTeste ? 'RPMont' : '');
+      (usuarioWillamesTeste
+        ? 'RPMont'
+        : '');
 
     const setorFinal =
       usuario?.setor ??
       usuario?.SETOR ??
-      (usuarioWillamesTeste ? 'P4' : '');
+      (usuarioWillamesTeste
+        ? 'P4'
+        : '');
 
     const usuarioNormalizado = {
       ...usuario,
@@ -460,30 +563,8 @@ function App() {
     );
 
     console.log(
-      'É P4?',
-      usuarioEhP4(usuarioNormalizado)
-    );
-
-    console.log(
-      'É BAIA?',
-      usuarioEhBaia(usuarioNormalizado)
-    );
-
-    console.log(
-      'É FISCAL-DE-DIA?',
-      usuarioEhFiscalDeDia(
-        usuarioNormalizado
-      )
-    );
-
-    console.log(
       'UNIDADE:',
       usuarioNormalizado.unidade
-    );
-
-    console.log(
-      'SETOR:',
-      usuarioNormalizado.setor
     );
 
     console.log(
@@ -493,6 +574,122 @@ function App() {
 
     return usuarioNormalizado;
   };
+
+  /*
+   * =====================================================
+   * PENDÊNCIAS ADMINISTRATIVAS
+   * =====================================================
+   */
+
+  const carregarPendenciasAdministrativas =
+    async (usuario) => {
+      if (
+        !usuario ||
+        !usuarioPodeAdministrarFenoRacao(usuario)
+      ) {
+        const resumoVazio = {
+          ...RESUMO_PENDENCIAS_VAZIO,
+        };
+
+        setPendenciasAdministrativas(
+          resumoVazio
+        );
+
+        return resumoVazio;
+      }
+
+      try {
+        const resumo =
+          await consultarResumoPendenciasAdministrativas();
+
+        console.log(
+          'PENDÊNCIAS ADMINISTRATIVAS:',
+          resumo
+        );
+
+        const extraviosPendentes =
+          Number(
+            resumo?.extraviosPendentes ??
+              0
+          );
+
+        const transferenciasPendentes =
+          Number(
+            resumo?.transferenciasPendentes ??
+              0
+          );
+
+        const totalCalculado =
+          extraviosPendentes +
+          transferenciasPendentes;
+
+        const totalRecebido =
+          Number(
+            resumo?.totalPendencias
+          );
+
+        const totalPendencias =
+          Number.isFinite(totalRecebido)
+            ? totalRecebido
+            : totalCalculado;
+
+        const pendenciasNormalizadas = {
+          extraviosPendentes:
+            Number.isFinite(
+              extraviosPendentes
+            )
+              ? extraviosPendentes
+              : 0,
+
+          transferenciasPendentes:
+            Number.isFinite(
+              transferenciasPendentes
+            )
+              ? transferenciasPendentes
+              : 0,
+
+          totalPendencias:
+            Number.isFinite(
+              totalPendencias
+            )
+              ? totalPendencias
+              : totalCalculado,
+
+          possuiPendencias:
+            Boolean(
+              resumo?.possuiPendencias ??
+                totalCalculado > 0
+            ),
+        };
+
+        setPendenciasAdministrativas(
+          pendenciasNormalizadas
+        );
+
+        return pendenciasNormalizadas;
+      } catch (error) {
+        console.error(
+          'Erro ao carregar pendências administrativas:',
+          error
+        );
+
+        const resumoVazio = {
+          ...RESUMO_PENDENCIAS_VAZIO,
+        };
+
+        setPendenciasAdministrativas(
+          resumoVazio
+        );
+
+        return resumoVazio;
+      }
+    };
+
+  /*
+   * =====================================================
+   * FECHAR TELAS
+   * =====================================================
+   */
 
   const fecharTelasSecundarias = () => {
     setConfiguracaoConferencia(null);
@@ -510,17 +707,38 @@ function App() {
     setMaterialEmEdicao(null);
   };
 
+  /*
+   * =====================================================
+   * LOGOUT
+   * =====================================================
+   */
+
   const sairDoSistema = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('usuarioLogado');
 
     setUsuarioLogado(null);
+
     setMateriais([]);
+
     setErroMateriais('');
+
     setCarregandoMateriais(false);
+
+    setPendenciasAdministrativas({
+      ...RESUMO_PENDENCIAS_VAZIO,
+    });
+
+    setAbrirAvisoPendencias(false);
 
     fecharTelasSecundarias();
   };
+
+  /*
+   * =====================================================
+   * ZERAR CONFERÊNCIA
+   * =====================================================
+   */
 
   const zerarConferenciaPatrimonial = async ({
     usuario,
@@ -528,38 +746,45 @@ function App() {
     tipo,
     setor,
   }) => {
-    if (!usuarioPodeAcessarPatrimonio(usuario)) {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuario
+      )
+    ) {
       throw new Error(
         'Acesso negado. Somente usuários do setor P4 podem zerar a conferência patrimonial.'
       );
     }
-  
+
     if (!usuarioEhAdmin(usuario)) {
       throw new Error(
         'Acesso negado. Somente administradores podem zerar a conferência.'
       );
     }
-  
-    const senhaTratada = String(
-      senha ?? ''
-    ).trim();
-  
-    const tipoTratado = String(
-      tipo ?? ''
-    )
-      .trim()
-      .toUpperCase();
-  
-    const setorTratado = String(
-      setor ?? ''
-    ).trim();
-  
+
+    const senhaTratada =
+      String(
+        senha ?? ''
+      ).trim();
+
+    const tipoTratado =
+      String(
+        tipo ?? ''
+      )
+        .trim()
+        .toUpperCase();
+
+    const setorTratado =
+      String(
+        setor ?? ''
+      ).trim();
+
     if (!senhaTratada) {
       throw new Error(
         'Digite a senha do administrador.'
       );
     }
-  
+
     if (
       tipoTratado !== 'TODOS' &&
       tipoTratado !== 'SETOR'
@@ -568,7 +793,7 @@ function App() {
         'O tipo de zeramento é inválido.'
       );
     }
-  
+
     if (
       tipoTratado === 'SETOR' &&
       !setorTratado
@@ -577,7 +802,7 @@ function App() {
         'O setor da conferência não foi identificado.'
       );
     }
-  
+
     try {
       const quantidadeZerada =
         await zerarConferencia({
@@ -588,19 +813,19 @@ function App() {
               ? setorTratado
               : null,
         });
-  
+
       await carregarMateriais(
         usuario,
         false
       );
-  
+
       return quantidadeZerada;
     } catch (error) {
       console.error(
         'Erro ao zerar conferência:',
         error
       );
-  
+
       throw new Error(
         obterMensagemErro(error),
         {
@@ -609,6 +834,12 @@ function App() {
       );
     }
   };
+
+  /*
+   * =====================================================
+   * MATERIAL
+   * =====================================================
+   */
 
   const salvarMaterialCadastrado = async (
     dadosNovoMaterial
@@ -631,10 +862,14 @@ function App() {
           dadosNovoMaterial
         );
 
-      setMateriais((materiaisAtuais) => [
-        ...materiaisAtuais,
-        materialCadastrado,
-      ]);
+      setMateriais(
+        (
+          materiaisAtuais
+        ) => [
+          ...materiaisAtuais,
+          materialCadastrado,
+        ]
+      );
 
       setCadastroPendente(null);
     } catch (error) {
@@ -643,7 +878,9 @@ function App() {
         error
       );
 
-      window.alert(obterMensagemErro(error));
+      window.alert(
+        obterMensagemErro(error)
+      );
     }
   };
 
@@ -663,9 +900,14 @@ function App() {
     }
 
     const idMaterial =
-      obterIdMaterial(materialEmEdicao);
+      obterIdMaterial(
+        materialEmEdicao
+      );
 
-    if (idMaterial === null || idMaterial === undefined) {
+    if (
+      idMaterial === null ||
+      idMaterial === undefined
+    ) {
       window.alert(
         'Não foi possível identificar o material que será editado.'
       );
@@ -680,12 +922,18 @@ function App() {
           dadosAtualizados
         );
 
-      setMateriais((materiaisAtuais) =>
-        materiaisAtuais.map((material) =>
-          obterIdMaterial(material) === idMaterial
-            ? materialAtualizado
-            : material
-        )
+      setMateriais(
+        (
+          materiaisAtuais
+        ) =>
+          materiaisAtuais.map(
+            (material) =>
+              obterIdMaterial(
+                material
+              ) === idMaterial
+                ? materialAtualizado
+                : material
+          )
       );
 
       setMaterialEmEdicao(null);
@@ -695,7 +943,9 @@ function App() {
         error
       );
 
-      window.alert(obterMensagemErro(error));
+      window.alert(
+        obterMensagemErro(error)
+      );
     }
   };
 
@@ -707,7 +957,9 @@ function App() {
       materialAtualizado;
 
     const idMaterialAtualizado =
-      obterIdMaterial(materialRecebido);
+      obterIdMaterial(
+        materialRecebido
+      );
 
     if (
       !materialRecebido ||
@@ -722,13 +974,18 @@ function App() {
       return;
     }
 
-    setMateriais((materiaisAtuais) =>
-      materiaisAtuais.map((material) =>
-        obterIdMaterial(material) ===
-        idMaterialAtualizado
-          ? materialRecebido
-          : material
-      )
+    setMateriais(
+      (
+        materiaisAtuais
+      ) =>
+        materiaisAtuais.map(
+          (material) =>
+            obterIdMaterial(
+              material
+            ) === idMaterialAtualizado
+              ? materialRecebido
+              : material
+        )
     );
   };
 
@@ -748,9 +1005,14 @@ function App() {
     }
 
     const idMaterial =
-      obterIdMaterial(materialParaExcluir);
+      obterIdMaterial(
+        materialParaExcluir
+      );
 
-    if (idMaterial === null || idMaterial === undefined) {
+    if (
+      idMaterial === null ||
+      idMaterial === undefined
+    ) {
       window.alert(
         'Não foi possível identificar o material que será inativado.'
       );
@@ -760,14 +1022,22 @@ function App() {
 
     try {
       const materialInativado =
-        await inativarMaterial(idMaterial);
+        await inativarMaterial(
+          idMaterial
+        );
 
-      setMateriais((materiaisAtuais) =>
-        materiaisAtuais.map((material) =>
-          obterIdMaterial(material) === idMaterial
-            ? materialInativado
-            : material
-        )
+      setMateriais(
+        (
+          materiaisAtuais
+        ) =>
+          materiaisAtuais.map(
+            (material) =>
+              obterIdMaterial(
+                material
+              ) === idMaterial
+                ? materialInativado
+                : material
+          )
       );
 
       setMaterialEmEdicao(null);
@@ -777,7 +1047,9 @@ function App() {
         error
       );
 
-      window.alert(obterMensagemErro(error));
+      window.alert(
+        obterMensagemErro(error)
+      );
     }
   };
 
@@ -797,9 +1069,14 @@ function App() {
     }
 
     const idMaterial =
-      obterIdMaterial(materialParaConferir);
+      obterIdMaterial(
+        materialParaConferir
+      );
 
-    if (idMaterial === null || idMaterial === undefined) {
+    if (
+      idMaterial === null ||
+      idMaterial === undefined
+    ) {
       window.alert(
         'Não foi possível identificar o material que será conferido.'
       );
@@ -809,14 +1086,22 @@ function App() {
 
     try {
       const materialConferido =
-        await conferirMaterial(idMaterial);
+        await conferirMaterial(
+          idMaterial
+        );
 
-      setMateriais((materiaisAtuais) =>
-        materiaisAtuais.map((material) =>
-          obterIdMaterial(material) === idMaterial
-            ? materialConferido
-            : material
-        )
+      setMateriais(
+        (
+          materiaisAtuais
+        ) =>
+          materiaisAtuais.map(
+            (material) =>
+              obterIdMaterial(
+                material
+              ) === idMaterial
+                ? materialConferido
+                : material
+          )
       );
 
       return materialConferido;
@@ -826,11 +1111,19 @@ function App() {
         error
       );
 
-      window.alert(obterMensagemErro(error));
+      window.alert(
+        obterMensagemErro(error)
+      );
 
       return null;
     }
   };
+
+  /*
+   * =====================================================
+   * NAVEGAÇÃO PATRIMONIAL
+   * =====================================================
+   */
 
   const abrirTelaCadastroManual = () => {
     if (
@@ -891,7 +1184,9 @@ function App() {
 
     fecharTelasSecundarias();
 
-    setConfiguracaoConferencia(configuracao);
+    setConfiguracaoConferencia(
+      configuracao
+    );
   };
 
   const abrirConsultaComPermissao = () => {
@@ -927,8 +1222,17 @@ function App() {
       }
 
       fecharTelasSecundarias();
-      setAbrirConsultaMovimentacoes(true);
+
+      setAbrirConsultaMovimentacoes(
+        true
+      );
     };
+
+  /*
+   * =====================================================
+   * FENO E RAÇÃO
+   * =====================================================
+   */
 
   const abrirModuloFenoRacao = () => {
     fecharTelasSecundarias();
@@ -999,6 +1303,8 @@ function App() {
 
     fecharTelasSecundarias();
 
+    setAbrirAvisoPendencias(false);
+
     setAbrirExtravioFenoRacao(true);
   };
 
@@ -1035,6 +1341,8 @@ function App() {
 
     fecharTelasSecundarias();
 
+    setAbrirAvisoPendencias(false);
+
     setAbrirTransferenciaFenoRacao(true);
   };
 
@@ -1056,6 +1364,12 @@ function App() {
     setAbrirConsultaEstoqueFenoRacao(true);
   };
 
+  /*
+   * =====================================================
+   * VOLTAR
+   * =====================================================
+   */
+
   const voltarDoCadastroAlimentacao = () => {
     setAbrirCadastroAlimentacao(false);
     setConfiguracaoConferencia(null);
@@ -1069,6 +1383,10 @@ function App() {
   const voltarDoExtravioFenoRacao = () => {
     setAbrirExtravioFenoRacao(false);
     setConfiguracaoConferencia(null);
+
+    void carregarPendenciasAdministrativas(
+      usuarioLogado
+    );
   };
 
   const voltarDoRelatorioFenoRacao = () => {
@@ -1076,17 +1394,19 @@ function App() {
     setConfiguracaoConferencia(null);
   };
 
-  const voltarDaTransferenciaFenoRacao =
-    () => {
-      setAbrirTransferenciaFenoRacao(false);
-      setConfiguracaoConferencia(null);
-    };
+  const voltarDaTransferenciaFenoRacao = () => {
+    setAbrirTransferenciaFenoRacao(false);
+    setConfiguracaoConferencia(null);
 
-  const voltarDaConsultaEstoqueFenoRacao =
-    () => {
-      setAbrirConsultaEstoqueFenoRacao(false);
-      setConfiguracaoConferencia(null);
-    };
+    void carregarPendenciasAdministrativas(
+      usuarioLogado
+    );
+  };
+
+  const voltarDaConsultaEstoqueFenoRacao = () => {
+    setAbrirConsultaEstoqueFenoRacao(false);
+    setConfiguracaoConferencia(null);
+  };
 
   const voltarDaConsulta = () => {
     setAbrirConsulta(false);
@@ -1103,6 +1423,12 @@ function App() {
   const voltarDaConferencia = () => {
     setConfiguracaoConferencia(null);
   };
+
+  /*
+   * =====================================================
+   * TELAS ANTES DO LOGIN
+   * =====================================================
+   */
 
   if (abrirRecuperarSenha) {
     return (
@@ -1128,12 +1454,20 @@ function App() {
     );
   }
 
+  /*
+   * =====================================================
+   * LOGIN
+   * =====================================================
+   */
+
   if (!usuarioLogado) {
     return (
       <Login
         onLoginSuccess={async (usuario) => {
           const usuarioNormalizado =
-            normalizarUsuarioLogado(usuario);
+            normalizarUsuarioLogado(
+              usuario
+            );
 
           setUsuarioLogado(
             usuarioNormalizado
@@ -1142,6 +1476,26 @@ function App() {
           await carregarMateriais(
             usuarioNormalizado
           );
+
+          const resumoPendencias =
+            await carregarPendenciasAdministrativas(
+              usuarioNormalizado
+            );
+
+          if (
+            resumoPendencias
+              ?.possuiPendencias &&
+            resumoPendencias
+              ?.totalPendencias > 0
+          ) {
+            setAbrirAvisoPendencias(
+              true
+            );
+          } else {
+            setAbrirAvisoPendencias(
+              false
+            );
+          }
         }}
         onSolicitarAcesso={() => {
           sessionStorage.removeItem(
@@ -1163,6 +1517,12 @@ function App() {
       />
     );
   }
+
+  /*
+   * =====================================================
+   * TELAS DE FENO E RAÇÃO
+   * =====================================================
+   */
 
   if (abrirConsultaEstoqueFenoRacao) {
     return (
@@ -1230,6 +1590,12 @@ function App() {
     );
   }
 
+  /*
+   * =====================================================
+   * CARREGAMENTO / ERRO
+   * =====================================================
+   */
+
   if (
     carregandoMateriais &&
     (
@@ -1242,7 +1608,9 @@ function App() {
   ) {
     return (
       <main className="app-feedback-page">
-        <p>Carregando materiais patrimoniais...</p>
+        <p>
+          Carregando materiais patrimoniais...
+        </p>
       </main>
     );
   }
@@ -1256,7 +1624,9 @@ function App() {
   ) {
     return (
       <main className="app-feedback-page">
-        <p>{erroMateriais}</p>
+        <p>
+          {erroMateriais}
+        </p>
 
         <button
           type="button"
@@ -1271,13 +1641,21 @@ function App() {
 
         <button
           type="button"
-          onClick={fecharTelasSecundarias}
+          onClick={
+            fecharTelasSecundarias
+          }
         >
           Voltar
         </button>
       </main>
     );
   }
+
+  /*
+   * =====================================================
+   * MATERIAL
+   * =====================================================
+   */
 
   if (materialEmEdicao) {
     return (
@@ -1300,9 +1678,15 @@ function App() {
         configuracao={
           configuracaoConferencia
         }
-        codigo={cadastroPendente.codigo}
-        modo={cadastroPendente.modo}
-        onSalvar={salvarMaterialCadastrado}
+        codigo={
+          cadastroPendente.codigo
+        }
+        modo={
+          cadastroPendente.modo
+        }
+        onSalvar={
+          salvarMaterialCadastrado
+        }
         onCancelar={() =>
           setCadastroPendente(null)
         }
@@ -1310,14 +1694,42 @@ function App() {
     );
   }
 
+  /*
+   * =====================================================
+   * PAINEL ADMINISTRATIVO
+   * =====================================================
+   */
+
   if (abrirAdmin) {
     return (
       <AdminPainel
         usuario={usuarioLogado}
-        onVoltar={voltarDoAdmin}
+        pendencias={
+          pendenciasAdministrativas
+        }
+        onVerExtravios={
+          abrirTelaExtravioFenoRacao
+        }
+        onVerTransferencias={
+          abrirTelaTransferenciaFenoRacao
+        }
+        onAtualizarPendencias={() =>
+          carregarPendenciasAdministrativas(
+            usuarioLogado
+          )
+        }
+        onVoltar={
+          voltarDoAdmin
+        }
       />
     );
   }
+
+  /*
+   * =====================================================
+   * CONSULTAS
+   * =====================================================
+   */
 
   if (abrirConsultaMovimentacoes) {
     return (
@@ -1335,7 +1747,9 @@ function App() {
       <ConsultaMateriais
         usuario={usuarioLogado}
         materiais={materiais}
-        onVoltar={voltarDaConsulta}
+        onVoltar={
+          voltarDaConsulta
+        }
         onEditarMaterial={
           setMaterialEmEdicao
         }
@@ -1345,6 +1759,12 @@ function App() {
       />
     );
   }
+
+  /*
+   * =====================================================
+   * TELA PRINCIPAL
+   * =====================================================
+   */
 
   if (!configuracaoConferencia) {
     return (
@@ -1378,6 +1798,124 @@ function App() {
           }
         />
 
+        {/*
+         * =================================================
+         * AVISO AUTOMÁTICO DE PENDÊNCIAS
+         * =================================================
+         */}
+
+        {abrirAvisoPendencias &&
+          pendenciasAdministrativas
+            .possuiPendencias && (
+            <div className="app-pendencias-overlay">
+              <section
+                className="app-pendencias-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="app-pendencias-titulo"
+              >
+                <div className="app-pendencias-modal-topo">
+                  <span>
+                    Atenção, administrador
+                  </span>
+
+                  <div className="app-pendencias-total">
+                    {
+                      pendenciasAdministrativas
+                        .totalPendencias
+                    }
+                  </div>
+                </div>
+
+                <h2 id="app-pendencias-titulo">
+                  Pendências Administrativas
+                </h2>
+
+                <p className="app-pendencias-descricao">
+                  Existem ocorrências de
+                  Feno e Ração aguardando
+                  sua análise.
+                </p>
+
+                <div className="app-pendencias-resumo">
+                  <div>
+                    <span>
+                      Extravios
+                    </span>
+
+                    <strong>
+                      {
+                        pendenciasAdministrativas
+                          .extraviosPendentes
+                      }
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Transferências
+                    </span>
+
+                    <strong>
+                      {
+                        pendenciasAdministrativas
+                          .transferenciasPendentes
+                      }
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="app-pendencias-acoes">
+                  {pendenciasAdministrativas
+                    .extraviosPendentes >
+                    0 && (
+                    <button
+                      type="button"
+                      className="app-pendencias-btn app-pendencias-btn-extravio"
+                      onClick={
+                        abrirTelaExtravioFenoRacao
+                      }
+                    >
+                      Ver extravios
+                    </button>
+                  )}
+
+                  {pendenciasAdministrativas
+                    .transferenciasPendentes >
+                    0 && (
+                    <button
+                      type="button"
+                      className="app-pendencias-btn app-pendencias-btn-transferencia"
+                      onClick={
+                        abrirTelaTransferenciaFenoRacao
+                      }
+                    >
+                      Ver transferências
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="app-pendencias-btn app-pendencias-btn-depois"
+                    onClick={() =>
+                      setAbrirAvisoPendencias(
+                        false
+                      )
+                    }
+                  >
+                    Agora não
+                  </button>
+                </div>
+              </section>
+            </div>
+          )}
+
+        {/*
+         * =================================================
+         * MODAL FENO E RAÇÃO
+         * =================================================
+         */}
+
         {abrirModalFenoRacao && (
           <div className="modal-feno-racao-overlay">
             <div className="modal-feno-racao">
@@ -1386,7 +1924,9 @@ function App() {
                   Alimentação equina
                 </span>
 
-                <h2>Feno e Ração</h2>
+                <h2>
+                  Feno e Ração
+                </h2>
 
                 <p>
                   Escolha uma opção para
@@ -1482,20 +2022,34 @@ function App() {
     );
   }
 
+  /*
+   * =====================================================
+   * CONFERÊNCIA
+   * =====================================================
+   */
+
   return (
     <ConferenciaMateriais
       usuario={usuarioLogado}
-      configuracao={configuracaoConferencia}
+      configuracao={
+        configuracaoConferencia
+      }
       materiais={materiais}
-      setMateriais={setMateriais}
-      onVoltar={voltarDaConferencia}
+      setMateriais={
+        setMateriais
+      }
+      onVoltar={
+        voltarDaConferencia
+      }
       onAbrirCadastro={
         abrirTelaCadastroConferencia
       }
       onEditarMaterial={
         setMaterialEmEdicao
       }
-      onExcluirMaterial={excluirMaterial}
+      onExcluirMaterial={
+        excluirMaterial
+      }
       onConferirMaterial={
         conferirMaterialPatrimonial
       }

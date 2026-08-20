@@ -58,6 +58,10 @@
   cursor: pointer;
 }
 
+.extravio-alimentacao-voltar:active {
+  transform: scale(0.96);
+}
+
 .extravio-alimentacao-header span {
   display: block;
 
@@ -87,12 +91,13 @@
 
 /*
  * ==========================================
- * CARDS
+ * CARDS PRINCIPAIS
  * ==========================================
  */
 
 .extravio-alimentacao-alerta,
-.extravio-alimentacao-card {
+.extravio-alimentacao-card,
+.extravio-alimentacao-pendencias {
   border-radius: 26px;
 
   background: rgba(255, 255, 255, 0.96);
@@ -188,6 +193,247 @@
 
 /*
  * ==========================================
+ * PENDÊNCIAS ADMINISTRATIVAS
+ * ==========================================
+ */
+
+.extravio-alimentacao-pendencias {
+  padding: 18px;
+
+  margin-bottom: 14px;
+
+  border:
+    2px solid #facc15;
+}
+
+.extravio-alimentacao-pendencias-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+.extravio-alimentacao-pendencias-topo > div > span {
+  display: block;
+
+  color: #b91c1c;
+
+  font-size: 0.74rem;
+  font-weight: 900;
+
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.extravio-alimentacao-pendencias-topo h2 {
+  margin: 3px 0 0;
+
+  color: #111827;
+
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-pendencias-topo > strong {
+  min-width: 38px;
+  height: 38px;
+
+  padding: 0 10px;
+
+  border-radius: 13px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #facc15;
+  background: #111827;
+
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-pendencias-lista {
+  display: grid;
+
+  gap: 12px;
+}
+
+.extravio-alimentacao-pendencias-vazio {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 14px;
+
+  border-radius: 16px;
+
+  color: #166534;
+  background: #dcfce7;
+
+  border:
+    1px solid #bbf7d0;
+
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.extravio-alimentacao-pendencias-vazio > svg {
+  flex: 0 0 auto;
+
+  font-size: 1.15rem;
+}
+
+.extravio-alimentacao-pendencias-vazio strong {
+  display: block;
+
+  color: #166534;
+
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-pendencias-vazio p {
+  margin: 3px 0 0;
+
+  color: #4b6352;
+
+  font-size: 0.8rem;
+}
+
+.extravio-alimentacao-pendencia-item {
+  padding: 14px;
+
+  border-radius: 18px;
+
+  background: #fffaf0;
+
+  border:
+    1px solid #facc15;
+
+  box-shadow:
+    0 10px 22px
+    rgba(0, 0, 0, 0.06);
+}
+
+.extravio-alimentacao-pendencia-status {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 6px;
+
+  margin-bottom: 8px;
+
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  color: #991b1b;
+  background: #fee2e2;
+
+  font-size: 0.72rem;
+  font-weight: 900;
+
+  text-transform: uppercase;
+}
+
+.extravio-alimentacao-pendencia-item h3 {
+  margin: 0 0 10px;
+
+  color: #111827;
+
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-pendencia-dados {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 5px 14px;
+}
+
+.extravio-alimentacao-pendencia-dados p {
+  margin: 0;
+
+  color: #475569;
+
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.extravio-alimentacao-pendencia-dados strong {
+  color: #334155;
+
+  font-weight: 900;
+}
+
+.extravio-alimentacao-pendencia-motivo {
+  margin-top: 11px;
+
+  padding: 10px;
+
+  border-radius: 13px;
+
+  background: #ffffff;
+
+  border:
+    1px solid #e2e8f0;
+}
+
+.extravio-alimentacao-pendencia-motivo strong {
+  display: block;
+
+  color: #334155;
+
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.extravio-alimentacao-pendencia-motivo p {
+  margin: 4px 0 0;
+
+  color: #64748b;
+
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.extravio-alimentacao-analisar {
+  width: 100%;
+
+  min-height: 44px;
+
+  margin-top: 12px;
+
+  border: none;
+  border-radius: 14px;
+
+  color: #facc15;
+  background: #111827;
+
+  font-size: 0.88rem;
+  font-weight: 900;
+
+  cursor: pointer;
+}
+
+.extravio-alimentacao-analisar:hover {
+  filter: brightness(1.08);
+}
+
+.extravio-alimentacao-analisar:active {
+  transform: scale(0.985);
+}
+
+/*
+ * ==========================================
  * FORMULÁRIO
  * ==========================================
  */
@@ -260,6 +506,12 @@
   color: #64748b;
   background: #f8fafc;
 }
+
+/*
+ * ==========================================
+ * LOTE SELECIONADO
+ * ==========================================
+ */
 
 .extravio-alimentacao-lote-card {
   border-radius: 20px;
@@ -524,9 +776,35 @@
 
 /*
  * ==========================================
- * STATUS
+ * RESUMO / STATUS
  * ==========================================
  */
+
+.extravio-alimentacao-resumo-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+
+  margin-top: 8px;
+}
+
+.extravio-alimentacao-resumo-status
+  .extravio-alimentacao-status-analise {
+  margin-top: 0;
+}
+
+.extravio-alimentacao-quantidade-resumo {
+  color: #991b1b;
+
+  font-size: 0.84rem;
+  font-weight: 900;
+
+  white-space: nowrap;
+}
 
 .extravio-alimentacao-status-analise {
   display: inline-flex;
@@ -625,7 +903,7 @@
 
 /*
  * ==========================================
- * AÇÕES ADMINISTRATIVAS
+ * AÇÕES ADMINISTRATIVAS NO HISTÓRICO
  * ==========================================
  */
 
@@ -699,7 +977,11 @@
 .extravio-alimentacao-modal {
   width: min(100%, 540px);
 
-  max-height: calc(100dvh - 32px);
+  max-height:
+    calc(
+      100dvh - 32px
+    );
+
   overflow-y: auto;
 
   border-radius: 24px;
@@ -801,6 +1083,71 @@
   font-size: 0.82rem;
   font-weight: 900;
 }
+
+/*
+ * ==========================================
+ * ESCOLHA DA ANÁLISE
+ * ==========================================
+ */
+
+.extravio-alimentacao-escolha-analise {
+  display: grid;
+
+  gap: 10px;
+}
+
+.extravio-alimentacao-escolha-analise > p {
+  margin: 0 0 4px;
+
+  color: #64748b;
+
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.extravio-alimentacao-escolha-analise button {
+  width: 100%;
+
+  min-height: 48px;
+
+  border: none;
+  border-radius: 14px;
+
+  padding: 10px 14px;
+
+  color: #ffffff;
+
+  font-size: 0.9rem;
+  font-weight: 900;
+
+  cursor: pointer;
+}
+
+.extravio-alimentacao-escolha-analise button.confirmar {
+  background: #15803d;
+}
+
+.extravio-alimentacao-escolha-analise button.ajustar {
+  background: #d97706;
+}
+
+.extravio-alimentacao-escolha-analise button.cancelar {
+  background: #b91c1c;
+}
+
+.extravio-alimentacao-escolha-analise button:hover {
+  filter: brightness(1.06);
+}
+
+.extravio-alimentacao-escolha-analise button:active {
+  transform: scale(0.985);
+}
+
+/*
+ * ==========================================
+ * AVISOS DO MODAL
+ * ==========================================
+ */
 
 .extravio-alimentacao-modal-aviso {
   display: flex;
@@ -950,7 +1297,13 @@
   }
 
   .extravio-alimentacao-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
+  }
+
+  .extravio-alimentacao-pendencia-dados {
+    grid-template-columns:
+      1fr;
   }
 }
 
@@ -960,49 +1313,44 @@
   }
 
   .extravio-alimentacao-acoes-analise {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
   }
 
   .extravio-alimentacao-modal-resumo {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
   }
 
   .extravio-alimentacao-calculo-ajuste {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
   }
 }
 
 @media (max-width: 430px) {
   .extravio-alimentacao-modal-acoes {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
   }
 
   .extravio-alimentacao-modal {
     padding: 16px;
+
     border-radius: 20px;
   }
-}
 
-.extravio-alimentacao-resumo-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+  .extravio-alimentacao-pendencias {
+    padding: 14px;
 
-  margin-top: 8px;
-}
+    border-radius: 20px;
+  }
 
-.extravio-alimentacao-resumo-status
-  .extravio-alimentacao-status-analise {
-  margin-top: 0;
-}
+  .extravio-alimentacao-pendencia-item {
+    padding: 12px;
+  }
 
-.extravio-alimentacao-quantidade-resumo {
-  color: #991b1b;
-
-  font-size: 0.84rem;
-  font-weight: 900;
-
-  white-space: nowrap;
+  .extravio-alimentacao-pendencias-topo h2 {
+    font-size: 1rem;
+  }
 }

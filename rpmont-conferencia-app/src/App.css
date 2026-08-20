@@ -134,3 +134,218 @@
   background: linear-gradient(135deg, #7c3aed, #2563eb);
   color: #ffffff;
 }
+
+/* ======================================================
+   AVISO DE PENDÊNCIAS ADMINISTRATIVAS
+   ====================================================== */
+
+.app-pendencias-overlay {
+  position: fixed;
+  inset: 0;
+
+  z-index: 12000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    rgba(15, 23, 42, 0.76);
+
+  backdrop-filter: blur(5px);
+}
+
+.app-pendencias-modal {
+  width: min(100%, 430px);
+
+  border-radius: 26px;
+
+  padding: 22px;
+
+  background:
+    linear-gradient(
+      160deg,
+      #fffdf4 0%,
+      #ffffff 55%,
+      #f8f5ea 100%
+    );
+
+  border:
+    2px solid #ffe600;
+
+  box-shadow:
+    0 28px 75px
+    rgba(0, 0, 0, 0.45);
+}
+
+.app-pendencias-modal-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 14px;
+
+  margin-bottom: 8px;
+}
+
+.app-pendencias-modal-topo > span {
+  color: #df1b24;
+
+  font-size: 0.75rem;
+  font-weight: 900;
+
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.app-pendencias-total {
+  min-width: 44px;
+  height: 44px;
+
+  padding: 0 12px;
+
+  border-radius: 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #ffffff;
+  background: #df1b24;
+
+  font-size: 1.15rem;
+  font-weight: 900;
+
+  box-shadow:
+    0 8px 18px
+    rgba(223, 27, 36, 0.28);
+}
+
+.app-pendencias-modal h2 {
+  margin: 0 0 7px;
+
+  color: #171717;
+
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.app-pendencias-descricao {
+  margin: 0 0 17px;
+
+  color: #64748b;
+
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.app-pendencias-resumo {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 10px;
+
+  margin-bottom: 16px;
+}
+
+.app-pendencias-resumo > div {
+  padding: 14px;
+
+  border-radius: 17px;
+
+  background: #ffffff;
+
+  border:
+    1px solid #e5e7eb;
+
+  text-align: center;
+}
+
+.app-pendencias-resumo span {
+  display: block;
+
+  color: #64748b;
+
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.app-pendencias-resumo strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #111827;
+
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.app-pendencias-acoes {
+  display: grid;
+
+  gap: 9px;
+}
+
+.app-pendencias-btn {
+  width: 100%;
+
+  min-height: 48px;
+
+  border: none;
+  border-radius: 15px;
+
+  padding: 10px 14px;
+
+  font-size: 0.9rem;
+  font-weight: 900;
+
+  cursor: pointer;
+}
+
+.app-pendencias-btn:active {
+  transform: scale(0.985);
+}
+
+.app-pendencias-btn-extravio {
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      #b91c1c,
+      #ef4444
+    );
+}
+
+.app-pendencias-btn-transferencia {
+  color: #ffffff;
+
+  background: #304f9d;
+}
+
+.app-pendencias-btn-depois {
+  color: #ffe600;
+
+  background: #111111;
+}
+
+@media (max-width: 430px) {
+  .app-pendencias-overlay {
+    padding: 16px;
+  }
+
+  .app-pendencias-modal {
+    padding: 18px;
+
+    border-radius: 22px;
+  }
+
+  .app-pendencias-modal h2 {
+    font-size: 1.3rem;
+  }
+}

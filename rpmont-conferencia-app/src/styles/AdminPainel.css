@@ -2,7 +2,11 @@
   width: 100%;
   min-height: 100dvh;
   height: 100dvh;
-  background: radial-gradient(circle at top, #2d2d2d 0%, #080808 68%);
+  background: radial-gradient(
+    circle at top,
+    #2d2d2d 0%,
+    #080808 68%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,12 +22,21 @@
   overflow-y: auto;
   overflow-x: hidden;
   border-radius: 42px;
-  background: linear-gradient(160deg, #fffdf4 0%, #ffffff 48%, #f7f4ea 100%);
+
+  background: linear-gradient(
+    160deg,
+    #fffdf4 0%,
+    #ffffff 48%,
+    #f7f4ea 100%
+  );
+
   box-shadow:
     0 28px 70px rgba(0, 0, 0, 0.65),
     inset 0 0 0 8px #121212,
     inset 0 0 0 10px #343434;
+
   padding: 54px 24px 28px;
+
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -37,11 +50,16 @@
   position: absolute;
   top: -90px;
   right: -80px;
+
   width: 300px;
   height: 210px;
+
   background: #ed1c24;
+
   border-bottom-left-radius: 220px;
+
   z-index: 1;
+
   pointer-events: none;
 }
 
@@ -50,27 +68,40 @@
   position: absolute;
   top: 58px;
   right: -35px;
+
   width: 260px;
   height: 28px;
+
   background: #111;
+
   border-bottom: 7px solid #ffe600;
+
   transform: rotate(-16deg);
+
   border-radius: 999px;
+
   z-index: 1;
+
   pointer-events: none;
 }
 
 .admin-painel-header,
 .admin-boas-vindas,
+.admin-pendencias,
 .admin-modulos {
   position: relative;
   z-index: 2;
 }
 
+/* ======================================================
+   CABEÇALHO
+   ====================================================== */
+
 .admin-painel-header {
   display: flex;
   gap: 14px;
   align-items: center;
+
   margin-bottom: 18px;
 }
 
@@ -78,25 +109,36 @@
   width: 42px;
   height: 42px;
   min-width: 42px;
+
   border: 0;
   border-radius: 15px;
+
   background: #111;
   color: #ffe600;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   cursor: pointer;
+}
+
+.admin-voltar-button:active {
+  transform: scale(0.96);
 }
 
 .admin-painel-header span {
   color: #df1b24;
+
   font-size: 12px;
   font-weight: 900;
 }
 
 .admin-painel-header h1 {
   margin: 2px 0;
+
   color: #222;
+
   font-size: 23px;
   font-weight: 900;
   line-height: 1.1;
@@ -104,153 +146,738 @@
 
 .admin-painel-header p {
   margin: 0;
+
   color: #666;
+
   font-size: 13px;
   font-weight: 700;
 }
 
+/* ======================================================
+   BOAS-VINDAS
+   ====================================================== */
+
 .admin-boas-vindas {
   background: #111;
+
   color: #ffffff;
+
   border: 2px solid #ffe600;
+
   border-radius: 24px;
+
   padding: 18px;
+
   margin-bottom: 18px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
+
+  box-shadow:
+    0 14px 28px
+    rgba(0, 0, 0, 0.2);
 }
 
 .admin-boas-vindas span {
   display: block;
+
   color: #ffe600;
+
   font-size: 11px;
   font-weight: 900;
+
   margin-bottom: 4px;
 }
 
 .admin-boas-vindas h2 {
   margin: 0 0 8px;
+
   color: #ffffff;
+
   font-size: 21px;
   font-weight: 900;
 }
 
 .admin-boas-vindas p {
   margin: 0;
+
   color: #d6d6d6;
+
   font-size: 12px;
+
   line-height: 1.4;
 }
 
+/* ======================================================
+   PENDÊNCIAS ADMINISTRATIVAS
+   ====================================================== */
+
+.admin-pendencias {
+  background: #ffffff;
+
+  border: 1px solid #eeeeee;
+
+  border-radius: 24px;
+
+  padding: 17px;
+
+  margin-bottom: 20px;
+
+  box-shadow:
+    0 13px 28px
+    rgba(0, 0, 0, 0.09);
+}
+
+.admin-pendencias-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 14px;
+
+  margin-bottom: 14px;
+}
+
+.admin-pendencias-subtitulo {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #df1b24;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.6px;
+}
+
+.admin-pendencias-cabecalho h2 {
+  margin: 0;
+
+  color: #222;
+
+  font-size: 18px;
+  font-weight: 900;
+
+  line-height: 1.15;
+}
+
+.admin-pendencias-badge {
+  min-width: 42px;
+  height: 42px;
+
+  padding: 0 12px;
+
+  border-radius: 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 17px;
+  font-weight: 900;
+
+  flex-shrink: 0;
+}
+
+.admin-pendencias-badge.possui {
+  background: #df1b24;
+  color: #ffffff;
+
+  box-shadow:
+    0 7px 16px
+    rgba(223, 27, 36, 0.3);
+}
+
+.admin-pendencias-badge.vazio {
+  background: #e9f7ed;
+  color: #24753a;
+}
+
+/* ======================================================
+   ALERTA
+   ====================================================== */
+
+.admin-pendencias-alerta {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 10px;
+
+  padding: 12px;
+
+  border-radius: 17px;
+
+  background: #fff5d8;
+
+  border: 1px solid #f4d267;
+
+  color: #7e6500;
+
+  margin-bottom: 12px;
+}
+
+.admin-pendencias-alerta > svg {
+  margin-top: 2px;
+
+  flex-shrink: 0;
+
+  font-size: 17px;
+}
+
+.admin-pendencias-alerta strong {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #604b00;
+
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-pendencias-alerta p {
+  margin: 0;
+
+  color: #796a32;
+
+  font-size: 11px;
+
+  line-height: 1.35;
+}
+
+/* ======================================================
+   LISTA DAS PENDÊNCIAS
+   ====================================================== */
+
+.admin-pendencias-lista {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+.admin-pendencia-card {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    42px
+    1fr
+    16px;
+
+  align-items: center;
+
+  gap: 10px;
+
+  border: 1px solid #eeeeee;
+
+  border-radius: 16px;
+
+  background: #fafafa;
+
+  padding: 11px;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.admin-pendencia-card:not(:disabled):hover {
+  border-color: #dddddd;
+
+  box-shadow:
+    0 7px 15px
+    rgba(0, 0, 0, 0.06);
+}
+
+.admin-pendencia-card:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+.admin-pendencia-card:disabled {
+  opacity: 0.5;
+
+  cursor: default;
+}
+
+.admin-pendencia-icon {
+  width: 42px;
+  height: 42px;
+
+  border-radius: 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 17px;
+}
+
+.admin-pendencia-icon.extravio {
+  background: #ffe5e7;
+
+  color: #df1b24;
+}
+
+.admin-pendencia-icon.transferencia {
+  background: #e8edff;
+
+  color: #304f9d;
+}
+
+.admin-pendencia-conteudo {
+  min-width: 0;
+}
+
+.admin-pendencia-titulo {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 8px;
+
+  margin-bottom: 3px;
+}
+
+.admin-pendencia-titulo strong {
+  color: #222;
+
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.admin-pendencia-titulo span {
+  min-width: 24px;
+  height: 24px;
+
+  padding: 0 7px;
+
+  border-radius: 999px;
+
+  background: #111;
+
+  color: #ffe600;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-pendencia-conteudo p {
+  margin: 0;
+
+  color: #666;
+
+  font-size: 10.5px;
+
+  line-height: 1.35;
+}
+
+.admin-pendencia-seta {
+  color: #aaaaaa;
+
+  font-size: 13px;
+}
+
+/* ======================================================
+   SEM PENDÊNCIAS
+   ====================================================== */
+
+.admin-pendencias-ok {
+  display: flex;
+
+  align-items: center;
+
+  gap: 11px;
+
+  padding: 13px;
+
+  border-radius: 17px;
+
+  background: #eef9f1;
+
+  border: 1px solid #bfe4c8;
+}
+
+.admin-pendencias-ok-icon {
+  width: 42px;
+  height: 42px;
+
+  min-width: 42px;
+
+  border-radius: 14px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background: #d7f1dd;
+
+  color: #24753a;
+
+  font-size: 18px;
+}
+
+.admin-pendencias-ok strong {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #235e31;
+
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-pendencias-ok p {
+  margin: 0;
+
+  color: #57745e;
+
+  font-size: 10.5px;
+
+  line-height: 1.35;
+}
+
+/* ======================================================
+   ATUALIZAR PENDÊNCIAS
+   ====================================================== */
+
+.admin-pendencias-atualizar {
+  width: 100%;
+
+  margin-top: 11px;
+
+  border: 0;
+
+  border-radius: 14px;
+
+  padding: 10px 12px;
+
+  background: #111;
+
+  color: #ffe600;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  font-size: 11px;
+
+  font-weight: 900;
+
+  cursor: pointer;
+}
+
+.admin-pendencias-atualizar:disabled {
+  opacity: 0.65;
+
+  cursor: default;
+}
+
+.admin-pendencias-atualizar:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+/* ======================================================
+   ANIMAÇÃO DE ATUALIZAÇÃO
+   ====================================================== */
+
+.admin-pendencias-atualizar .girando {
+  animation:
+    admin-girar
+    0.8s
+    linear
+    infinite;
+}
+
+@keyframes admin-girar {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ======================================================
+   MÓDULOS
+   ====================================================== */
+
 .admin-modulos {
   display: flex;
+
   flex-direction: column;
+
   gap: 13px;
+
+  padding-bottom: 4px;
+}
+
+.admin-modulos-titulo {
+  margin:
+    2px
+    0
+    1px;
+
+  color: #222;
+
+  font-size: 15px;
+
+  font-weight: 900;
 }
 
 .admin-modulo-card {
   width: 100%;
-  border: 1px solid #eeeeee;
-  background: #ffffff;
-  border-radius: 22px;
-  padding: 16px;
-  display: grid;
-  grid-template-columns: 48px 1fr 20px;
-  gap: 13px;
-  align-items: center;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.075);
+
+  border:
+    1px solid
+    #eeeeee;
+
+  background:
+    #ffffff;
+
+  border-radius:
+    22px;
+
+  padding:
+    16px;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    48px
+    1fr
+    20px;
+
+  gap:
+    13px;
+
+  align-items:
+    center;
+
+  text-align:
+    left;
+
+  cursor:
+    pointer;
+
+  box-shadow:
+    0 12px 24px
+    rgba(0, 0, 0, 0.075);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .admin-modulo-card:active {
-  transform: scale(0.98);
+  transform:
+    scale(0.98);
 }
 
 .admin-modulo-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 17px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
+  width:
+    48px;
+
+  height:
+    48px;
+
+  border-radius:
+    17px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  font-size:
+    20px;
 }
 
 .admin-modulo-icon.vermelho {
-  background: #ffe5e7;
-  color: #df1b24;
+  background:
+    #ffe5e7;
+
+  color:
+    #df1b24;
 }
 
 .admin-modulo-icon.amarelo {
-  background: #fff6bf;
-  color: #7c6500;
+  background:
+    #fff6bf;
+
+  color:
+    #7c6500;
 }
 
 .admin-modulo-icon.preto {
-  background: #111;
-  color: #ffe600;
+  background:
+    #111;
+
+  color:
+    #ffe600;
 }
 
 .admin-modulo-texto {
-  min-width: 0;
+  min-width:
+    0;
 }
 
 .admin-modulo-texto h3 {
-  margin: 0 0 4px;
-  color: #222;
-  font-size: 15px;
-  font-weight: 900;
+  margin:
+    0 0 4px;
+
+  color:
+    #222;
+
+  font-size:
+    15px;
+
+  font-weight:
+    900;
 }
 
 .admin-modulo-texto p {
-  margin: 0;
-  color: #666;
-  font-size: 12px;
-  line-height: 1.35;
+  margin:
+    0;
+
+  color:
+    #666;
+
+  font-size:
+    12px;
+
+  line-height:
+    1.35;
 }
 
 .admin-modulo-seta {
-  color: #aaa;
-  font-size: 15px;
+  color:
+    #aaa;
+
+  font-size:
+    15px;
 }
+
+/* ======================================================
+   CELULAR
+   ====================================================== */
 
 @media (max-width: 430px) {
   .admin-painel-page {
-    width: 100vw;
-    height: 100dvh;
-    min-height: 100dvh;
-    padding: 0;
-    background: #fffdf4;
-    overflow: hidden;
+    width:
+      100vw;
+
+    height:
+      100dvh;
+
+    min-height:
+      100dvh;
+
+    padding:
+      0;
+
+    background:
+      #fffdf4;
+
+    overflow:
+      hidden;
   }
 
   .admin-painel-phone {
-    width: 100vw;
-    height: 100dvh;
-    min-height: 100dvh;
-    max-height: 100dvh;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 34px 20px 24px;
+    width:
+      100vw;
+
+    height:
+      100dvh;
+
+    min-height:
+      100dvh;
+
+    max-height:
+      100dvh;
+
+    border-radius:
+      0;
+
+    box-shadow:
+      none;
+
+    padding:
+      34px
+      20px
+      24px;
   }
 
   .admin-painel-header h1 {
-    font-size: 21px;
+    font-size:
+      21px;
   }
 
   .admin-boas-vindas {
-    padding: 16px;
-    border-radius: 20px;
+    padding:
+      16px;
+
+    border-radius:
+      20px;
+  }
+
+  .admin-pendencias {
+    padding:
+      15px;
+
+    border-radius:
+      20px;
+  }
+
+  .admin-pendencias-cabecalho h2 {
+    font-size:
+      17px;
   }
 
   .admin-modulo-card {
-    padding: 13px;
-    border-radius: 18px;
-    grid-template-columns: 44px 1fr 18px;
+    padding:
+      13px;
+
+    border-radius:
+      18px;
+
+    grid-template-columns:
+      44px
+      1fr
+      18px;
   }
 
   .admin-modulo-icon {
-    width: 44px;
-    height: 44px;
+    width:
+      44px;
+
+    height:
+      44px;
   }
 }

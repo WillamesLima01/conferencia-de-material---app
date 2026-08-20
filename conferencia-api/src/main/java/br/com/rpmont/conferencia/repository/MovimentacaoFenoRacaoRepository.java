@@ -1,5 +1,6 @@
 package br.com.rpmont.conferencia.repository;
 
+import br.com.rpmont.conferencia.enums.SituacaoAnaliseExtravioFenoRacao;
 import br.com.rpmont.conferencia.enums.SituacaoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.enums.TipoMovimentacaoFenoRacao;
 import br.com.rpmont.conferencia.model.MovimentacaoFenoRacao;
@@ -96,5 +97,16 @@ public interface MovimentacaoFenoRacaoRepository
 
             @Param("dataFinal")
             LocalDate dataFinal
+    );
+
+    long countByTipoMovimentacaoAndSituacaoAnaliseExtravio(
+            TipoMovimentacaoFenoRacao tipoMovimentacao,
+            SituacaoAnaliseExtravioFenoRacao situacaoAnaliseExtravio
+    );
+
+    long countByTipoMovimentacaoAndSituacaoAnaliseExtravioAndUnidadeOrigemIgnoreCase(
+            TipoMovimentacaoFenoRacao tipoMovimentacao,
+            SituacaoAnaliseExtravioFenoRacao situacaoAnaliseExtravio,
+            String unidadeOrigem
     );
 }

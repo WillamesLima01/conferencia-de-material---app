@@ -48,4 +48,13 @@ public interface SolicitacaoTransferenciaFenoRacaoRepository
             Integer loteSelecionadoId,
             StatusSolicitacaoTransferenciaFenoRacao status
     );
+
+    long countByStatus(
+            StatusSolicitacaoTransferenciaFenoRacao status
+    );
+
+    long countByUnidadeOrigemIgnoreCaseAndStatus(
+            String unidadeOrigem,
+            StatusSolicitacaoTransferenciaFenoRacao status
+    );
 }

@@ -29,7 +29,10 @@ import {
 import '../styles/ExtravioFenoRacao.css';
 
 const PRODUTOS = [
-  { valor: 'FENO', nome: 'Feno' },
+  {
+    valor: 'FENO',
+    nome: 'Feno',
+  },
   {
     valor: 'RACAO_ADULTO_PREMIUM',
     nome: 'Ração Adulto Premium',
@@ -51,51 +54,131 @@ const PRODUTOS = [
 const NIVEL_ADMIN_MASTER = 1;
 const NIVEL_ADMIN = 2;
 
+const UNIDADES_EQUINAS = [
+  'RPMONT',
+  '3EPMONT',
+];
+
+const DATA_INICIAL_PENDENCIAS =
+  '2000-01-01';
+
 const dataHoje = () => {
   const agora = new Date();
-  const ano = agora.getFullYear();
-  const mes = String(agora.getMonth() + 1).padStart(2, '0');
-  const dia = String(agora.getDate()).padStart(2, '0');
+
+  const ano =
+    agora.getFullYear();
+
+  const mes =
+    String(
+      agora.getMonth() + 1
+    ).padStart(
+      2,
+      '0'
+    );
+
+  const dia =
+    String(
+      agora.getDate()
+    ).padStart(
+      2,
+      '0'
+    );
 
   return `${ano}-${mes}-${dia}`;
 };
 
-const normalizarTexto = (valor) =>
-  String(valor ?? '')
+const normalizarTexto = (
+  valor
+) =>
+  String(
+    valor ?? ''
+  )
     .trim()
     .toUpperCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/º/g, '')
-    .replace(/°/g, '')
-    .replace(/\s+/g, '')
-    .replace(/[^A-Z0-9]/g, '');
+    .replace(
+      /[\u0300-\u036f]/g,
+      ''
+    )
+    .replace(
+      /º/g,
+      ''
+    )
+    .replace(
+      /°/g,
+      ''
+    )
+    .replace(
+      /\s+/g,
+      ''
+    )
+    .replace(
+      /[^A-Z0-9]/g,
+      ''
+    );
 
-const formatarNumero = (valor) =>
-  new Intl.NumberFormat('pt-BR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(Number(valor || 0));
+const formatarNumero = (
+  valor
+) =>
+  new Intl.NumberFormat(
+    'pt-BR',
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }
+  ).format(
+    Number(
+      valor || 0
+    )
+  );
 
-const formatarData = (valor) => {
-  if (!valor) return '-';
+const formatarData = (
+  valor
+) => {
+  if (!valor) {
+    return '-';
+  }
 
-  const dataSemHorario = String(valor).split('T')[0];
-  const [ano, mes, dia] = dataSemHorario.split('-');
+  const dataSemHorario =
+    String(valor).split(
+      'T'
+    )[0];
 
-  if (!ano || !mes || !dia) {
-    return String(valor);
+  const [
+    ano,
+    mes,
+    dia,
+  ] =
+    dataSemHorario.split(
+      '-'
+    );
+
+  if (
+    !ano ||
+    !mes ||
+    !dia
+  ) {
+    return String(
+      valor
+    );
   }
 
   return `${dia}/${mes}/${ano}`;
 };
 
-const obterNomeProduto = (tipo) =>
-  PRODUTOS.find((produto) => produto.valor === tipo)?.nome ||
+const obterNomeProduto = (
+  tipo
+) =>
+  PRODUTOS.find(
+    (produto) =>
+      produto.valor === tipo
+  )?.nome ||
   tipo ||
   '-';
 
-const obterStatusAnalise = (situacao) => {
+const obterStatusAnalise = (
+  situacao
+) => {
   switch (situacao) {
     case 'PENDENTE_ANALISE':
       return {
@@ -126,24 +209,67 @@ const obterStatusAnalise = (situacao) => {
   }
 };
 
-const extrairLista = (resposta) => {
-  if (Array.isArray(resposta)) return resposta;
-  if (Array.isArray(resposta?.content)) return resposta.content;
-  if (Array.isArray(resposta?.data)) return resposta.data;
-  if (Array.isArray(resposta?.dados)) return resposta.dados;
-  if (Array.isArray(resposta?.itens)) return resposta.itens;
+const extrairLista = (
+  resposta
+) => {
+  if (
+    Array.isArray(
+      resposta
+    )
+  ) {
+    return resposta;
+  }
+
+  if (
+    Array.isArray(
+      resposta?.content
+    )
+  ) {
+    return resposta.content;
+  }
+
+  if (
+    Array.isArray(
+      resposta?.data
+    )
+  ) {
+    return resposta.data;
+  }
+
+  if (
+    Array.isArray(
+      resposta?.dados
+    )
+  ) {
+    return resposta.dados;
+  }
+
+  if (
+    Array.isArray(
+      resposta?.itens
+    )
+  ) {
+    return resposta.itens;
+  }
 
   return [];
 };
 
-const obterMensagemErro = (erro, padrao) => {
+const obterMensagemErro = (
+  erro,
+  padrao
+) => {
   const dados =
     erro?.response?.data ??
     erro?.data ??
     erro?.body ??
     null;
 
-  if (typeof dados === 'string' && dados.trim()) {
+  if (
+    typeof dados ===
+      'string' &&
+    dados.trim()
+  ) {
     return dados.trim();
   }
 
@@ -154,19 +280,40 @@ const obterMensagemErro = (erro, padrao) => {
     erro?.message ??
     erro?.mensagem;
 
-  if (typeof mensagem === 'string' && mensagem.trim()) {
+  if (
+    typeof mensagem ===
+      'string' &&
+    mensagem.trim()
+  ) {
     return mensagem.trim();
   }
 
-  if (dados?.fields && typeof dados.fields === 'object') {
-    const mensagens = Object.values(dados.fields)
-      .flat()
-      .filter(Boolean)
-      .map((valor) => String(valor).trim())
-      .filter(Boolean);
+  if (
+    dados?.fields &&
+    typeof dados.fields ===
+      'object'
+  ) {
+    const mensagens =
+      Object.values(
+        dados.fields
+      )
+        .flat()
+        .filter(Boolean)
+        .map(
+          (valor) =>
+            String(
+              valor
+            ).trim()
+        )
+        .filter(Boolean);
 
-    if (mensagens.length > 0) {
-      return mensagens.join(' ');
+    if (
+      mensagens.length >
+      0
+    ) {
+      return mensagens.join(
+        ' '
+      );
     }
   }
 
@@ -177,55 +324,87 @@ function ExtravioFenoRacao({
   usuario,
   onVoltar,
 }) {
-  const mensagemRef = useRef(null);
+  const mensagemRef =
+    useRef(null);
 
   const unidadeUsuario =
     usuario?.unidade ||
     usuario?.UNIDADE ||
     '';
 
-  const nivelUsuario = Number(
-    usuario?.nivel ??
-      usuario?.NIVEL ??
-      usuario?.nivelAcesso ??
-      usuario?.NIVELACESSO ??
-      0
-  );
+  const nivelUsuario =
+    Number(
+      usuario?.nivel ??
+        usuario?.NIVEL ??
+        usuario?.nivelAcesso ??
+        usuario?.NIVELACESSO ??
+        0
+    );
 
   const usuarioPodeAnalisar =
-    nivelUsuario === NIVEL_ADMIN_MASTER ||
-    nivelUsuario === NIVEL_ADMIN;
+    nivelUsuario ===
+      NIVEL_ADMIN_MASTER ||
+    nivelUsuario ===
+      NIVEL_ADMIN;
 
-  const [estoque, setEstoque] = useState([]);
-  const [extravios, setExtravios] = useState([]);
+  const [
+    estoque,
+    setEstoque,
+  ] = useState([]);
 
-  const [tipoProduto, setTipoProduto] =
-    useState('FENO');
+  const [
+    extravios,
+    setExtravios,
+  ] = useState([]);
 
-  const [entradaId, setEntradaId] =
-    useState('');
+  const [
+    extraviosPendentes,
+    setExtraviosPendentes,
+  ] = useState([]);
 
-  const [dataExtravio, setDataExtravio] =
-    useState(dataHoje());
+  const [
+    tipoProduto,
+    setTipoProduto,
+  ] = useState(
+    'FENO'
+  );
+
+  const [
+    entradaId,
+    setEntradaId,
+  ] = useState('');
+
+  const [
+    dataExtravio,
+    setDataExtravio,
+  ] = useState(
+    dataHoje()
+  );
 
   const [
     quantidadeExtraviada,
     setQuantidadeExtraviada,
   ] = useState('');
 
-  const [motivo, setMotivo] =
-    useState('');
+  const [
+    motivo,
+    setMotivo,
+  ] = useState('');
 
-  const [responsavel, setResponsavel] =
-    useState(
-      usuario?.nomeExibicao ||
-        usuario?.nome ||
-        usuario?.NOME ||
-        ''
-    );
+  const [
+    responsavel,
+    setResponsavel,
+  ] = useState(
+    usuario?.nomeExibicao ||
+      usuario?.nome ||
+      usuario?.NOME ||
+      ''
+  );
 
-  const [salvando, setSalvando] =
-    useState(false);
+  const [
+    salvando,
+    setSalvando,
+  ] = useState(false);
 
   const [
     carregandoDados,
@@ -247,6 +426,11 @@ function ExtravioFenoRacao({
    * ANÁLISE ADMINISTRATIVA
    * ==========================================
    */
+
+  const [
+    painelAnaliseAberto,
+    setPainelAnaliseAberto,
+  ] = useState(false);
 
   const [
     modalAnaliseAberto,
@@ -273,27 +457,51 @@ function ExtravioFenoRacao({
     setMotivoAnalise,
   ] = useState('');
 
-  const [analisando, setAnalisando] =
-    useState(false);
+  const [
+    analisando,
+    setAnalisando,
+  ] = useState(false);
+
+  /*
+   * ==========================================
+   * MENSAGENS
+   * ==========================================
+   */
 
   const rolarParaMensagem =
     useCallback(() => {
-      window.setTimeout(() => {
-        mensagemRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-      }, 80);
+      window.setTimeout(
+        () => {
+          mensagemRef.current
+            ?.scrollIntoView({
+              behavior:
+                'smooth',
+
+              block:
+                'center',
+            });
+        },
+        80
+      );
     }, []);
 
-  const exibirErro = useCallback(
-    (mensagem) => {
-      setMensagemSucesso('');
-      setMensagemErro(mensagem);
-      rolarParaMensagem();
-    },
-    [rolarParaMensagem]
-  );
+  const exibirErro =
+    useCallback(
+      (mensagem) => {
+        setMensagemSucesso(
+          ''
+        );
+
+        setMensagemErro(
+          mensagem
+        );
+
+        rolarParaMensagem();
+      },
+      [
+        rolarParaMensagem,
+      ]
+    );
 
   /*
    * ==========================================
@@ -302,77 +510,300 @@ function ExtravioFenoRacao({
    */
 
   const carregarDados =
-    useCallback(async () => {
-      if (!unidadeUsuario) {
-        setEstoque([]);
-        setExtravios([]);
+    useCallback(
+      async () => {
+        if (
+          !unidadeUsuario
+        ) {
+          setEstoque(
+            []
+          );
 
-        exibirErro(
-          'A unidade do usuário não foi identificada.'
+          setExtravios(
+            []
+          );
+
+          setExtraviosPendentes(
+            []
+          );
+
+          exibirErro(
+            'A unidade do usuário não foi identificada.'
+          );
+
+          return;
+        }
+
+        setCarregandoDados(
+          true
         );
 
-        return;
-      }
+        try {
+          const hoje =
+            dataHoje();
 
-      setCarregandoDados(true);
+          /*
+           * ======================================
+           * ESTOQUE
+           * ======================================
+           */
 
-      try {
-        const hoje = dataHoje();
+          const promessaEstoque =
+            listarEstoqueFenoRacao({
+              unidade:
+                unidadeUsuario,
 
-        const [
-          respostaEstoque,
-          respostaExtravios,
-        ] = await Promise.all([
-          listarEstoqueFenoRacao({
-            unidade: unidadeUsuario,
-            situacao: 'ATIVO',
-          }),
+              situacao:
+                'ATIVO',
+            });
 
-          listarMovimentacoesFenoRacao({
-            dataInicial: hoje,
-            dataFinal: hoje,
-            tipoMovimentacao: 'EXTRAVIO',
-            unidade: unidadeUsuario,
-          }),
-        ]);
+          /*
+           * ======================================
+           * HISTÓRICO DE HOJE
+           * ======================================
+           */
 
-        setEstoque(
-          extrairLista(respostaEstoque)
-        );
+          const promessaHistorico =
+            listarMovimentacoesFenoRacao({
+              dataInicial:
+                hoje,
 
-        setExtravios(
-          extrairLista(respostaExtravios)
-        );
+              dataFinal:
+                hoje,
 
-        setMensagemErro('');
-      } catch (erro) {
-        setEstoque([]);
-        setExtravios([]);
+              tipoMovimentacao:
+                'EXTRAVIO',
 
-        exibirErro(
-          obterMensagemErro(
-            erro,
-            'Não foi possível carregar os dados de extravio.'
-          )
-        );
-      } finally {
-        setCarregandoDados(false);
-      }
-    }, [
-      unidadeUsuario,
-      exibirErro,
-    ]);
+              unidade:
+                unidadeUsuario,
+            });
+
+          /*
+           * ======================================
+           * PENDÊNCIAS ADMINISTRATIVAS
+           * ======================================
+           */
+
+          let promessaPendencias =
+            Promise.resolve(
+              []
+            );
+
+          if (
+            usuarioPodeAnalisar
+          ) {
+            if (
+              nivelUsuario ===
+              NIVEL_ADMIN_MASTER
+            ) {
+              promessaPendencias =
+                Promise.all(
+                  UNIDADES_EQUINAS.map(
+                    (
+                      unidade
+                    ) =>
+                      listarMovimentacoesFenoRacao(
+                        {
+                          dataInicial:
+                            DATA_INICIAL_PENDENCIAS,
+
+                          dataFinal:
+                            hoje,
+
+                          tipoMovimentacao:
+                            'EXTRAVIO',
+
+                          unidade,
+                        }
+                      )
+                  )
+                );
+            } else {
+              promessaPendencias =
+                Promise.all([
+                  listarMovimentacoesFenoRacao(
+                    {
+                      dataInicial:
+                        DATA_INICIAL_PENDENCIAS,
+
+                      dataFinal:
+                        hoje,
+
+                      tipoMovimentacao:
+                        'EXTRAVIO',
+
+                      unidade:
+                        unidadeUsuario,
+                    }
+                  ),
+                ]);
+            }
+          }
+
+          const [
+            respostaEstoque,
+            respostaHistorico,
+            respostasPendencias,
+          ] =
+            await Promise.all([
+              promessaEstoque,
+              promessaHistorico,
+              promessaPendencias,
+            ]);
+
+          /*
+           * ======================================
+           * ESTOQUE
+           * ======================================
+           */
+
+          setEstoque(
+            extrairLista(
+              respostaEstoque
+            )
+          );
+
+          /*
+           * ======================================
+           * HISTÓRICO DO DIA
+           * ======================================
+           */
+
+          setExtravios(
+            extrairLista(
+              respostaHistorico
+            )
+          );
+
+          /*
+           * ======================================
+           * PENDÊNCIAS
+           * ======================================
+           */
+
+          const listaPendencias =
+            respostasPendencias
+              .flatMap(
+                (
+                  resposta
+                ) =>
+                  extrairLista(
+                    resposta
+                  )
+              )
+              .filter(
+                (
+                  extravio
+                ) =>
+                  extravio
+                    ?.situacaoAnaliseExtravio ===
+                  'PENDENTE_ANALISE'
+              );
+
+          /*
+           * Evita duplicidade.
+           */
+          const pendenciasSemDuplicidade =
+            Array.from(
+              new Map(
+                listaPendencias.map(
+                  (
+                    extravio
+                  ) => [
+                    String(
+                      extravio.id
+                    ),
+                    extravio,
+                  ]
+                )
+              ).values()
+            );
+
+          /*
+           * Mais antigos primeiro.
+           */
+          pendenciasSemDuplicidade.sort(
+            (
+              a,
+              b
+            ) => {
+              const dataA =
+                String(
+                  a?.dataOperacao ??
+                    a?.dataCadastro ??
+                    ''
+                );
+
+              const dataB =
+                String(
+                  b?.dataOperacao ??
+                    b?.dataCadastro ??
+                    ''
+                );
+
+              return dataA.localeCompare(
+                dataB
+              );
+            }
+          );
+
+          setExtraviosPendentes(
+            pendenciasSemDuplicidade
+          );
+
+          setMensagemErro(
+            ''
+          );
+        } catch (erro) {
+          setEstoque(
+            []
+          );
+
+          setExtravios(
+            []
+          );
+
+          setExtraviosPendentes(
+            []
+          );
+
+          exibirErro(
+            obterMensagemErro(
+              erro,
+              'Não foi possível carregar os dados de extravio.'
+            )
+          );
+        } finally {
+          setCarregandoDados(
+            false
+          );
+        }
+      },
+      [
+        unidadeUsuario,
+        usuarioPodeAnalisar,
+        nivelUsuario,
+        exibirErro,
+      ]
+    );
 
   useEffect(() => {
     const timeoutId =
-      window.setTimeout(() => {
-        void carregarDados();
-      }, 0);
+      window.setTimeout(
+        () => {
+          void carregarDados();
+        },
+        0
+      );
 
     return () => {
-      window.clearTimeout(timeoutId);
+      window.clearTimeout(
+        timeoutId
+      );
     };
-  }, [carregarDados]);
+  }, [
+    carregarDados,
+  ]);
 
   /*
    * ==========================================
@@ -388,7 +819,8 @@ function ExtravioFenoRacao({
             .filter(
               (item) =>
                 Number(
-                  item?.quantidadeAtual || 0
+                  item?.quantidadeAtual ||
+                    0
                 ) > 0
             )
             .map(
@@ -406,70 +838,89 @@ function ExtravioFenoRacao({
             )
         );
 
-      return filtrados.length > 0
+      return filtrados.length >
+        0
         ? filtrados
         : PRODUTOS;
-    }, [estoque]);
+    }, [
+      estoque,
+    ]);
 
   const estoqueDisponivel =
     useMemo(() => {
       return estoque
-        .filter((entrada) => {
-          const mesmaUnidade =
-            normalizarTexto(
-              entrada?.unidade
-            ) ===
-            normalizarTexto(
-              unidadeUsuario
-            );
+        .filter(
+          (entrada) => {
+            const mesmaUnidade =
+              normalizarTexto(
+                entrada?.unidade
+              ) ===
+              normalizarTexto(
+                unidadeUsuario
+              );
 
-          const mesmoProduto =
-            entrada?.tipoProduto ===
-            tipoProduto;
+            const mesmoProduto =
+              entrada?.tipoProduto ===
+              tipoProduto;
 
-          const ativo =
-            !entrada?.situacao ||
-            normalizarTexto(
-              entrada?.situacao
-            ) === 'ATIVO';
+            const ativo =
+              !entrada?.situacao ||
+              normalizarTexto(
+                entrada?.situacao
+              ) ===
+                'ATIVO';
 
-          const temSaldo =
-            Number(
-              entrada?.quantidadeAtual || 0
-            ) > 0;
+            const temSaldo =
+              Number(
+                entrada?.quantidadeAtual ||
+                  0
+              ) > 0;
 
-          return (
-            mesmaUnidade &&
-            mesmoProduto &&
-            ativo &&
-            temSaldo
-          );
-        })
-        .sort((a, b) => {
-          const dataA =
-            String(
-              a?.dataEntrada || ''
-            );
-
-          const dataB =
-            String(
-              b?.dataEntrada || ''
-            );
-
-          if (dataA !== dataB) {
-            return dataA.localeCompare(
-              dataB
+            return (
+              mesmaUnidade &&
+              mesmoProduto &&
+              ativo &&
+              temSaldo
             );
           }
+        )
+        .sort(
+          (
+            a,
+            b
+          ) => {
+            const dataA =
+              String(
+                a?.dataEntrada ||
+                  ''
+              );
 
-          return String(
-            a?.validade || ''
-          ).localeCompare(
-            String(
-              b?.validade || ''
-            )
-          );
-        });
+            const dataB =
+              String(
+                b?.dataEntrada ||
+                  ''
+              );
+
+            if (
+              dataA !==
+              dataB
+            ) {
+              return dataA.localeCompare(
+                dataB
+              );
+            }
+
+            return String(
+              a?.validade ||
+                ''
+            ).localeCompare(
+              String(
+                b?.validade ||
+                  ''
+              )
+            );
+          }
+        );
     }, [
       estoque,
       tipoProduto,
@@ -480,10 +931,17 @@ function ExtravioFenoRacao({
     useMemo(() => {
       return (
         estoqueDisponivel.find(
-          (entrada) =>
-            String(entrada?.id) ===
-            String(entradaId)
-        ) || null
+          (
+            entrada
+          ) =>
+            String(
+              entrada?.id
+            ) ===
+            String(
+              entradaId
+            )
+        ) ||
+        null
       );
     }, [
       estoqueDisponivel,
@@ -497,17 +955,21 @@ function ExtravioFenoRacao({
 
   const pesoExtraviadoKg =
     useMemo(() => {
-      if (!entradaSelecionada) {
+      if (
+        !entradaSelecionada
+      ) {
         return 0;
       }
 
       return (
         Number(
-          quantidadeExtraviada || 0
+          quantidadeExtraviada ||
+            0
         ) *
         Number(
           entradaSelecionada
-            ?.pesoUnidadeKg || 0
+            ?.pesoUnidadeKg ||
+            0
         )
       );
     }, [
@@ -521,22 +983,44 @@ function ExtravioFenoRacao({
    * ==========================================
    */
 
-  const limparFormulario = () => {
-    setEntradaId('');
-    setQuantidadeExtraviada('');
-    setMotivo('');
-  };
+  const limparFormulario =
+    () => {
+      setEntradaId(
+        ''
+      );
+
+      setQuantidadeExtraviada(
+        ''
+      );
+
+      setMotivo(
+        ''
+      );
+    };
 
   const salvarExtravio =
-    async (event) => {
+    async (
+      event
+    ) => {
       event.preventDefault();
 
-      if (salvando) return;
+      if (
+        salvando
+      ) {
+        return;
+      }
 
-      setMensagemErro('');
-      setMensagemSucesso('');
+      setMensagemErro(
+        ''
+      );
 
-      if (!dataExtravio) {
+      setMensagemSucesso(
+        ''
+      );
+
+      if (
+        !dataExtravio
+      ) {
         exibirErro(
           'Informe a data do extravio.'
         );
@@ -544,7 +1028,9 @@ function ExtravioFenoRacao({
         return;
       }
 
-      if (!entradaSelecionada) {
+      if (
+        !entradaSelecionada
+      ) {
         exibirErro(
           'Selecione um lote disponível.'
         );
@@ -556,7 +1042,8 @@ function ExtravioFenoRacao({
         !Number.isInteger(
           quantidadeNumerica
         ) ||
-        quantidadeNumerica <= 0
+        quantidadeNumerica <=
+          0
       ) {
         exibirErro(
           'A quantidade extraviada deve ser um número inteiro maior que zero.'
@@ -568,7 +1055,8 @@ function ExtravioFenoRacao({
       const quantidadeAtual =
         Number(
           entradaSelecionada
-            ?.quantidadeAtual || 0
+            ?.quantidadeAtual ||
+            0
         );
 
       if (
@@ -587,7 +1075,9 @@ function ExtravioFenoRacao({
       const motivoNormalizado =
         motivo.trim();
 
-      if (!motivoNormalizado) {
+      if (
+        !motivoNormalizado
+      ) {
         exibirErro(
           'Informe a justificativa do extravio.'
         );
@@ -625,8 +1115,11 @@ function ExtravioFenoRacao({
         );
 
       if (
-        !Number.isInteger(loteId) ||
-        loteId <= 0
+        !Number.isInteger(
+          loteId
+        ) ||
+        loteId <=
+          0
       ) {
         exibirErro(
           'O lote selecionado é inválido.'
@@ -637,18 +1130,28 @@ function ExtravioFenoRacao({
 
       const payload = {
         loteId,
+
         quantidadeExtraviada:
           quantidadeNumerica,
+
         dataExtravio,
+
         motivo:
           motivoNormalizado,
+
         responsavel:
           responsavelNormalizado,
-        numeroDocumento: null,
-        observacao: null,
+
+        numeroDocumento:
+          null,
+
+        observacao:
+          null,
       };
 
-      setSalvando(true);
+      setSalvando(
+        true
+      );
 
       try {
         const resposta =
@@ -674,7 +1177,8 @@ function ExtravioFenoRacao({
           resposta?.codigoLote ??
           entradaSelecionada
             ?.codigoLote ??
-          entradaSelecionada?.lote ??
+          entradaSelecionada
+            ?.lote ??
           '-';
 
         limparFormulario();
@@ -709,8 +1213,84 @@ function ExtravioFenoRacao({
           )
         );
       } finally {
-        setSalvando(false);
+        setSalvando(
+          false
+        );
       }
+    };
+
+  /*
+   * ==========================================
+   * PAINEL "ANALISAR"
+   * ==========================================
+   */
+
+  const abrirPainelAnalise =
+    (
+      extravio
+    ) => {
+      if (
+        !usuarioPodeAnalisar
+      ) {
+        return;
+      }
+
+      setExtravioSelecionado(
+        extravio
+      );
+
+      setTipoAnalise(
+        ''
+      );
+
+      setQuantidadeConfirmada(
+        ''
+      );
+
+      setMotivoAnalise(
+        ''
+      );
+
+      setMensagemErro(
+        ''
+      );
+
+      setMensagemSucesso(
+        ''
+      );
+
+      setPainelAnaliseAberto(
+        true
+      );
+    };
+
+  const fecharPainelAnalise =
+    () => {
+      if (
+        analisando
+      ) {
+        return;
+      }
+
+      setPainelAnaliseAberto(
+        false
+      );
+
+      setExtravioSelecionado(
+        null
+      );
+
+      setTipoAnalise(
+        ''
+      );
+
+      setQuantidadeConfirmada(
+        ''
+      );
+
+      setMotivoAnalise(
+        ''
+      );
     };
 
   /*
@@ -719,34 +1299,91 @@ function ExtravioFenoRacao({
    * ==========================================
    */
 
-  const abrirModalAnalise = (
-    tipo,
-    extravio
-  ) => {
-    setTipoAnalise(tipo);
-
-    setExtravioSelecionado(
+  const abrirModalAnalise =
+    (
+      tipo,
       extravio
-    );
+    ) => {
+      setTipoAnalise(
+        tipo
+      );
 
-    setQuantidadeConfirmada('');
-    setMotivoAnalise('');
+      setExtravioSelecionado(
+        extravio
+      );
 
-    setMensagemErro('');
-    setMensagemSucesso('');
+      setQuantidadeConfirmada(
+        ''
+      );
 
-    setModalAnaliseAberto(true);
-  };
+      setMotivoAnalise(
+        ''
+      );
 
-  const fecharModalAnalise = () => {
-    if (analisando) return;
+      setMensagemErro(
+        ''
+      );
 
-    setModalAnaliseAberto(false);
-    setTipoAnalise('');
-    setExtravioSelecionado(null);
-    setQuantidadeConfirmada('');
-    setMotivoAnalise('');
-  };
+      setMensagemSucesso(
+        ''
+      );
+
+      setModalAnaliseAberto(
+        true
+      );
+    };
+
+  const selecionarTipoAnalise =
+    (
+      tipo
+    ) => {
+      const extravio =
+        extravioSelecionado;
+
+      if (
+        !extravio
+      ) {
+        return;
+      }
+
+      setPainelAnaliseAberto(
+        false
+      );
+
+      abrirModalAnalise(
+        tipo,
+        extravio
+      );
+    };
+
+  const fecharModalAnalise =
+    () => {
+      if (
+        analisando
+      ) {
+        return;
+      }
+
+      setModalAnaliseAberto(
+        false
+      );
+
+      setTipoAnalise(
+        ''
+      );
+
+      setExtravioSelecionado(
+        null
+      );
+
+      setQuantidadeConfirmada(
+        ''
+      );
+
+      setMotivoAnalise(
+        ''
+      );
+    };
 
   const quantidadeOriginalAnalise =
     Number(
@@ -763,17 +1400,19 @@ function ExtravioFenoRacao({
     );
 
   const quantidadeDevolvidaCalculada =
-    tipoAnalise === 'AJUSTAR' &&
+    tipoAnalise ===
+      'AJUSTAR' &&
     Number.isInteger(
       quantidadeConfirmadaNumerica
     ) &&
-    quantidadeConfirmadaNumerica > 0 &&
+    quantidadeConfirmadaNumerica >
+      0 &&
     quantidadeConfirmadaNumerica <
       quantidadeOriginalAnalise
       ? quantidadeOriginalAnalise -
         quantidadeConfirmadaNumerica
       : tipoAnalise ===
-            'CANCELAR'
+          'CANCELAR'
         ? quantidadeOriginalAnalise
         : 0;
 
@@ -795,14 +1434,16 @@ function ExtravioFenoRacao({
 
       const movimentacaoId =
         Number(
-          extravioSelecionado?.id
+          extravioSelecionado
+            ?.id
         );
 
       if (
         !Number.isInteger(
           movimentacaoId
         ) ||
-        movimentacaoId <= 0
+        movimentacaoId <=
+          0
       ) {
         exibirErro(
           'O extravio selecionado é inválido.'
@@ -816,11 +1457,17 @@ function ExtravioFenoRacao({
           ?.situacaoAnaliseExtravio !==
         'PENDENTE_ANALISE'
       ) {
+        setModalAnaliseAberto(
+          false
+        );
+
+        setExtravioSelecionado(
+          null
+        );
+
         exibirErro(
           'Este extravio já foi analisado.'
         );
-
-        fecharModalAnalise();
 
         return;
       }
@@ -829,7 +1476,8 @@ function ExtravioFenoRacao({
         motivoAnalise.trim();
 
       if (
-        tipoAnalise === 'AJUSTAR'
+        tipoAnalise ===
+        'AJUSTAR'
       ) {
         if (
           !Number.isInteger(
@@ -856,7 +1504,9 @@ function ExtravioFenoRacao({
           return;
         }
 
-        if (!motivoNormalizado) {
+        if (
+          !motivoNormalizado
+        ) {
           exibirErro(
             'Informe o motivo do ajuste.'
           );
@@ -888,7 +1538,9 @@ function ExtravioFenoRacao({
         return;
       }
 
-      setAnalisando(true);
+      setAnalisando(
+        true
+      );
 
       try {
         if (
@@ -905,13 +1557,15 @@ function ExtravioFenoRacao({
         }
 
         if (
-          tipoAnalise === 'AJUSTAR'
+          tipoAnalise ===
+          'AJUSTAR'
         ) {
           await ajustarExtravioFenoRacao(
             movimentacaoId,
             {
               quantidadeConfirmada:
                 quantidadeConfirmadaNumerica,
+
               motivo:
                 motivoNormalizado,
             }
@@ -949,7 +1603,14 @@ function ExtravioFenoRacao({
           false
         );
 
-        setTipoAnalise('');
+        setPainelAnaliseAberto(
+          false
+        );
+
+        setTipoAnalise(
+          ''
+        );
+
         setExtravioSelecionado(
           null
         );
@@ -958,7 +1619,9 @@ function ExtravioFenoRacao({
           ''
         );
 
-        setMotivoAnalise('');
+        setMotivoAnalise(
+          ''
+        );
 
         await carregarDados();
 
@@ -971,7 +1634,9 @@ function ExtravioFenoRacao({
           )
         );
       } finally {
-        setAnalisando(false);
+        setAnalisando(
+          false
+        );
       }
     };
 
@@ -989,6 +1654,7 @@ function ExtravioFenoRacao({
             type="button"
             className="extravio-alimentacao-voltar"
             onClick={onVoltar}
+            aria-label="Voltar"
           >
             <FaArrowLeft />
           </button>
@@ -1032,6 +1698,211 @@ function ExtravioFenoRacao({
             </p>
           </div>
         </section>
+
+        {/*
+         * ========================================
+         * EXTRAVIOS PENDENTES PARA ADMIN
+         * ========================================
+         */}
+
+        {usuarioPodeAnalisar && (
+          <section className="extravio-alimentacao-pendencias">
+            <div className="extravio-alimentacao-pendencias-topo">
+              <div>
+                <span>
+                  Pendentes
+                </span>
+
+                <h2>
+                  Extravios para analisar
+                </h2>
+              </div>
+
+              <strong>
+                {
+                  extraviosPendentes.length
+                }
+              </strong>
+            </div>
+
+            {carregandoDados ? (
+              <div className="extravio-alimentacao-pendencias-vazio">
+                Carregando pendências...
+              </div>
+            ) : extraviosPendentes.length ===
+              0 ? (
+              <div className="extravio-alimentacao-pendencias-vazio">
+                <FaCircleCheck />
+
+                <div>
+                  <strong>
+                    Nenhum extravio pendente
+                  </strong>
+
+                  <p>
+                    Não existem extravios
+                    aguardando análise
+                    administrativa.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="extravio-alimentacao-pendencias-lista">
+                {extraviosPendentes.map(
+                  (
+                    extravio
+                  ) => {
+                    const quantidade =
+                      extravio
+                        ?.quantidadeUnidades ??
+                      extravio
+                        ?.quantidadeExtraviada ??
+                      0;
+
+                    const peso =
+                      extravio
+                        ?.pesoMovimentadoKg ??
+                      extravio
+                        ?.pesoExtraviadoKg ??
+                      0;
+
+                    const lote =
+                      extravio
+                        ?.codigoLote ??
+                      extravio
+                        ?.lote ??
+                      '-';
+
+                    const data =
+                      extravio
+                        ?.dataOperacao ??
+                      extravio
+                        ?.dataExtravio;
+
+                    const unidade =
+                      extravio
+                        ?.unidadeOrigem ??
+                      '-';
+
+                    return (
+                      <article
+                        key={
+                          extravio.id
+                        }
+                        className="extravio-alimentacao-pendencia-item"
+                      >
+                        <div className="extravio-alimentacao-pendencia-status">
+                          <FaTriangleExclamation />
+
+                          <span>
+                            Pendente
+                          </span>
+                        </div>
+
+                        <h3>
+                          {extravio
+                            ?.nomeProduto ||
+                            obterNomeProduto(
+                              extravio
+                                ?.tipoProduto
+                            )}
+                        </h3>
+
+                        <div className="extravio-alimentacao-pendencia-dados">
+                          <p>
+                            <strong>
+                              Unidade:
+                            </strong>{' '}
+                            {
+                              unidade
+                            }
+                          </p>
+
+                          <p>
+                            <strong>
+                              Lote:
+                            </strong>{' '}
+                            {
+                              lote
+                            }
+                          </p>
+
+                          <p>
+                            <strong>
+                              Quantidade:
+                            </strong>{' '}
+                            {formatarNumero(
+                              quantidade
+                            )}{' '}
+                            un.
+                          </p>
+
+                          <p>
+                            <strong>
+                              Peso:
+                            </strong>{' '}
+                            {formatarNumero(
+                              peso
+                            )}{' '}
+                            kg
+                          </p>
+
+                          <p>
+                            <strong>
+                              Data:
+                            </strong>{' '}
+                            {formatarData(
+                              data
+                            )}
+                          </p>
+
+                          <p>
+                            <strong>
+                              Responsável:
+                            </strong>{' '}
+                            {extravio
+                              ?.responsavel ??
+                              '-'}
+                          </p>
+                        </div>
+
+                        <div className="extravio-alimentacao-pendencia-motivo">
+                          <strong>
+                            Justificativa
+                          </strong>
+
+                          <p>
+                            {extravio
+                              ?.motivo ??
+                              '-'}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="extravio-alimentacao-analisar"
+                          onClick={() =>
+                            abrirPainelAnalise(
+                              extravio
+                            )
+                          }
+                        >
+                          Analisar
+                        </button>
+                      </article>
+                    );
+                  }
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/*
+         * ========================================
+         * FORMULÁRIO DE REGISTRO
+         * ========================================
+         */}
 
         <section className="extravio-alimentacao-card">
           <div className="extravio-alimentacao-card-titulo">
@@ -1123,7 +1994,9 @@ function ExtravioFenoRacao({
                   }
                 >
                   {produtosDisponiveis.map(
-                    (produto) => (
+                    (
+                      produto
+                    ) => (
                       <option
                         key={
                           produto.valor
@@ -1149,7 +2022,9 @@ function ExtravioFenoRacao({
 
               <select
                 id="entradaId"
-                value={entradaId}
+                value={
+                  entradaId
+                }
                 onChange={(
                   event
                 ) => {
@@ -1185,7 +2060,9 @@ function ExtravioFenoRacao({
                 </option>
 
                 {estoqueDisponivel.map(
-                  (entrada) => {
+                  (
+                    entrada
+                  ) => {
                     const codigoLote =
                       entrada
                         ?.codigoLote ??
@@ -1403,9 +2280,15 @@ function ExtravioFenoRacao({
 
               <textarea
                 id="motivo"
-                value={motivo}
-                maxLength={250}
-                rows={4}
+                value={
+                  motivo
+                }
+                maxLength={
+                  250
+                }
+                rows={
+                  4
+                }
                 placeholder="Ex.: Fardos molhados pela chuva durante armazenamento."
                 onChange={(
                   event
@@ -1445,14 +2328,18 @@ function ExtravioFenoRacao({
             </button>
 
             <div
-              ref={mensagemRef}
+              ref={
+                mensagemRef
+              }
             >
               {mensagemErro && (
                 <div className="extravio-alimentacao-feedback erro">
                   <FaTriangleExclamation />
 
                   <span>
-                    {mensagemErro}
+                    {
+                      mensagemErro
+                    }
                   </span>
                 </div>
               )}
@@ -1462,12 +2349,20 @@ function ExtravioFenoRacao({
                   <FaCircleCheck />
 
                   <span>
-                    {mensagemSucesso}
+                    {
+                      mensagemSucesso
+                    }
                   </span>
                 </div>
               )}
             </div>
           </form>
+
+          {/*
+           * ======================================
+           * HISTÓRICO DE HOJE
+           * ======================================
+           */}
 
           {extravios.length >
             0 && (
@@ -1495,7 +2390,10 @@ function ExtravioFenoRacao({
 
               <div className="extravio-alimentacao-historico-lista">
                 {extravios
-                  .slice(0, 5)
+                  .slice(
+                    0,
+                    5
+                  )
                   .map(
                     (
                       extravio
@@ -1597,14 +2495,24 @@ function ExtravioFenoRacao({
                                 <div
                                   className={`extravio-alimentacao-status-analise ${statusAnalise.classe}`}
                                 >
-                                  <strong>Status:</strong>{' '}
-                                  {statusAnalise.texto}
+                                  <strong>
+                                    Status:
+                                  </strong>{' '}
+                                  {
+                                    statusAnalise.texto
+                                  }
                                 </div>
                               )}
 
                               <span className="extravio-alimentacao-quantidade-resumo">
-                                {formatarNumero(quantidade)} un. /{' '}
-                                {formatarNumero(peso)} kg
+                                {formatarNumero(
+                                  quantidade
+                                )}{' '}
+                                un. /{' '}
+                                {formatarNumero(
+                                  peso
+                                )}{' '}
+                                kg
                               </span>
                             </div>
 
@@ -1633,9 +2541,7 @@ function ExtravioFenoRacao({
                                 </span>
 
                                 <span>
-                                  Devolvido
-                                  ao
-                                  estoque:{' '}
+                                  Devolvido ao estoque:{' '}
                                   <b>
                                     {formatarNumero(
                                       quantidadeDevolvida
@@ -1663,15 +2569,12 @@ function ExtravioFenoRacao({
                                 <span>
                                   Confirmado:{' '}
                                   <b>
-                                    0
-                                    un.
+                                    0 un.
                                   </b>
                                 </span>
 
                                 <span>
-                                  Devolvido
-                                  ao
-                                  estoque:{' '}
+                                  Devolvido ao estoque:{' '}
                                   <b>
                                     {formatarNumero(
                                       quantidadeDevolvida
@@ -1686,8 +2589,7 @@ function ExtravioFenoRacao({
                               ?.motivoAnalise && (
                               <div className="extravio-alimentacao-motivo-analise">
                                 <strong>
-                                  Análise
-                                  administrativa
+                                  Análise administrativa
                                 </strong>
 
                                 <p>
@@ -1705,39 +2607,12 @@ function ExtravioFenoRacao({
                                     type="button"
                                     className="confirmar"
                                     onClick={() =>
-                                      abrirModalAnalise(
-                                        'CONFIRMAR',
+                                      abrirPainelAnalise(
                                         extravio
                                       )
                                     }
                                   >
-                                    Confirmar
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    className="ajustar"
-                                    onClick={() =>
-                                      abrirModalAnalise(
-                                        'AJUSTAR',
-                                        extravio
-                                      )
-                                    }
-                                  >
-                                    Ajustar
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    className="cancelar"
-                                    onClick={() =>
-                                      abrirModalAnalise(
-                                        'CANCELAR',
-                                        extravio
-                                      )
-                                    }
-                                  >
-                                    Cancelar
+                                    Analisar
                                   </button>
                                 </div>
                               )}
@@ -1751,6 +2626,161 @@ function ExtravioFenoRacao({
           )}
         </section>
       </section>
+
+      {/*
+       * ==========================================
+       * MODAL DE ESCOLHA DA ANÁLISE
+       * ==========================================
+       */}
+
+      {painelAnaliseAberto &&
+        extravioSelecionado && (
+          <div
+            className="extravio-alimentacao-modal-overlay"
+            role="presentation"
+            onMouseDown={(
+              event
+            ) => {
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
+                fecharPainelAnalise();
+              }
+            }}
+          >
+            <section
+              className="extravio-alimentacao-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="titulo-painel-analise"
+            >
+              <div className="extravio-alimentacao-modal-topo">
+                <div>
+                  <span>
+                    Análise administrativa
+                  </span>
+
+                  <h2 id="titulo-painel-analise">
+                    Analisar extravio
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  className="extravio-alimentacao-modal-fechar"
+                  onClick={
+                    fecharPainelAnalise
+                  }
+                  disabled={
+                    analisando
+                  }
+                  aria-label="Fechar"
+                >
+                  <FaXmark />
+                </button>
+              </div>
+
+              <div className="extravio-alimentacao-modal-resumo">
+                <div>
+                  <span>
+                    Produto
+                  </span>
+
+                  <strong>
+                    {extravioSelecionado
+                      ?.nomeProduto ||
+                      obterNomeProduto(
+                        extravioSelecionado
+                          ?.tipoProduto
+                      )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Lote
+                  </span>
+
+                  <strong>
+                    {extravioSelecionado
+                      ?.codigoLote ??
+                      extravioSelecionado
+                        ?.lote ??
+                      '-'}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Quantidade
+                  </span>
+
+                  <strong>
+                    {formatarNumero(
+                      extravioSelecionado
+                        ?.quantidadeUnidades ??
+                        extravioSelecionado
+                          ?.quantidadeExtraviada ??
+                        0
+                    )}{' '}
+                    un.
+                  </strong>
+                </div>
+              </div>
+
+              <div className="extravio-alimentacao-escolha-analise">
+                <p>
+                  Escolha como deseja
+                  concluir esta
+                  ocorrência.
+                </p>
+
+                <button
+                  type="button"
+                  className="confirmar"
+                  onClick={() =>
+                    selecionarTipoAnalise(
+                      'CONFIRMAR'
+                    )
+                  }
+                >
+                  Confirmar extravio
+                </button>
+
+                <button
+                  type="button"
+                  className="ajustar"
+                  onClick={() =>
+                    selecionarTipoAnalise(
+                      'AJUSTAR'
+                    )
+                  }
+                >
+                  Ajustar quantidade
+                </button>
+
+                <button
+                  type="button"
+                  className="cancelar"
+                  onClick={() =>
+                    selecionarTipoAnalise(
+                      'CANCELAR'
+                    )
+                  }
+                >
+                  Cancelar extravio
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+      {/*
+       * ==========================================
+       * MODAL DE CONFIRMAÇÃO / AJUSTE / CANCELAMENTO
+       * ==========================================
+       */}
 
       {modalAnaliseAberto &&
         extravioSelecionado && (
@@ -1800,6 +2830,7 @@ function ExtravioFenoRacao({
                   disabled={
                     analisando
                   }
+                  aria-label="Fechar"
                 >
                   <FaXmark />
                 </button>
@@ -1870,9 +2901,7 @@ function ExtravioFenoRacao({
                 <>
                   <div className="extravio-alimentacao-form-group">
                     <label htmlFor="quantidadeConfirmadaAnalise">
-                      Quantidade
-                      realmente
-                      extraviada
+                      Quantidade realmente extraviada
                     </label>
 
                     <input
@@ -1905,8 +2934,8 @@ function ExtravioFenoRacao({
 
                   <div className="extravio-alimentacao-calculo-ajuste">
                     <span>
-                      Quantidade
-                      informada
+                      Quantidade informada
+
                       <strong>
                         {formatarNumero(
                           quantidadeOriginalAnalise
@@ -1916,8 +2945,8 @@ function ExtravioFenoRacao({
                     </span>
 
                     <span>
-                      Quantidade
-                      confirmada
+                      Quantidade confirmada
+
                       <strong>
                         {formatarNumero(
                           quantidadeConfirmadaNumerica
@@ -1927,9 +2956,8 @@ function ExtravioFenoRacao({
                     </span>
 
                     <span>
-                      Devolução
-                      automática ao
-                      estoque
+                      Devolução automática ao estoque
+
                       <strong>
                         {formatarNumero(
                           quantidadeDevolvidaCalculada
