@@ -108,7 +108,6 @@ public class EstoqueFenoRacaoServiceImpl
 
         String unidadeEntrada =
                 definirUnidadeOperacao(
-                        request.unidade(),
                         usuarioLogado
                 );
 
@@ -597,7 +596,6 @@ public class EstoqueFenoRacaoServiceImpl
 
         String unidadeEntrada =
                 definirUnidadeOperacao(
-                        request.unidade(),
                         usuarioLogado
                 );
 
@@ -1644,18 +1642,12 @@ public class EstoqueFenoRacaoServiceImpl
      */
 
     private String definirUnidadeOperacao(
-            String unidadeInformada,
             Usuario usuario
     ) {
-        if (usuarioEhAdminMaster(usuario)) {
-            String unidadeNormalizada =
-                    normalizarTextoOpcional(
-                            unidadeInformada
-                    );
-
-            if (unidadeNormalizada != null) {
-                return unidadeNormalizada;
-            }
+        if (usuario == null) {
+            throw new ForbiddenException(
+                    "Usuário autenticado não identificado."
+            );
         }
 
         return normalizarTextoObrigatorio(

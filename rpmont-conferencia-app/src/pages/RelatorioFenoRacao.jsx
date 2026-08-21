@@ -18,10 +18,10 @@ import {
   listarMovimentacoesFenoRacao,
 } from '../services/fenoRacaoEstoqueService';
 import { listarTransferencias } from '../services/fenoRacaoTransferenciaService';
+import { listarUnidades } from '../services/unidadeService';
 
 import '../styles/RelatorioFenoRacao.css';
 
-const UNIDADES_PADRAO = ['RPMont', '3º EPMont'];
 
 const NIVEIS_USUARIO = {
   ADMIN_MASTER: 1,
@@ -98,6 +98,41 @@ const extrairListaResposta = (resposta) => {
   if (Array.isArray(resposta?.itens)) return resposta.itens;
 
   return [];
+};
+
+const extrairUnidadesAtivasResposta = (resposta) => {
+  const dadosPossiveis = [
+    resposta,
+    resposta?.data,
+    resposta?.content,
+    resposta?.dados,
+    resposta?.itens,
+  ];
+
+  const unidadesRecebidas =
+    dadosPossiveis.find(Array.isArray) || [];
+
+  return unidadesRecebidas.filter((unidade) => {
+    const ativoInformado =
+      unidade?.ativo ??
+      unidade?.ATIVO;
+
+    const situacao = String(
+      unidade?.situacao ??
+      unidade?.status ??
+      ''
+    )
+      .trim()
+      .toUpperCase();
+
+    return (
+      ativoInformado === undefined ||
+      ativoInformado === null ||
+      ativoInformado === true ||
+      Number(ativoInformado) === 1 ||
+      situacao === 'ATIVO'
+    );
+  });
 };
 
 const obterMensagemErro = (erro) => {
@@ -202,6 +237,11 @@ const normalizarTexto = (valor) => {
     .toUpperCase();
 };
 
+const normalizarUnidade = (valor) => {
+  return normalizarTexto(valor)
+    .replace(/\s+/g, '');
+};
+
 const obterUnidadeUsuario = (usuario) => {
   return usuario?.unidade || usuario?.UNIDADE || usuario?.Unidade || 'RPMont';
 };
@@ -219,7 +259,7 @@ const obterNivelUsuario = (usuario) => {
 };
 
 const unidadesSaoIguais = (unidadeA, unidadeB) => {
-  return normalizarTexto(unidadeA) === normalizarTexto(unidadeB);
+  return normalizarUnidade(unidadeA) === normalizarUnidade(unidadeB);
 };
 
 const obterUnidadeRegistro = (registro) => {
@@ -367,27 +407,12 @@ const transferenciaEstaAprovada = (transferencia) => {
 };
 
 
-const removerDuplicadasPorUnidade = (unidades) => {
-  const mapa = new Map();
-
-  unidades
-    .filter(Boolean)
-    .forEach((unidade) => {
-      const chave = normalizarTexto(unidade);
-
-      if (!mapa.has(chave)) {
-        mapa.set(chave, unidade);
-      }
-    });
-
-  return Array.from(mapa.values());
-};
-
 function RelatorioFenoRacao({ usuario, onVoltar }) {
   const [entradas, setEntradas] = useState([]);
   const [saidas, setSaidas] = useState([]);
   const [extravios, setExtravios] = useState([]);
   const [transferencias, setTransferencias] = useState([]);
+  const [unidadesCadastradas, setUnidadesCadastradas] = useState([]);
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState('');
 
@@ -420,6 +445,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
           respostaEstoque,
           respostaMovimentacoes,
           respostaTransferencias,
+          respostaUnidades,
         ] = await Promise.all([
           listarEstoqueFenoRacao(),
           listarMovimentacoesFenoRacao({
@@ -427,6 +453,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
             dataFinal,
           }),
           listarTransferencias(),
+          listarUnidades(),
         ]);
 
         if (!componenteAtivo) return;
@@ -438,7 +465,10 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
         const transferenciasCarregadas = extrairListaResposta(
           respostaTransferencias
         );
+        const unidadesAtivas =
+          extrairUnidadesAtivasResposta(respostaUnidades);
 
+        setUnidadesCadastradas(unidadesAtivas);
         setEntradas(estoque);
         setSaidas(
           movimentacoes.filter(
@@ -483,18 +513,58 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   );
 
   const unidadesDisponiveis = useMemo(() => {
-    const unidadesDosRegistros = [
-      ...entradas.map(obterUnidadeRegistro),
-      ...saidas.map(obterUnidadeRegistro),
-      ...extravios.map(obterUnidadeRegistro),
-      ...transferencias.map(obterUnidadeOrigemTransferencia),
-      ...transferencias.map(obterUnidadeDestinoTransferencia),
-      unidadeUsuario,
-      ...UNIDADES_PADRAO,
-    ];
+    const chavesComDados = new Set(
+      [
+        ...entradas.map(obterUnidadeRegistro),
+        ...saidas.map(obterUnidadeRegistro),
+        ...extravios.map(obterUnidadeRegistro),
+        ...transferencias.map(obterUnidadeOrigemTransferencia),
+        ...transferencias.map(obterUnidadeDestinoTransferencia),
+        unidadeUsuario,
+      ]
+        .filter(Boolean)
+        .map(normalizarUnidade)
+    );
 
-    return removerDuplicadasPorUnidade(unidadesDosRegistros);
-  }, [entradas, saidas, extravios, transferencias, unidadeUsuario]);
+    const unidadesOficiais = unidadesCadastradas
+      .map((unidade) => {
+        const valorOficial = String(
+          unidade?.sigla ??
+          unidade?.nome ??
+          unidade?.unidade ??
+          unidade?.descricao ??
+          ''
+        ).trim();
+
+        if (!valorOficial) return null;
+
+        return {
+          chave: normalizarUnidade(valorOficial),
+          valor: valorOficial,
+        };
+      })
+      .filter(Boolean)
+      .filter((unidade) => chavesComDados.has(unidade.chave));
+
+    const mapa = new Map();
+
+    unidadesOficiais.forEach((unidade) => {
+      if (!mapa.has(unidade.chave)) {
+        mapa.set(unidade.chave, unidade.valor);
+      }
+    });
+
+    return Array.from(mapa.values()).sort((a, b) =>
+      String(a).localeCompare(String(b), 'pt-BR')
+    );
+  }, [
+    entradas,
+    saidas,
+    extravios,
+    transferencias,
+    unidadeUsuario,
+    unidadesCadastradas,
+  ]);
 
   const unidadeRelatorio = podeSelecionarUnidadeRelatorio
     ? unidadeSelecionada

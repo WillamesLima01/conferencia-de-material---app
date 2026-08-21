@@ -6,7 +6,7 @@ import {
   Filesystem,
   Directory,
 } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
+import { FileViewer } from '@capacitor/file-viewer';
 
 import brasaoRPMont from '../assets/RPMont.png';
 
@@ -177,7 +177,7 @@ const carregarImagemBase64 = (src) => {
   });
 };
 
-const salvarOuCompartilharPdf = async (
+const salvarOuAbrirPdf = async (
   doc,
   nomeArquivo
 ) => {
@@ -199,15 +199,21 @@ const salvarOuCompartilharPdf = async (
     );
   }
 
-  const arquivoSalvo =
-    await Filesystem.writeFile({
+  await Filesystem.writeFile({
+    path: nomeArquivo,
+    data: pdfBase64,
+    directory: Directory.Cache,
+    recursive: true,
+  });
+
+  const arquivo =
+    await Filesystem.getUri({
       path: nomeArquivo,
-      data: pdfBase64,
       directory: Directory.Cache,
     });
 
   const uriArquivo =
-    arquivoSalvo.uri;
+    arquivo?.uri;
 
   if (!uriArquivo) {
     throw new Error(
@@ -215,11 +221,13 @@ const salvarOuCompartilharPdf = async (
     );
   }
 
-  await Share.share({
-    title: 'Relatório de Feno e Ração',
-    text: 'Relatório de Feno e Ração gerado pelo sistema.',
-    files: [uriArquivo],
-    dialogTitle: 'Compartilhar relatório',
+  console.log(
+    'PDF gerado no dispositivo:',
+    uriArquivo
+  );
+
+  await FileViewer.openDocumentFromLocalPath({
+    path: uriArquivo,
   });
 };
 
@@ -1603,7 +1611,7 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       '-'
     )}.pdf`;
 
-  await salvarOuCompartilharPdf(
+  await salvarOuAbrirPdf(
     doc,
     nomeArquivo
   );

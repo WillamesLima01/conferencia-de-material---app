@@ -84,7 +84,7 @@ public class MovimentacaoFenoRacaoServiceImpl
         );
 
         LoteFenoRacao lote =
-                buscarLoteComPermissao(
+                buscarLoteParaSaida(
                         request.loteId(),
                         usuarioLogado
                 );
@@ -1434,6 +1434,51 @@ public class MovimentacaoFenoRacaoServiceImpl
                 .orElseThrow(
                         () -> new ResourceNotFoundException(
                                 "Usuário autenticado não encontrado."
+                        )
+                );
+    }
+
+
+    /*
+     * ==========================================
+     * BUSCAR LOTE PARA SAÍDA
+     * ==========================================
+     *
+     * A saída é uma operação física/operacional
+     * da unidade. Por isso, inclusive o
+     * ADMIN_MASTER só pode retirar estoque de
+     * lote pertencente à própria unidade.
+     */
+    private LoteFenoRacao buscarLoteParaSaida(
+            Integer loteId,
+            Usuario usuario
+    ) {
+        if (loteId == null) {
+            throw new BusinessException(
+                    "O lote é obrigatório."
+            );
+        }
+
+        if (usuario == null) {
+            throw new ForbiddenException(
+                    "Usuário autenticado não identificado."
+            );
+        }
+
+        String unidadeUsuario =
+                normalizarTextoObrigatorio(
+                        usuario.getUnidade(),
+                        "O usuário não possui unidade cadastrada."
+                );
+
+        return loteRepository
+                .findByIdAndUnidade(
+                        loteId,
+                        unidadeUsuario
+                )
+                .orElseThrow(
+                        () -> new ResourceNotFoundException(
+                                "Lote não encontrado na unidade do usuário."
                         )
                 );
     }

@@ -1061,7 +1061,7 @@ function CadastroFenoRacao({
 
             <p>
               {adminMaster
-                ? 'Registre entradas e visualize os estoques de todas as unidades.'
+                ? 'Registre entradas somente na sua unidade e visualize os estoques de todas as unidades.'
                 : `Registre e acompanhe somente as entradas da unidade ${unidadeUsuario}.`}
             </p>
           </div>
