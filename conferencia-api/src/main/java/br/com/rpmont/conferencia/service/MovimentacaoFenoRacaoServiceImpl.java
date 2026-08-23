@@ -1139,6 +1139,10 @@ public class MovimentacaoFenoRacaoServiceImpl
                 usuarioLogado
         );
 
+        validarUsuarioAdministrador(
+                usuarioLogado
+        );
+
         validarPeriodo(
                 dataInicial,
                 dataFinal
@@ -1598,16 +1602,59 @@ public class MovimentacaoFenoRacaoServiceImpl
     private void validarUsuarioPodeRegistrarExtravio(
             Usuario usuario
     ) {
-        if (usuario.getNivel() == null) {
+        if (
+                usuario == null ||
+                        usuario.getNivel() == null
+        ) {
             throw new ForbiddenException(
                     "O usuário não possui nível de acesso cadastrado."
             );
         }
 
         if (
-                usuario.getNivel() != NIVEL_ADMIN_MASTER &&
-                        usuario.getNivel() != NIVEL_ADMIN &&
-                        usuario.getNivel() != NIVEL_USUARIO_COMUM
+                usuario.getNivel() == NIVEL_ADMIN_MASTER ||
+                        usuario.getNivel() == NIVEL_ADMIN
+        ) {
+            return;
+        }
+
+        if (usuario.getNivel() != NIVEL_USUARIO_COMUM) {
+            throw new ForbiddenException(
+                    "O usuário não possui permissão para registrar extravio."
+            );
+        }
+
+        String setor =
+                normalizarTextoOpcional(
+                        usuario.getSetor()
+                );
+
+        if (setor == null) {
+            throw new ForbiddenException(
+                    "O usuário não possui permissão para registrar extravio."
+            );
+        }
+
+        String setorNormalizado =
+                setor
+                        .replace('-', ' ')
+                        .replace('_', ' ')
+                        .replaceAll("\\s+", " ")
+                        .trim();
+
+        boolean usuarioEhBaia =
+                setorNormalizado.equalsIgnoreCase(
+                        "Baia"
+                );
+
+        boolean usuarioEhFiscalDeDia =
+                setorNormalizado.equalsIgnoreCase(
+                        "Fiscal de dia"
+                );
+
+        if (
+                !usuarioEhBaia &&
+                        !usuarioEhFiscalDeDia
         ) {
             throw new ForbiddenException(
                     "O usuário não possui permissão para registrar extravio."
@@ -2141,22 +2188,40 @@ public class MovimentacaoFenoRacaoServiceImpl
             String unidadeInformada,
             Usuario usuario
     ) {
+        String unidadeUsuario =
+                normalizarTextoObrigatorio(
+                        usuario.getUnidade(),
+                        "O usuário não possui unidade cadastrada."
+                );
+
+        String unidadeNormalizada =
+                normalizarTextoOpcional(
+                        unidadeInformada
+                );
+
         if (
                 usuario.getNivel() != null &&
-                        usuario.getNivel() ==
-                                NIVEL_ADMIN_MASTER
+                        usuario.getNivel() == NIVEL_ADMIN_MASTER
         ) {
-            String unidadeNormalizada =
-                    normalizarTextoOpcional(
-                            unidadeInformada
-                    );
-
             if (unidadeNormalizada != null) {
                 return unidadeNormalizada;
             }
+
+            return unidadeUsuario;
         }
 
-        return usuario.getUnidade().trim();
+        if (
+                unidadeNormalizada != null &&
+                        !unidadeNormalizada.equalsIgnoreCase(
+                                unidadeUsuario
+                        )
+        ) {
+            throw new ForbiddenException(
+                    "O administrador só pode consultar movimentações da própria unidade."
+            );
+        }
+
+        return unidadeUsuario;
     }
 
     /*

@@ -72,6 +72,10 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                 usuario
         );
 
+        validarUsuarioAdministrador(
+                usuario
+        );
+
         String unidadeSolicitante =
                 normalizarUnidade(
                         usuario.getUnidade()
@@ -260,6 +264,10 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                 usuario
         );
 
+        validarUsuarioAdministrador(
+                usuario
+        );
+
         SolicitacaoTransferenciaFenoRacao solicitacao =
                 buscarSolicitacao(
                         solicitacaoId
@@ -288,6 +296,10 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                 );
 
         validarUsuarioParaOperacao(
+                usuario
+        );
+
+        validarUsuarioAdministrador(
                 usuario
         );
 
@@ -359,6 +371,10 @@ public class SolicitacaoTransferenciaFenoRacaoServiceImpl
                 );
 
         validarUsuarioParaOperacao(
+                usuario
+        );
+
+        validarUsuarioAdministrador(
                 usuario
         );
 

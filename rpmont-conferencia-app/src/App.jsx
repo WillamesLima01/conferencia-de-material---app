@@ -282,7 +282,12 @@ function App() {
   };
 
   const usuarioEhBaia = (usuario) => {
-    return obterSetorUsuario(usuario) === 'BAIA';
+    const setor = obterSetorUsuario(usuario);
+
+    return (
+      setor === 'BAIA' ||
+      setor === 'BAIAS'
+    );
   };
 
   const usuarioEhFiscalDeDia = (usuario) => {

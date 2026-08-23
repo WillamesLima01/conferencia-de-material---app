@@ -61,6 +61,10 @@ public class TransferenciaFenoRacaoServiceImpl
                 usuario
         );
 
+        validarUsuarioAdministrador(
+                usuario
+        );
+
         List<TransferenciaFenoRacao> transferencias;
 
         if (usuarioEhAdminMaster(
@@ -111,6 +115,10 @@ public class TransferenciaFenoRacaoServiceImpl
                 );
 
         validarUsuarioParaOperacao(
+                usuario
+        );
+
+        validarUsuarioAdministrador(
                 usuario
         );
 
@@ -167,6 +175,10 @@ public class TransferenciaFenoRacaoServiceImpl
                 usuario
         );
 
+        validarUsuarioAdministrador(
+                usuario
+        );
+
         List<TransferenciaFenoRacao> transferencias;
 
         if (usuarioEhAdminMaster(
@@ -213,6 +225,10 @@ public class TransferenciaFenoRacaoServiceImpl
                 );
 
         validarUsuarioParaOperacao(
+                usuario
+        );
+
+        validarUsuarioAdministrador(
                 usuario
         );
 
@@ -494,6 +510,20 @@ public class TransferenciaFenoRacaoServiceImpl
 
             throw new ForbiddenException(
                     "O usuário não possui unidade cadastrada."
+            );
+        }
+    }
+
+    private void validarUsuarioAdministrador(
+            Usuario usuario
+    ) {
+        if (usuario.getNivel() == null
+                || (
+                usuario.getNivel() != 1
+                        && usuario.getNivel() != 2
+        )) {
+            throw new ForbiddenException(
+                    "Somente administradores podem consultar transferências de Feno e Ração."
             );
         }
     }

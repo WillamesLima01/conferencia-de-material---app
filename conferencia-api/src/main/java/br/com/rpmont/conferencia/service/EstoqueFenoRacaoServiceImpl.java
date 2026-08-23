@@ -42,6 +42,8 @@ public class EstoqueFenoRacaoServiceImpl
 
     private static final int NIVEL_ADMIN = 2;
 
+    private static final int NIVEL_USUARIO_COMUM = 3;
+
     private static final String STATUS_LIBERADO =
             "LIBERADO";
 
@@ -264,6 +266,10 @@ public class EstoqueFenoRacaoServiceImpl
                 usuarioLogado
         );
 
+        validarUsuarioPodeConsultarEstoque(
+                usuarioLogado
+        );
+
         BigDecimal pesoNormalizado =
                 pesoUnidadeKg == null
                         ? null
@@ -287,7 +293,16 @@ public class EstoqueFenoRacaoServiceImpl
                         unidadeNormalizada == null
         ) {
             lotes =
-                    loteRepository.findAll();
+                    loteRepository
+                            .findAll()
+                            .stream()
+                            .filter(
+                                    lote ->
+                                            unidadeEhDoModuloEquino(
+                                                    lote.getUnidade()
+                                            )
+                            )
+                            .toList();
         } else {
             /*
              * ADMIN_MASTER com unidade:
@@ -439,6 +454,10 @@ public class EstoqueFenoRacaoServiceImpl
                 usuarioLogado
         );
 
+        validarUsuarioPodeConsultarEstoque(
+                usuarioLogado
+        );
+
         LoteFenoRacao lote =
                 buscarLoteComPermissao(
                         loteId,
@@ -470,6 +489,10 @@ public class EstoqueFenoRacaoServiceImpl
                 );
 
         validarAcessoAoModulo(
+                usuarioLogado
+        );
+
+        validarUsuarioPodeConsultarEstoque(
                 usuarioLogado
         );
 
@@ -1326,6 +1349,99 @@ public class EstoqueFenoRacaoServiceImpl
         }
     }
 
+    private void validarUsuarioPodeConsultarEstoque(
+            Usuario usuario
+    ) {
+        if (
+                usuario == null ||
+                        usuario.getNivel() == null
+        ) {
+            throw new ForbiddenException(
+                    "O usuário não possui nível de acesso cadastrado."
+            );
+        }
+
+        if (!unidadeEhDoModuloEquino(usuario.getUnidade())) {
+            throw new ForbiddenException(
+                    "O usuário não possui acesso ao estoque de Feno e Ração do módulo Equino."
+            );
+        }
+
+        if (
+                usuario.getNivel() == NIVEL_ADMIN_MASTER ||
+                        usuario.getNivel() == NIVEL_ADMIN
+        ) {
+            return;
+        }
+
+        if (
+                usuario.getNivel() == NIVEL_USUARIO_COMUM &&
+                        usuarioEhBaiaOuFiscalDeDia(usuario)
+        ) {
+            return;
+        }
+
+        throw new ForbiddenException(
+                "O usuário não possui permissão para consultar o estoque de Feno e Ração."
+        );
+    }
+
+    private boolean usuarioEhBaiaOuFiscalDeDia(
+            Usuario usuario
+    ) {
+        if (
+                usuario == null ||
+                        usuario.getSetor() == null ||
+                        usuario.getSetor().isBlank()
+        ) {
+            return false;
+        }
+
+        String setorNormalizado =
+                normalizarIdentificador(
+                        usuario.getSetor()
+                );
+
+        return "BAIA".equals(setorNormalizado) ||
+                "FISCALDEDIA".equals(setorNormalizado);
+    }
+
+    private boolean unidadeEhDoModuloEquino(
+            String unidade
+    ) {
+        if (unidade == null || unidade.isBlank()) {
+            return false;
+        }
+
+        String unidadeNormalizada =
+                normalizarIdentificador(
+                        unidade
+                );
+
+        return "RPMONT".equals(unidadeNormalizada) ||
+                "3EPMONT".equals(unidadeNormalizada);
+    }
+
+    private String normalizarIdentificador(
+            String valor
+    ) {
+        if (valor == null) {
+            return "";
+        }
+
+        String normalizado =
+                java.text.Normalizer
+                        .normalize(
+                                valor.trim().toUpperCase(),
+                                java.text.Normalizer.Form.NFD
+                        )
+                        .replaceAll("\\p{M}+", "")
+                        .replace("º", "")
+                        .replaceAll("[^A-Z0-9]", "");
+
+        return normalizado;
+    }
+
     private boolean usuarioEhAdminMaster(
             Usuario usuario
     ) {
@@ -1672,18 +1788,20 @@ public class EstoqueFenoRacaoServiceImpl
                 );
 
         /*
-         * ADMIN_MASTER e ADMIN podem consultar
-         * estoque de qualquer unidade.
+         * ADMIN_MASTER:
+         * pode consultar qualquer unidade do módulo Equino.
+         * Sem unidade informada, os métodos que suportam visão global
+         * tratam esse caso antes de chegar aqui.
          */
-        if (
-                usuario.getNivel() != null &&
-                        (
-                                usuario.getNivel() == NIVEL_ADMIN_MASTER ||
-                                        usuario.getNivel() == NIVEL_ADMIN
-                        )
-        ) {
+        if (usuarioEhAdminMaster(usuario)) {
             if (unidadeNormalizada == null) {
                 return unidadeUsuario;
+            }
+
+            if (!unidadeEhDoModuloEquino(unidadeNormalizada)) {
+                throw new ForbiddenException(
+                        "A unidade informada não pertence ao módulo Equino."
+                );
             }
 
             if (
@@ -1701,9 +1819,20 @@ public class EstoqueFenoRacaoServiceImpl
         }
 
         /*
-         * USUÁRIO_COMUM permanece restrito
-         * à própria unidade.
+         * ADMIN e USUÁRIO_COMUM autorizado:
+         * permanecem restritos à própria unidade.
          */
+        if (
+                unidadeNormalizada != null &&
+                        !unidadeNormalizada.equalsIgnoreCase(
+                                unidadeUsuario
+                        )
+        ) {
+            throw new ForbiddenException(
+                    "O usuário só pode consultar o estoque da própria unidade."
+            );
+        }
+
         return unidadeUsuario;
     }
 
