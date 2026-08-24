@@ -29,6 +29,11 @@ const NIVEIS_USUARIO = {
   USUARIO_COMUM: 3,
 };
 
+const UNIDADES_EQUINAS = [
+  'RPMONT',
+  '3EPMONT',
+];
+
 const PRODUTOS = [
   {
     valor: 'TODOS',
@@ -56,7 +61,20 @@ const PRODUTOS = [
   },
 ];
 
-const dataHoje = () => new Date().toISOString().slice(0, 10);
+const dataHoje = () => {
+  const data = new Date();
+
+  const ano = data.getFullYear();
+  const mes = String(
+    data.getMonth() + 1
+  ).padStart(2, '0');
+
+  const dia = String(
+    data.getDate()
+  ).padStart(2, '0');
+
+  return `${ano}-${mes}-${dia}`;
+};
 
 const primeiroDiaDoMes = () => {
   const data = new Date();
@@ -433,80 +451,147 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   });
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
-  useEffect(() => {
-    let componenteAtivo = true;
+ useEffect(() => {
+  let componenteAtivo = true;
 
-    const carregarDadosBackend = async () => {
-      try {
-        setCarregandoDados(true);
-        setErroCarregamento('');
+  const carregarDadosBackend = async () => {
+    try {
+      setCarregandoDados(true);
+      setErroCarregamento('');
 
-        const [
-          respostaEstoque,
-          respostaMovimentacoes,
-          respostaTransferencias,
-          respostaUnidades,
-        ] = await Promise.all([
-          listarEstoqueFenoRacao(),
-          listarMovimentacoesFenoRacao({
+      let respostaMovimentacoes;
+
+      if (
+        usuarioAdminMaster &&
+        unidadeSelecionada === 'GERAL'
+      ) {
+        const respostasMovimentacoes =
+          await Promise.all(
+            UNIDADES_EQUINAS.map((unidade) =>
+              listarMovimentacoesFenoRacao({
+                dataInicial,
+                dataFinal,
+                unidade,
+              })
+            )
+          );
+
+        respostaMovimentacoes =
+          respostasMovimentacoes.flatMap(
+            (resposta) =>
+              extrairListaResposta(resposta)
+          );
+      } else {
+        const unidadeConsulta =
+          usuarioAdminMaster
+            ? unidadeSelecionada
+            : unidadeUsuario;
+
+        respostaMovimentacoes =
+          await listarMovimentacoesFenoRacao({
             dataInicial,
             dataFinal,
-          }),
-          listarTransferencias(),
-          listarUnidades(),
-        ]);
+            unidade: unidadeConsulta,
+          });
+      }
 
-        if (!componenteAtivo) return;
+      const [
+        respostaEstoque,
+        respostaTransferencias,
+        respostaUnidades,
+      ] = await Promise.all([
+        listarEstoqueFenoRacao(),
+        listarTransferencias(),
+        listarUnidades(),
+      ]);
 
-        const estoque = extrairListaResposta(respostaEstoque);
-        const movimentacoes = extrairListaResposta(
+      if (!componenteAtivo) {
+        return;
+      }
+
+      const estoque =
+        extrairListaResposta(
+          respostaEstoque
+        );
+
+      const movimentacoes =
+        extrairListaResposta(
           respostaMovimentacoes
-        ).map(normalizarMovimentacao);
-        const transferenciasCarregadas = extrairListaResposta(
+        ).map(
+          normalizarMovimentacao
+        );
+
+      const transferenciasCarregadas =
+        extrairListaResposta(
           respostaTransferencias
         );
-        const unidadesAtivas =
-          extrairUnidadesAtivasResposta(respostaUnidades);
 
-        setUnidadesCadastradas(unidadesAtivas);
-        setEntradas(estoque);
-        setSaidas(
-          movimentacoes.filter(
-            (item) =>
-              normalizarTexto(item?.tipoMovimentacao) === 'SAIDA'
-          )
+      const unidadesAtivas =
+        extrairUnidadesAtivasResposta(
+          respostaUnidades
         );
-        setExtravios(
-          movimentacoes.filter(
-            (item) =>
-              normalizarTexto(item?.tipoMovimentacao) === 'EXTRAVIO'
-          )
-        );
-        setTransferencias(transferenciasCarregadas);
-      } catch (error) {
-        if (!componenteAtivo) return;
 
-        console.error(
-          'Erro ao carregar relatório de feno e ração:',
-          error
-        );
-        setErroCarregamento(obterMensagemErro(error));
-      } finally {
-        if (componenteAtivo) {
-          setCarregandoDados(false);
-        }
+      setUnidadesCadastradas(
+        unidadesAtivas
+      );
+
+      setEntradas(
+        estoque
+      );
+
+      setSaidas(
+        movimentacoes.filter(
+          (item) =>
+            normalizarTexto(
+              item?.tipoMovimentacao
+            ) === 'SAIDA'
+        )
+      );
+
+      setExtravios(
+        movimentacoes.filter(
+          (item) =>
+            normalizarTexto(
+              item?.tipoMovimentacao
+            ) === 'EXTRAVIO'
+        )
+      );
+
+      setTransferencias(
+        transferenciasCarregadas
+      );
+    } catch (error) {
+      if (!componenteAtivo) {
+        return;
       }
-    };
 
-    carregarDadosBackend();
+      console.error(
+        'Erro ao carregar relatório de feno e ração:',
+        error
+      );
 
-    return () => {
-      componenteAtivo = false;
-    };
-  }, [
-    dataInicial,
-    dataFinal,
-  ]);
+      setErroCarregamento(
+        obterMensagemErro(error)
+      );
+    } finally {
+      if (componenteAtivo) {
+        setCarregandoDados(false);
+      }
+    }
+  };
+
+  carregarDadosBackend();
+
+  return () => {
+    componenteAtivo = false;
+  };
+}, [
+  dataInicial,
+  dataFinal,
+  unidadeSelecionada,
+  usuarioAdminMaster,
+  unidadeUsuario,
+]);
 
   const produtoAtual = PRODUTOS.find(
     (produto) => produto.valor === produtoSelecionado

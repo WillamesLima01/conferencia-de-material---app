@@ -1,21 +1,7 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 
 import Login from './pages/Login';
 import SelecionarConferencia from './pages/SelecionarConferencia';
-import ConferenciaMateriais from './pages/ConferenciaMateriais';
-import CadastroMaterial from './pages/CadastroMaterial';
-import EditarMaterial from './pages/EditarMaterial';
-import ConsultaMateriais from './pages/ConsultaMateriais';
-import ConsultaMovimentacoes from './pages/ConsultaMovimentacoes';
-import AdminPainel from './pages/AdminPainel';
-import CadastroFenoRacao from './pages/CadastroFenoRacao';
-import SaidaFenoRacao from './pages/SaidaFenoRacao';
-import RelatorioFenoRacao from './pages/RelatorioFenoRacao';
-import ExtravioFenoRacao from './pages/ExtravioFenoRacao';
-import TransferenciaFenoRacao from './pages/TransferenciaFenoRacao';
-import ConsultaEstoqueFenoRacao from './pages/ConsultaEstoqueFenoRacao';
-import SolicitarAcesso from './pages/SolicitarAcesso';
-import RecuperarSenha from './pages/RecuperarSenha';
 
 import {
   atualizarMaterial,
@@ -32,6 +18,62 @@ import {
 
 import './App.css';
 
+const ConferenciaMateriais = lazy(
+  () => import('./pages/ConferenciaMateriais')
+);
+
+const CadastroMaterial = lazy(
+  () => import('./pages/CadastroMaterial')
+);
+
+const EditarMaterial = lazy(
+  () => import('./pages/EditarMaterial')
+);
+
+const ConsultaMateriais = lazy(
+  () => import('./pages/ConsultaMateriais')
+);
+
+const ConsultaMovimentacoes = lazy(
+  () => import('./pages/ConsultaMovimentacoes')
+);
+
+const AdminPainel = lazy(
+  () => import('./pages/AdminPainel')
+);
+
+const CadastroFenoRacao = lazy(
+  () => import('./pages/CadastroFenoRacao')
+);
+
+const SaidaFenoRacao = lazy(
+  () => import('./pages/SaidaFenoRacao')
+);
+
+const RelatorioFenoRacao = lazy(
+  () => import('./pages/RelatorioFenoRacao')
+);
+
+const ExtravioFenoRacao = lazy(
+  () => import('./pages/ExtravioFenoRacao')
+);
+
+const TransferenciaFenoRacao = lazy(
+  () => import('./pages/TransferenciaFenoRacao')
+);
+
+const ConsultaEstoqueFenoRacao = lazy(
+  () => import('./pages/ConsultaEstoqueFenoRacao')
+);
+
+const SolicitarAcesso = lazy(
+  () => import('./pages/SolicitarAcesso')
+);
+
+const RecuperarSenha = lazy(
+  () => import('./pages/RecuperarSenha')
+);
+
 const UNIDADES_EQUINAS = ['RPMONT', '3EPMONT'];
 
 const NIVEIS_USUARIO = {
@@ -47,7 +89,7 @@ const RESUMO_PENDENCIAS_VAZIO = {
   possuiPendencias: false,
 };
 
-function App() {
+function AppConteudo() {
   const [usuarioLogado, setUsuarioLogado] = useState(null);
 
   const [
@@ -2062,6 +2104,22 @@ function App() {
         zerarConferenciaPatrimonial
       }
     />
+  );
+}
+
+function App() {
+  return (
+    <Suspense
+      fallback={
+        <main className="app-feedback-page">
+          <p>
+            Carregando...
+          </p>
+        </main>
+      }
+    >
+      <AppConteudo />
+    </Suspense>
   );
 }
 
