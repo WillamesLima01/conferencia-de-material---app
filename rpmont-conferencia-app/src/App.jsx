@@ -1,4 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import Login from './pages/Login';
 import SelecionarConferencia from './pages/SelecionarConferencia';
@@ -89,8 +95,184 @@ const RESUMO_PENDENCIAS_VAZIO = {
   possuiPendencias: false,
 };
 
+const carregarUsuarioSalvo = () => {
+  const token =
+    localStorage.getItem('token');
+
+  const usuarioSalvo =
+    localStorage.getItem(
+      'usuarioLogado'
+    );
+
+  if (!token || !usuarioSalvo) {
+    localStorage.removeItem('token');
+    localStorage.removeItem(
+      'usuarioLogado'
+    );
+
+    return null;
+  }
+
+  try {
+    const usuario =
+      JSON.parse(usuarioSalvo);
+
+    if (
+      !usuario ||
+      typeof usuario !== 'object'
+    ) {
+      throw new Error(
+        'Usuário salvo inválido.'
+      );
+    }
+
+    return usuario;
+  } catch (error) {
+    console.warn(
+      'Não foi possível restaurar a sessão salva:',
+      error
+    );
+
+    localStorage.removeItem('token');
+    localStorage.removeItem(
+      'usuarioLogado'
+    );
+
+    return null;
+  }
+};
+
+
+/*
+ * =====================================================
+ * UTILITÁRIOS E REGRAS DE ACESSO
+ * =====================================================
+ */
+
+const obterMensagemErro = (error) => {
+  return (
+    error?.data?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    'Não foi possível concluir a operação.'
+  );
+};
+
+const obterIdMaterial = (material) => {
+  return material?.id ?? material?.ID;
+};
+
+const obterValorNormalizado = (valor) => {
+  return String(valor ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/º/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
+
+const obterNivelUsuario = (usuario) => {
+  return Number(
+    usuario?.nivel ??
+      usuario?.NIVEL ??
+      usuario?.nivelAcesso ??
+      usuario?.NIVEL_ACESSO ??
+      NIVEIS_USUARIO.USUARIO_COMUM
+  );
+};
+
+const obterSetorUsuario = (usuario) => {
+  return obterValorNormalizado(
+    usuario?.setor ??
+      usuario?.SETOR ??
+      ''
+  );
+};
+
+const obterUnidadeUsuario = (usuario) => {
+  return obterValorNormalizado(
+    usuario?.unidade ??
+      usuario?.UNIDADE ??
+      ''
+  );
+};
+
+const usuarioEhAdminMaster = (usuario) => {
+  return (
+    obterNivelUsuario(usuario) ===
+    NIVEIS_USUARIO.ADMIN_MASTER
+  );
+};
+
+const usuarioEhAdmin = (usuario) => {
+  const nivel =
+    obterNivelUsuario(usuario);
+
+  return (
+    nivel === NIVEIS_USUARIO.ADMIN_MASTER ||
+    nivel === NIVEIS_USUARIO.ADMIN
+  );
+};
+
+const usuarioEhP4 = (usuario) => {
+  return obterSetorUsuario(usuario) === 'P4';
+};
+
+const usuarioEhBaia = (usuario) => {
+  const setor = obterSetorUsuario(usuario);
+
+  return (
+    setor === 'BAIA' ||
+    setor === 'BAIAS'
+  );
+};
+
+const usuarioEhFiscalDeDia = (usuario) => {
+  return (
+    obterSetorUsuario(usuario) ===
+    'FISCALDEDIA'
+  );
+};
+
+const usuarioEhUnidadeEquina = (usuario) => {
+  const unidade =
+    obterUnidadeUsuario(usuario);
+
+  return UNIDADES_EQUINAS.includes(unidade);
+};
+
+const usuarioPodeAcessarPatrimonio = (usuario) => {
+  return usuarioEhP4(usuario);
+};
+
+const usuarioPodeAcessarFenoRacao = (usuario) => {
+  if (!usuarioEhUnidadeEquina(usuario)) {
+    return false;
+  }
+
+  return (
+    usuarioEhAdmin(usuario) ||
+    usuarioEhBaia(usuario) ||
+    usuarioEhFiscalDeDia(usuario)
+  );
+};
+
+const usuarioPodeAdministrarFenoRacao = (
+  usuario
+) => {
+  return (
+    usuarioEhUnidadeEquina(usuario) &&
+    usuarioEhAdmin(usuario)
+  );
+};
+
 function AppConteudo() {
-  const [usuarioLogado, setUsuarioLogado] = useState(null);
+  const [
+    usuarioLogado,
+    setUsuarioLogado,
+  ] = useState(carregarUsuarioSalvo);
 
   const [
     configuracaoConferencia,
@@ -238,201 +420,67 @@ function AppConteudo() {
 
   /*
    * =====================================================
-   * UTILITÁRIOS
-   * =====================================================
-   */
-
-  const obterMensagemErro = (error) => {
-    return (
-      error?.data?.message ||
-      error?.response?.data?.message ||
-      error?.message ||
-      'Não foi possível concluir a operação.'
-    );
-  };
-
-  const obterIdMaterial = (material) => {
-    return material?.id ?? material?.ID;
-  };
-
-  const obterValorNormalizado = (valor) => {
-    return String(valor ?? '')
-      .trim()
-      .toUpperCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/º/g, '')
-      .replace(/\s+/g, '')
-      .replace(/[^A-Z0-9]/g, '');
-  };
-
-  /*
-   * =====================================================
-   * USUÁRIO
-   * =====================================================
-   */
-
-  const obterNivelUsuario = (usuario) => {
-    return Number(
-      usuario?.nivel ??
-        usuario?.NIVEL ??
-        usuario?.nivelAcesso ??
-        usuario?.NIVEL_ACESSO ??
-        NIVEIS_USUARIO.USUARIO_COMUM
-    );
-  };
-
-  const obterSetorUsuario = (usuario) => {
-    return obterValorNormalizado(
-      usuario?.setor ??
-        usuario?.SETOR ??
-        ''
-    );
-  };
-
-  const obterUnidadeUsuario = (usuario) => {
-    return obterValorNormalizado(
-      usuario?.unidade ??
-        usuario?.UNIDADE ??
-        ''
-    );
-  };
-
-  const usuarioEhAdminMaster = (usuario) => {
-    return (
-      obterNivelUsuario(usuario) ===
-      NIVEIS_USUARIO.ADMIN_MASTER
-    );
-  };
-
-  const usuarioEhAdmin = (usuario) => {
-    const nivel =
-      obterNivelUsuario(usuario);
-
-    return (
-      nivel === NIVEIS_USUARIO.ADMIN_MASTER ||
-      nivel === NIVEIS_USUARIO.ADMIN
-    );
-  };
-
-  const usuarioEhP4 = (usuario) => {
-    return obterSetorUsuario(usuario) === 'P4';
-  };
-
-  const usuarioEhBaia = (usuario) => {
-    const setor = obterSetorUsuario(usuario);
-
-    return (
-      setor === 'BAIA' ||
-      setor === 'BAIAS'
-    );
-  };
-
-  const usuarioEhFiscalDeDia = (usuario) => {
-    return (
-      obterSetorUsuario(usuario) ===
-      'FISCALDEDIA'
-    );
-  };
-
-  const usuarioEhUnidadeEquina = (usuario) => {
-    const unidade =
-      obterUnidadeUsuario(usuario);
-
-    return UNIDADES_EQUINAS.includes(unidade);
-  };
-
-  /*
-   * =====================================================
-   * PERMISSÕES
-   * =====================================================
-   */
-
-  const usuarioPodeAcessarPatrimonio = (usuario) => {
-    return usuarioEhP4(usuario);
-  };
-
-  const usuarioPodeAcessarFenoRacao = (usuario) => {
-    if (!usuarioEhUnidadeEquina(usuario)) {
-      return false;
-    }
-
-    return (
-      usuarioEhAdmin(usuario) ||
-      usuarioEhBaia(usuario) ||
-      usuarioEhFiscalDeDia(usuario)
-    );
-  };
-
-  const usuarioPodeAdministrarFenoRacao = (
-    usuario
-  ) => {
-    return (
-      usuarioEhUnidadeEquina(usuario) &&
-      usuarioEhAdmin(usuario)
-    );
-  };
-
-  /*
-   * =====================================================
    * MATERIAIS
    * =====================================================
    */
 
-  const carregarMateriais = async (
-    usuario,
-    exibirCarregamento = true
-  ) => {
-    if (
-      !usuario ||
-      !usuarioPodeAcessarPatrimonio(usuario)
-    ) {
-      setMateriais([]);
-      setErroMateriais('');
-
-      if (exibirCarregamento) {
-        setCarregandoMateriais(false);
-      }
-
-      return;
-    }
-
-    try {
-      if (exibirCarregamento) {
-        setCarregandoMateriais(true);
-      }
-
-      setErroMateriais('');
-
-      const materiaisRecebidos =
-        await listarMateriais();
-
-      setMateriais(
-        Array.isArray(materiaisRecebidos)
-          ? materiaisRecebidos
-          : []
-      );
-    } catch (error) {
-      console.error(
-        'Erro ao carregar materiais patrimoniais:',
-        error
-      );
-
-      setErroMateriais(
-        obterMensagemErro(error)
-      );
-
-      if (exibirCarregamento) {
+  const carregarMateriais = useCallback(
+    async (
+      usuario,
+      exibirCarregamento = true
+    ) => {
+      if (
+        !usuario ||
+        !usuarioPodeAcessarPatrimonio(usuario)
+      ) {
         setMateriais([]);
+        setErroMateriais('');
+
+        if (exibirCarregamento) {
+          setCarregandoMateriais(false);
+        }
+
+        return;
       }
 
-      throw error;
-    } finally {
-      if (exibirCarregamento) {
-        setCarregandoMateriais(false);
+      try {
+        if (exibirCarregamento) {
+          setCarregandoMateriais(true);
+        }
+
+        setErroMateriais('');
+
+        const materiaisRecebidos =
+          await listarMateriais();
+
+        setMateriais(
+          Array.isArray(materiaisRecebidos)
+            ? materiaisRecebidos
+            : []
+        );
+      } catch (error) {
+        console.error(
+          'Erro ao carregar materiais patrimoniais:',
+          error
+        );
+
+        setErroMateriais(
+          obterMensagemErro(error)
+        );
+
+        if (exibirCarregamento) {
+          setMateriais([]);
+        }
+
+        throw error;
+      } finally {
+        if (exibirCarregamento) {
+          setCarregandoMateriais(false);
+        }
       }
-    }
-  };
+    },
+    []
+  );
 
   /*
    * =====================================================
@@ -609,108 +657,167 @@ function AppConteudo() {
    */
 
   const carregarPendenciasAdministrativas =
-    async (usuario) => {
-      if (
-        !usuario ||
-        !usuarioPodeAdministrarFenoRacao(usuario)
-      ) {
-        const resumoVazio = {
-          ...RESUMO_PENDENCIAS_VAZIO,
-        };
+    useCallback(
+      async (usuario) => {
+        if (
+          !usuario ||
+          !usuarioPodeAdministrarFenoRacao(usuario)
+        ) {
+          const resumoVazio = {
+            ...RESUMO_PENDENCIAS_VAZIO,
+          };
 
-        setPendenciasAdministrativas(
-          resumoVazio
-        );
-
-        return resumoVazio;
-      }
-
-      try {
-        const resumo =
-          await consultarResumoPendenciasAdministrativas();
-
-        console.log(
-          'PENDÊNCIAS ADMINISTRATIVAS:',
-          resumo
-        );
-
-        const extraviosPendentes =
-          Number(
-            resumo?.extraviosPendentes ??
-              0
+          setPendenciasAdministrativas(
+            resumoVazio
           );
 
-        const transferenciasPendentes =
-          Number(
-            resumo?.transferenciasPendentes ??
-              0
+          return resumoVazio;
+        }
+
+        try {
+          const resumo =
+            await consultarResumoPendenciasAdministrativas();
+
+          console.log(
+            'PENDÊNCIAS ADMINISTRATIVAS:',
+            resumo
           );
 
-        const totalCalculado =
-          extraviosPendentes +
-          transferenciasPendentes;
+          const extraviosPendentes =
+            Number(
+              resumo?.extraviosPendentes ??
+                0
+            );
 
-        const totalRecebido =
-          Number(
-            resumo?.totalPendencias
+          const transferenciasPendentes =
+            Number(
+              resumo?.transferenciasPendentes ??
+                0
+            );
+
+          const totalCalculado =
+            extraviosPendentes +
+            transferenciasPendentes;
+
+          const totalRecebido =
+            Number(
+              resumo?.totalPendencias
+            );
+
+          const totalPendencias =
+            Number.isFinite(totalRecebido)
+              ? totalRecebido
+              : totalCalculado;
+
+          const pendenciasNormalizadas = {
+            extraviosPendentes:
+              Number.isFinite(
+                extraviosPendentes
+              )
+                ? extraviosPendentes
+                : 0,
+
+            transferenciasPendentes:
+              Number.isFinite(
+                transferenciasPendentes
+              )
+                ? transferenciasPendentes
+                : 0,
+
+            totalPendencias:
+              Number.isFinite(
+                totalPendencias
+              )
+                ? totalPendencias
+                : totalCalculado,
+
+            possuiPendencias:
+              Boolean(
+                resumo?.possuiPendencias ??
+                  totalCalculado > 0
+              ),
+          };
+
+          setPendenciasAdministrativas(
+            pendenciasNormalizadas
           );
 
-        const totalPendencias =
-          Number.isFinite(totalRecebido)
-            ? totalRecebido
-            : totalCalculado;
+          return pendenciasNormalizadas;
+        } catch (error) {
+          console.error(
+            'Erro ao carregar pendências administrativas:',
+            error
+          );
 
-        const pendenciasNormalizadas = {
-          extraviosPendentes:
-            Number.isFinite(
-              extraviosPendentes
-            )
-              ? extraviosPendentes
-              : 0,
+          const resumoVazio = {
+            ...RESUMO_PENDENCIAS_VAZIO,
+          };
 
-          transferenciasPendentes:
-            Number.isFinite(
-              transferenciasPendentes
-            )
-              ? transferenciasPendentes
-              : 0,
+          setPendenciasAdministrativas(
+            resumoVazio
+          );
 
-          totalPendencias:
-            Number.isFinite(
-              totalPendencias
-            )
-              ? totalPendencias
-              : totalCalculado,
+          return resumoVazio;
+        }
+      },
+      []
+    );
 
-          possuiPendencias:
+  /*
+   * =====================================================
+   * RESTAURAÇÃO / CARREGAMENTO DA SESSÃO
+   * =====================================================
+   */
+
+  useEffect(() => {
+    if (!usuarioLogado) {
+      return;
+    }
+
+    let componenteAtivo = true;
+
+    const carregarDadosDaSessao =
+      async () => {
+        try {
+          await carregarMateriais(
+            usuarioLogado
+          );
+
+          const resumoPendencias =
+            await carregarPendenciasAdministrativas(
+              usuarioLogado
+            );
+
+          if (!componenteAtivo) {
+            return;
+          }
+
+          setAbrirAvisoPendencias(
             Boolean(
-              resumo?.possuiPendencias ??
-                totalCalculado > 0
-            ),
-        };
+              resumoPendencias
+                ?.possuiPendencias &&
+                resumoPendencias
+                  ?.totalPendencias > 0
+            )
+          );
+        } catch (error) {
+          console.error(
+            'Erro ao carregar dados da sessão:',
+            error
+          );
+        }
+      };
 
-        setPendenciasAdministrativas(
-          pendenciasNormalizadas
-        );
+    void carregarDadosDaSessao();
 
-        return pendenciasNormalizadas;
-      } catch (error) {
-        console.error(
-          'Erro ao carregar pendências administrativas:',
-          error
-        );
-
-        const resumoVazio = {
-          ...RESUMO_PENDENCIAS_VAZIO,
-        };
-
-        setPendenciasAdministrativas(
-          resumoVazio
-        );
-
-        return resumoVazio;
-      }
+    return () => {
+      componenteAtivo = false;
     };
+  }, [
+    usuarioLogado,
+    carregarMateriais,
+    carregarPendenciasAdministrativas,
+  ]);
 
   /*
    * =====================================================
@@ -1490,39 +1597,22 @@ function AppConteudo() {
   if (!usuarioLogado) {
     return (
       <Login
-        onLoginSuccess={async (usuario) => {
+        onLoginSuccess={(usuario) => {
           const usuarioNormalizado =
             normalizarUsuarioLogado(
               usuario
             );
 
+          localStorage.setItem(
+            'usuarioLogado',
+            JSON.stringify(
+              usuarioNormalizado
+            )
+          );
+
           setUsuarioLogado(
             usuarioNormalizado
           );
-
-          await carregarMateriais(
-            usuarioNormalizado
-          );
-
-          const resumoPendencias =
-            await carregarPendenciasAdministrativas(
-              usuarioNormalizado
-            );
-
-          if (
-            resumoPendencias
-              ?.possuiPendencias &&
-            resumoPendencias
-              ?.totalPendencias > 0
-          ) {
-            setAbrirAvisoPendencias(
-              true
-            );
-          } else {
-            setAbrirAvisoPendencias(
-              false
-            );
-          }
         }}
         onSolicitarAcesso={() => {
           sessionStorage.removeItem(
