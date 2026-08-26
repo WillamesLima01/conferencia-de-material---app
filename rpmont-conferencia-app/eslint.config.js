@@ -12,6 +12,7 @@ export default defineConfig([
     'dist/**',
     'dist-ssr/**',
     'android/**',
+    'ios/**',
     'node_modules/**',
   ]),
 

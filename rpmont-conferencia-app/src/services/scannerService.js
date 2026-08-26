@@ -15,7 +15,7 @@ export function leitorNativoDisponivel() {
 export async function lerCodigoNativo() {
   if (!leitorNativoDisponivel()) {
     throw new Error(
-      'O leitor nativo está disponível somente no aplicativo Android.'
+      'O leitor nativo está disponível somente no aplicativo instalado no dispositivo.'
     );
   }
 

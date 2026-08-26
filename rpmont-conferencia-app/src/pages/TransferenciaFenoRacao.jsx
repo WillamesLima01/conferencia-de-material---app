@@ -15,6 +15,7 @@ import {
   FaXmark,
 } from 'react-icons/fa6';
 import { GiGrain } from 'react-icons/gi';
+import LoadingAmpulheta from '../components/LoadingAmpulheta';
 
 import '../styles/TransferenciaFenoRacao.css';
 
@@ -947,6 +948,10 @@ function TransferenciaFenoRacao({
 
   return (
     <main className="transferencia-alimentacao-page">
+      {carregandoDados && (
+        <LoadingAmpulheta texto="Carregando dados da transferência..." />
+      )}
+
       <section className="transferencia-alimentacao-phone">
         <header className="transferencia-alimentacao-header">
           <button
@@ -977,12 +982,6 @@ function TransferenciaFenoRacao({
         {mensagem && (
           <div className="transferencia-alimentacao-mensagem">
             {mensagem}
-          </div>
-        )}
-
-        {carregandoDados && (
-          <div className="transferencia-alimentacao-mensagem">
-            Carregando solicitações, transferências e notificações...
           </div>
         )}
 

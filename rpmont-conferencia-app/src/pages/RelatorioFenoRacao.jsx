@@ -9,19 +9,24 @@ import {
   FaTriangleExclamation,
   FaWheatAwn,
   FaFilePdf,
+  FaShareNodes,
 } from 'react-icons/fa6';
 import { GiGrain } from 'react-icons/gi';
 
-import { gerarRelatorioFenoRacaoPdf } from '../relatorios/gerarRelatorioFenoRacaoPdf';
+import {
+  ACAO_RELATORIO_PDF,
+  gerarRelatorioFenoRacaoPdf,
+} from '../relatorios/gerarRelatorioFenoRacaoPdf';
 import {
   listarEstoqueFenoRacao,
   listarMovimentacoesFenoRacao,
 } from '../services/fenoRacaoEstoqueService';
 import { listarTransferencias } from '../services/fenoRacaoTransferenciaService';
 import { listarUnidades } from '../services/unidadeService';
+import LoadingAmpulheta from '../components/LoadingAmpulheta';
 
+import '../styles/LoadingAmpulheta.css';
 import '../styles/RelatorioFenoRacao.css';
-
 
 const NIVEIS_USUARIO = {
   ADMIN_MASTER: 1,
@@ -450,8 +455,45 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     return podeSelecionarUnidadeRelatorio ? 'GERAL' : unidadeUsuario;
   });
   const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [compartilhandoPdf, setCompartilhandoPdf] = useState(false);
 
- useEffect(() => {
+useEffect(() => {
+  let componenteAtivo = true;
+
+  const carregarUnidades = async () => {
+    try {
+      const respostaUnidades =
+        await listarUnidades();
+
+      if (!componenteAtivo) {
+        return;
+      }
+
+      setUnidadesCadastradas(
+        extrairUnidadesAtivasResposta(
+          respostaUnidades
+        )
+      );
+    } catch (error) {
+      if (!componenteAtivo) {
+        return;
+      }
+
+      console.error(
+        'Erro ao carregar unidades do relatório:',
+        error
+      );
+    }
+  };
+
+  carregarUnidades();
+
+  return () => {
+    componenteAtivo = false;
+  };
+}, []);
+
+useEffect(() => {
   let componenteAtivo = true;
 
   const carregarDadosBackend = async () => {
@@ -459,36 +501,34 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       setCarregandoDados(true);
       setErroCarregamento('');
 
-      let respostaMovimentacoes;
+      let promessaMovimentacoes;
 
       if (
         usuarioAdminMaster &&
         unidadeSelecionada === 'GERAL'
       ) {
-        const respostasMovimentacoes =
-          await Promise.all(
-            UNIDADES_EQUINAS.map((unidade) =>
-              listarMovimentacoesFenoRacao({
-                dataInicial,
-                dataFinal,
-                unidade,
-              })
-            )
-          );
-
-        respostaMovimentacoes =
+        promessaMovimentacoes = Promise.all(
+          UNIDADES_EQUINAS.map((unidade) =>
+            listarMovimentacoesFenoRacao({
+              dataInicial,
+              dataFinal,
+              unidade,
+            })
+          )
+        ).then((respostasMovimentacoes) =>
           respostasMovimentacoes.flatMap(
             (resposta) =>
               extrairListaResposta(resposta)
-          );
+          )
+        );
       } else {
         const unidadeConsulta =
           usuarioAdminMaster
             ? unidadeSelecionada
             : unidadeUsuario;
 
-        respostaMovimentacoes =
-          await listarMovimentacoesFenoRacao({
+        promessaMovimentacoes =
+          listarMovimentacoesFenoRacao({
             dataInicial,
             dataFinal,
             unidade: unidadeConsulta,
@@ -496,13 +536,13 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
       }
 
       const [
+        respostaMovimentacoes,
         respostaEstoque,
         respostaTransferencias,
-        respostaUnidades,
       ] = await Promise.all([
+        promessaMovimentacoes,
         listarEstoqueFenoRacao(),
         listarTransferencias(),
-        listarUnidades(),
       ]);
 
       if (!componenteAtivo) {
@@ -525,15 +565,6 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
         extrairListaResposta(
           respostaTransferencias
         );
-
-      const unidadesAtivas =
-        extrairUnidadesAtivasResposta(
-          respostaUnidades
-        );
-
-      setUnidadesCadastradas(
-        unidadesAtivas
-      );
 
       setEntradas(
         estoque
@@ -1122,35 +1153,42 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     window.print();
   };
 
+  const montarDadosRelatorioPdf = (acao) => ({
+    usuario,
+    filtros: {
+      dataInicial,
+      dataFinal,
+      produtoSelecionado,
+      produtoNome: produtoAtual?.nome || 'Todos os produtos',
+      pesoSelecionado,
+      pesoNome: nomePesoRelatorio,
+      unidadeSelecionada: unidadeRelatorio,
+      unidadeNome: nomeUnidadeRelatorio,
+      relatorioGeral,
+    },
+    resumo,
+    resumoPorProduto,
+    estoqueAtualFiltrado,
+    entradasFiltradas,
+    saidasFiltradas,
+    extraviosFiltrados,
+    transferenciasFiltradas,
+    transferenciasRecebidas,
+    transferenciasEnviadas,
+    acao,
+  });
+
   const gerarPdfRelatorio = async () => {
-    if (gerandoPdf) return;
+    if (gerandoPdf || compartilhandoPdf) return;
 
     try {
       setGerandoPdf(true);
 
-      await gerarRelatorioFenoRacaoPdf({
-        usuario,
-        filtros: {
-          dataInicial,
-          dataFinal,
-          produtoSelecionado,
-          produtoNome: produtoAtual?.nome || 'Todos os produtos',
-          pesoSelecionado,
-          pesoNome: nomePesoRelatorio,
-          unidadeSelecionada: unidadeRelatorio,
-          unidadeNome: nomeUnidadeRelatorio,
-          relatorioGeral,
-        },
-        resumo,
-        resumoPorProduto,
-        estoqueAtualFiltrado,
-        entradasFiltradas,
-        saidasFiltradas,
-        extraviosFiltrados,
-        transferenciasFiltradas,
-        transferenciasRecebidas,
-        transferenciasEnviadas,
-      });
+      await gerarRelatorioFenoRacaoPdf(
+        montarDadosRelatorioPdf(
+          ACAO_RELATORIO_PDF.ABRIR
+        )
+      );
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       window.alert('Não foi possível gerar o PDF. Tente novamente.');
@@ -1159,8 +1197,34 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     }
   };
 
+  const compartilharPdfRelatorio = async () => {
+    if (gerandoPdf || compartilhandoPdf) return;
+
+    try {
+      setCompartilhandoPdf(true);
+
+      await gerarRelatorioFenoRacaoPdf(
+        montarDadosRelatorioPdf(
+          ACAO_RELATORIO_PDF.COMPARTILHAR
+        )
+      );
+    } catch (error) {
+      console.error('Erro ao compartilhar PDF:', error);
+      window.alert(
+        error?.message ||
+          'Não foi possível compartilhar o PDF. Tente novamente.'
+      );
+    } finally {
+      setCompartilhandoPdf(false);
+    }
+  };
+
   return (
     <main className="relatorio-alimentacao-page">
+      {carregandoDados && (
+        <LoadingAmpulheta texto="Carregando relatório..." />
+      )}
+
       <section className="relatorio-alimentacao-phone">
         <header className="relatorio-alimentacao-header">
           <button
@@ -1303,10 +1367,32 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
               type="button"
               className="relatorio-alimentacao-pdf"
               onClick={gerarPdfRelatorio}
-              disabled={gerandoPdf || carregandoDados || Boolean(erroCarregamento)}
+              disabled={
+                gerandoPdf ||
+                compartilhandoPdf ||
+                carregandoDados ||
+                Boolean(erroCarregamento)
+              }
             >
               <FaFilePdf />
               {gerandoPdf ? 'Gerando PDF...' : 'Gerar PDF'}
+            </button>
+
+            <button
+              type="button"
+              className="relatorio-alimentacao-pdf"
+              onClick={compartilharPdfRelatorio}
+              disabled={
+                gerandoPdf ||
+                compartilhandoPdf ||
+                carregandoDados ||
+                Boolean(erroCarregamento)
+              }
+            >
+              <FaShareNodes />
+              {compartilhandoPdf
+                ? 'Compartilhando...'
+                : 'Compartilhar PDF'}
             </button>
           </div>
         </section>

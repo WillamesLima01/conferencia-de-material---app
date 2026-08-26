@@ -1,106 +1,191 @@
-const API_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = String(
+  import.meta.env.VITE_API_URL ||
+    'http://localhost:8080'
+)
+  .trim()
+  .replace(/\/+$/, '');
 
 const TEMPO_LIMITE_MS = 10000;
 
-const api = async (endpoint, options = {}) => {
-  const token = localStorage.getItem('token');
-  const controller = new AbortController();
+const criarHeaders = (
+  options,
+  token
+) => {
+  const headers = new Headers(
+    options?.headers || {}
+  );
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  const possuiBody =
+    options?.body !== undefined &&
+    options?.body !== null;
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const bodyEhFormData =
+    typeof FormData !== 'undefined' &&
+    options?.body instanceof FormData;
+
+  if (
+    possuiBody &&
+    !bodyEhFormData &&
+    !headers.has('Content-Type')
+  ) {
+    headers.set(
+      'Content-Type',
+      'application/json'
+    );
   }
 
-  let timeoutId;
+  if (token) {
+    headers.set(
+      'Authorization',
+      `Bearer ${token}`
+    );
+  }
 
-  const requisicao = fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-    signal: controller.signal,
-  });
+  return headers;
+};
 
-  const timeout = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
+const lerResposta = async (
+  response
+) => {
+  if (response.status === 204) {
+    return null;
+  }
+
+  const contentType =
+    response.headers.get(
+      'content-type'
+    ) || '';
+
+  if (
+    contentType.includes(
+      'application/json'
+    )
+  ) {
+    return response.json();
+  }
+
+  const texto =
+    await response.text();
+
+  return texto || null;
+};
+
+const criarErroHttp = (
+  response,
+  data
+) => {
+  const mensagem =
+    typeof data === 'object'
+      ? data?.message
+      : data;
+
+  const erro = new Error(
+    mensagem ||
+      'Não foi possível concluir a operação.'
+  );
+
+  erro.status = response.status;
+  erro.data = data;
+
+  return erro;
+};
+
+const api = async (
+  endpoint,
+  options = {}
+) => {
+  const token =
+    localStorage.getItem('token');
+
+  const controller =
+    new AbortController();
+
+  const timeoutId =
+    setTimeout(() => {
       controller.abort();
-
-      reject(
-        new Error(
-          'O servidor demorou para responder. Verifique se o backend está ativo e tente novamente.'
-        )
-      );
     }, TEMPO_LIMITE_MS);
-  });
 
   try {
-    const response = await Promise.race([
-      requisicao,
-      timeout,
-    ]);
-
-    let data = null;
-
-    if (response.status !== 204) {
-      const contentType =
-        response.headers.get('content-type');
-
-      if (contentType?.includes('application/json')) {
-        data = await response.json();
-      }
-    }
-
-    if (!response.ok) {
-      const erroHttp = new Error(
-        data?.message ||
-          'Não foi possível concluir a operação.'
+    const headers =
+      criarHeaders(
+        options,
+        token
       );
 
-      erroHttp.status = response.status;
-      erroHttp.data = data;
+    const response =
+      await fetch(
+        `${API_URL}${endpoint}`,
+        {
+          ...options,
+          headers,
+          signal:
+            controller.signal,
+        }
+      );
 
-      throw erroHttp;
+    const data =
+      await lerResposta(
+        response
+      );
+
+    if (!response.ok) {
+      throw criarErroHttp(
+        response,
+        data
+      );
     }
 
     return data;
   } catch (error) {
-    const mensagemErro = String(
-      error?.message ?? ''
-    ).toLowerCase();
-
     if (
-      mensagemErro.includes(
-        'o servidor demorou para responder'
-      )
+      error?.status
     ) {
       throw error;
     }
 
-    if (error?.name === 'AbortError') {
+    if (
+      error?.name ===
+      'AbortError'
+    ) {
       throw new Error(
-        'O servidor demorou para responder. Verifique se o backend está ativo e tente novamente.',
-        { cause: error }
+        'O servidor demorou para responder. Verifique sua conexão e tente novamente.',
+        {
+          cause: error,
+        }
       );
     }
 
-    if (
+    const mensagemErro =
+      String(
+        error?.message || ''
+      ).toLowerCase();
+
+    const erroDeRede =
       error instanceof TypeError ||
-      mensagemErro.includes('failed to fetch') ||
-      mensagemErro.includes('network error') ||
-      mensagemErro.includes('load failed')
-    ) {
+      mensagemErro.includes(
+        'failed to fetch'
+      ) ||
+      mensagemErro.includes(
+        'network error'
+      ) ||
+      mensagemErro.includes(
+        'load failed'
+      );
+
+    if (erroDeRede) {
       throw new Error(
-        'Não foi possível conectar ao servidor. Verifique sua conexão e se o backend está ativo.',
-        { cause: error }
+        'Não foi possível conectar ao servidor. Verifique sua conexão e se o backend está disponível.',
+        {
+          cause: error,
+        }
       );
     }
 
     throw error;
   } finally {
-    clearTimeout(timeoutId);
+    clearTimeout(
+      timeoutId
+    );
   }
 };
 

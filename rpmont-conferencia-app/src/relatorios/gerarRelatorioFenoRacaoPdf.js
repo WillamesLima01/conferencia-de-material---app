@@ -7,8 +7,14 @@ import {
   Directory,
 } from '@capacitor/filesystem';
 import { FileViewer } from '@capacitor/file-viewer';
+import { Share } from '@capacitor/share';
 
 import brasaoRPMont from '../assets/RPMont.png';
+
+const ACAO_PDF = {
+  ABRIR: 'ABRIR',
+  COMPARTILHAR: 'COMPARTILHAR',
+};
 
 const formatarNumero = (valor) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -177,21 +183,19 @@ const carregarImagemBase64 = (src) => {
   });
 };
 
-const salvarOuAbrirPdf = async (
+const salvarAbrirOuCompartilharPdf = async (
   doc,
-  nomeArquivo
+  nomeArquivo,
+  acao = ACAO_PDF.ABRIR
 ) => {
   if (!Capacitor.isNativePlatform()) {
     doc.save(nomeArquivo);
-
     return;
   }
 
-  const pdfDataUri =
-    doc.output('datauristring');
+  const pdfDataUri = doc.output('datauristring');
 
-  const pdfBase64 =
-    pdfDataUri.split(',')[1];
+  const pdfBase64 = pdfDataUri.split(',')[1];
 
   if (!pdfBase64) {
     throw new Error(
@@ -206,14 +210,12 @@ const salvarOuAbrirPdf = async (
     recursive: true,
   });
 
-  const arquivo =
-    await Filesystem.getUri({
-      path: nomeArquivo,
-      directory: Directory.Cache,
-    });
+  const arquivo = await Filesystem.getUri({
+    path: nomeArquivo,
+    directory: Directory.Cache,
+  });
 
-  const uriArquivo =
-    arquivo?.uri;
+  const uriArquivo = arquivo?.uri;
 
   if (!uriArquivo) {
     throw new Error(
@@ -225,6 +227,26 @@ const salvarOuAbrirPdf = async (
     'PDF gerado no dispositivo:',
     uriArquivo
   );
+
+  if (acao === ACAO_PDF.COMPARTILHAR) {
+    const podeCompartilhar =
+      await Share.canShare();
+
+    if (!podeCompartilhar?.value) {
+      throw new Error(
+        'O compartilhamento não está disponível neste dispositivo.'
+      );
+    }
+
+    await Share.share({
+      title: 'Relatório de Feno e Ração',
+      text: 'Relatório de Feno e Ração.',
+      files: [uriArquivo],
+      dialogTitle: 'Compartilhar relatório',
+    });
+
+    return;
+  }
 
   await FileViewer.openDocumentFromLocalPath({
     path: uriArquivo,
@@ -241,6 +263,7 @@ export const gerarRelatorioFenoRacaoPdf = async ({
   saidasFiltradas,
   extraviosFiltrados = [],
   transferenciasFiltradas = [],
+  acao = ACAO_PDF.ABRIR,
 }) => {
   const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -1611,8 +1634,11 @@ export const gerarRelatorioFenoRacaoPdf = async ({
       '-'
     )}.pdf`;
 
-  await salvarOuAbrirPdf(
+  await salvarAbrirOuCompartilharPdf(
     doc,
-    nomeArquivo
+    nomeArquivo,
+    acao
   );
 };
+
+export const ACAO_RELATORIO_PDF = ACAO_PDF;

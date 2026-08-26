@@ -255,10 +255,6 @@ function AppConteudo() {
     return material?.id ?? material?.ID;
   };
 
-  const limparNumeros = (valor) => {
-    return String(valor || '').replace(/\D/g, '');
-  };
-
   const obterValorNormalizado = (valor) => {
     return String(valor ?? '')
       .trim()
@@ -444,40 +440,24 @@ function AppConteudo() {
    * =====================================================
    */
 
-  const normalizarUsuarioLogado = (usuario) => {
-    const matriculaLimpa =
-      limparNumeros(
-        usuario?.matricula ??
-          usuario?.MATRICULA
-      );
-
-    const usuarioWillamesTeste =
-      matriculaLimpa === '5257093';
-
+  const normalizarUsuarioLogado = (usuario) => {    
     const nivelRecebido = Number(
       usuario?.nivel ??
         usuario?.NIVEL ??
         NIVEIS_USUARIO.USUARIO_COMUM
     );
 
-    const nivelFinal =
-      usuarioWillamesTeste
-        ? NIVEIS_USUARIO.ADMIN_MASTER
-        : nivelRecebido;
+    const nivelFinal = nivelRecebido;
 
     const unidadeFinal =
       usuario?.unidade ??
       usuario?.UNIDADE ??
-      (usuarioWillamesTeste
-        ? 'RPMont'
-        : '');
+      '';
 
     const setorFinal =
       usuario?.setor ??
       usuario?.SETOR ??
-      (usuarioWillamesTeste
-        ? 'P4'
-        : '');
+      '';
 
     const usuarioNormalizado = {
       ...usuario,
