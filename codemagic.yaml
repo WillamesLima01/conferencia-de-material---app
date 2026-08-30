@@ -102,6 +102,6 @@ workflows:
             Payload
 
     artifacts:
-      - rpmont-conferencia-app/ios/App/build/ipa/*.ipa
-      - rpmont-conferencia-app/ios/App/build/DerivedData/Build/Products/Debug-iphoneos/*.app
+      - $CM_BUILD_DIR/rpmont-conferencia-app/ios/App/build/ipa/*.ipa
+      - $CM_BUILD_DIR/rpmont-conferencia-app/ios/App/build/DerivedData/Build/Products/Debug-iphoneos/*.app
       - /tmp/xcodebuild_logs/*.log
