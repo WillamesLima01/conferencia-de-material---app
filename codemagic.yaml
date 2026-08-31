@@ -7,7 +7,7 @@ workflows:
     working_directory: rpmont-conferencia-app
 
     environment:
-      xcode: latest
+      xcode: 16.4
       node: latest
 
     scripts:
@@ -51,7 +51,7 @@ workflows:
     working_directory: rpmont-conferencia-app
 
     environment:
-      xcode: latest
+      xcode: 16.4
       node: latest
 
     scripts:
