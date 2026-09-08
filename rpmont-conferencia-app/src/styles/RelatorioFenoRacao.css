@@ -476,3 +476,104 @@
     grid-template-columns: 1fr;
   }
 }
+
+.relatorio-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.relatorio-modal {
+  width: 100%;
+  max-width: 380px;
+
+  padding: 28px 24px 22px;
+
+  border-radius: 18px;
+
+  background: #ffffff;
+
+  text-align: center;
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.28);
+
+  animation: relatorioModalEntrada 0.2s ease-out;
+}
+
+.relatorio-modal-icone {
+  width: 56px;
+  height: 56px;
+
+  margin: 0 auto 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #fee2e2;
+
+  font-size: 26px;
+}
+
+.relatorio-modal h2 {
+  margin: 0 0 10px;
+
+  font-size: 20px;
+  font-weight: 700;
+
+  color: #1f2937;
+}
+
+.relatorio-modal p {
+  margin: 0 0 22px;
+
+  font-size: 15px;
+  line-height: 1.5;
+
+  color: #4b5563;
+}
+
+.relatorio-modal button {
+  width: 100%;
+
+  min-height: 44px;
+
+  border: none;
+  border-radius: 10px;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  color: #ffffff;
+  background: #b91c1c;
+
+  cursor: pointer;
+}
+
+.relatorio-modal button:active {
+  transform: scale(0.98);
+}
+
+@keyframes relatorioModalEntrada {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

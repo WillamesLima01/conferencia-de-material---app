@@ -457,6 +457,12 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [compartilhandoPdf, setCompartilhandoPdf] = useState(false);
 
+  const [modalErro, setModalErro] = useState({
+    aberto: false,
+    titulo: '',
+    mensagem: '',
+  });
+
 useEffect(() => {
   let componenteAtivo = true;
 
@@ -1042,6 +1048,14 @@ useEffect(() => {
     transferenciasEnviadas,
   ]);
 
+  const fecharModalErro = () => {
+    setModalErro({
+      aberto: false,
+      titulo: '',
+      mensagem: '',
+    });
+  };
+
   const resumoPorProduto = useMemo(() => {
     const tipos = [
       'FENO',
@@ -1210,10 +1224,14 @@ useEffect(() => {
       );
     } catch (error) {
       console.error('Erro ao compartilhar PDF:', error);
-      window.alert(
-        error?.message ||
-          'Não foi possível compartilhar o PDF. Tente novamente.'
-      );
+    
+      setModalErro({
+        aberto: true,
+        titulo: 'Erro ao compartilhar',
+        mensagem:
+          error?.message ||
+          'Não foi possível compartilhar o PDF. Tente novamente.',
+      });
     } finally {
       setCompartilhandoPdf(false);
     }
@@ -1221,6 +1239,34 @@ useEffect(() => {
 
   return (
     <main className="relatorio-alimentacao-page">
+
+      {modalErro.aberto && (
+        <div
+          className="relatorio-modal-overlay"
+          onClick={fecharModalErro}
+        >
+          <div
+            className="relatorio-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="relatorio-modal-icone">
+              <FaTriangleExclamation />
+            </div>
+
+            <h2>{modalErro.titulo}</h2>
+
+            <p>{modalErro.mensagem}</p>
+
+            <button
+              type="button"
+              onClick={fecharModalErro}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       {carregandoDados && (
         <LoadingAmpulheta texto="Carregando relatório..." />
       )}

@@ -231,20 +231,38 @@ const salvarAbrirOuCompartilharPdf = async (
   if (acao === ACAO_PDF.COMPARTILHAR) {
     const podeCompartilhar =
       await Share.canShare();
-
+  
     if (!podeCompartilhar?.value) {
       throw new Error(
         'O compartilhamento não está disponível neste dispositivo.'
       );
     }
-
-    await Share.share({
-      title: 'Relatório de Feno e Ração',
-      text: 'Relatório de Feno e Ração.',
-      files: [uriArquivo],
-      dialogTitle: 'Compartilhar relatório',
-    });
-
+  
+    try {
+      await Share.share({
+        title: 'Relatório de Feno e Ração',
+        text: 'Relatório de Feno e Ração.',
+        files: [uriArquivo],
+        dialogTitle: 'Compartilhar relatório',
+      });
+    } catch (error) {
+      const mensagemErro = String(
+        error?.message || error || ''
+      ).toLowerCase();
+  
+      const compartilhamentoCancelado =
+        mensagemErro.includes('share canceled') ||
+        mensagemErro.includes('share cancelled') ||
+        mensagemErro.includes('canceled') ||
+        mensagemErro.includes('cancelled');
+  
+      if (compartilhamentoCancelado) {
+        return;
+      }
+  
+      throw error;
+    }
+  
     return;
   }
 
