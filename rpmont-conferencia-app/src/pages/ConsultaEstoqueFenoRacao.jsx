@@ -387,58 +387,61 @@ function ConsultaEstoqueFenoRacao({
   const [erro, setErro] =
     useState('');
 
-  const carregarDados =
-    useCallback(async () => {
-      const unidadeConsulta =
-        adminMaster
+  const buscarEstoque = useCallback(async () => {
+    const unidadeConsulta =
+      adminMaster
+        ? unidadeSelecionada
+        : podeSelecionarUnidade
           ? unidadeSelecionada
-          : podeSelecionarUnidade
-            ? unidadeSelecionada
-            : unidadeUsuario;
+          : unidadeUsuario;
 
-      const filtrosConsulta =
-        unidadeConsulta
-          ? {
-              unidade: unidadeConsulta,
-            }
-          : {};
+    const filtrosConsulta = unidadeConsulta
+      ? {
+          unidade: unidadeConsulta,
+        }
+      : {};
 
-      try {
-        setCarregando(true);
-        setErro('');
+    const respostaEstoque =
+      await listarEstoqueFenoRacao(
+        filtrosConsulta
+      );
 
-        const respostaEstoque =
-          await listarEstoqueFenoRacao(
-            filtrosConsulta
-          );
+    return ordenarRegistros(
+      obterEstoqueDaResposta(
+        respostaEstoque
+      )
+    );
+  }, [
+    adminMaster,
+    podeSelecionarUnidade,
+    unidadeSelecionada,
+    unidadeUsuario,
+  ]);
 
-        setEstoque(
-          ordenarRegistros(
-            obterEstoqueDaResposta(
-              respostaEstoque
-            )
-          )
-        );
-      } catch (error) {
-        console.error(
-          'Erro ao consultar estoque:',
-          error
-        );
+  const carregarDados = useCallback(async () => {
+    setCarregando(true);
+    setErro('');
 
-        setErro(
-          obterMensagemErro(error)
-        );
+    try {
+      const dadosEstoque =
+        await buscarEstoque();
 
-        setEstoque([]);
-      } finally {
-        setCarregando(false);
-      }
-    }, [
-      adminMaster,
-      podeSelecionarUnidade,
-      unidadeSelecionada,
-      unidadeUsuario,
-    ]);
+      setEstoque(dadosEstoque);
+    } catch (error) {
+      console.error(
+        'Erro ao consultar estoque:',
+        error
+      );
+
+      setErro(
+        obterMensagemErro(error)
+      );
+
+      setEstoque([]);
+    } finally {
+      setCarregando(false);
+    }
+  }, [buscarEstoque]);
 
   useEffect(() => {
     let componenteAtivo = true;
@@ -479,38 +482,15 @@ function ConsultaEstoqueFenoRacao({
   }, [unidadeUsuario]);
 
   useEffect(() => {
-    const unidadeConsulta =
-      adminMaster
-        ? unidadeSelecionada
-        : podeSelecionarUnidade
-          ? unidadeSelecionada
-          : unidadeUsuario;
-
-    const filtrosConsulta =
-      unidadeConsulta
-        ? {
-            unidade: unidadeConsulta,
-          }
-        : {};
-
     let componenteAtivo = true;
 
-    listarEstoqueFenoRacao(
-      filtrosConsulta
-    )
-      .then((respostaEstoque) => {
+    buscarEstoque()
+      .then((dadosEstoque) => {
         if (!componenteAtivo) {
           return;
         }
 
-        setEstoque(
-          ordenarRegistros(
-            obterEstoqueDaResposta(
-              respostaEstoque
-            )
-          )
-        );
-
+        setEstoque(dadosEstoque);
         setErro('');
       })
       .catch((error) => {
@@ -538,13 +518,7 @@ function ConsultaEstoqueFenoRacao({
     return () => {
       componenteAtivo = false;
     };
-  }, [
-    adminMaster,
-    podeSelecionarUnidade,
-    unidadeSelecionada,
-    unidadeUsuario,
-  ]);
-
+  }, [buscarEstoque]);
 
   const unidadeFoiInformada =
     adminMaster ||
@@ -697,17 +671,25 @@ function ConsultaEstoqueFenoRacao({
     setDataFinal('');
     setErro('');
 
-    if (
-      normalizarTexto(unidadeSelecionada) !==
-      normalizarTexto(unidadeUsuario)
-    ) {
+    const unidadePadrao =
+      adminMaster
+        ? ''
+        : unidadeUsuario;
+
+    const unidadeVaiMudar =
+      normalizarTexto(
+        unidadeSelecionada
+      ) !==
+      normalizarTexto(
+        unidadePadrao
+      );
+
+    if (unidadeVaiMudar) {
       setCarregando(true);
     }
 
     setUnidadeSelecionada(
-      adminMaster
-        ? ''
-        : unidadeUsuario
+      unidadePadrao
     );
   };
 

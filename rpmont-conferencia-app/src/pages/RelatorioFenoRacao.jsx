@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import {
   FaArrowLeft,
   FaBoxesStacked,
@@ -455,6 +456,7 @@ function RelatorioFenoRacao({ usuario, onVoltar }) {
     return podeSelecionarUnidadeRelatorio ? 'GERAL' : unidadeUsuario;
   });
   const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [imprimindoRelatorio, setImprimindoRelatorio] = useState(false);
   const [compartilhandoPdf, setCompartilhandoPdf] = useState(false);
 
   const [modalErro, setModalErro] = useState({
@@ -1163,10 +1165,6 @@ useEffect(() => {
       ? 'Todos os pesos'
       : `${formatarNumero(pesoSelecionado)} kg`;
 
-  const imprimirRelatorio = () => {
-    window.print();
-  };
-
   const montarDadosRelatorioPdf = (acao) => ({
     usuario,
     filtros: {
@@ -1192,8 +1190,45 @@ useEffect(() => {
     acao,
   });
 
+  const imprimirRelatorio = async () => {
+    if (
+      imprimindoRelatorio ||
+      gerandoPdf ||
+      compartilhandoPdf
+    ) {
+      return;
+    }
+
+    if (!Capacitor.isNativePlatform()) {
+      window.print();
+      return;
+    }
+
+    try {
+      setImprimindoRelatorio(true);
+
+      await gerarRelatorioFenoRacaoPdf(
+        montarDadosRelatorioPdf(
+          ACAO_RELATORIO_PDF.ABRIR
+        )
+      );
+    } catch (error) {
+      console.error(
+        'Erro ao preparar relatório para impressão:',
+        error
+      );
+
+      window.alert(
+        error?.message ||
+          'Não foi possível preparar o relatório para impressão. Tente novamente.'
+      );
+    } finally {
+      setImprimindoRelatorio(false);
+    }
+  };
+
   const gerarPdfRelatorio = async () => {
-    if (gerandoPdf || compartilhandoPdf) return;
+    if (imprimindoRelatorio || gerandoPdf || compartilhandoPdf) return;
 
     try {
       setGerandoPdf(true);
@@ -1212,7 +1247,7 @@ useEffect(() => {
   };
 
   const compartilharPdfRelatorio = async () => {
-    if (gerandoPdf || compartilhandoPdf) return;
+    if (imprimindoRelatorio || gerandoPdf || compartilhandoPdf) return;
 
     try {
       setCompartilhandoPdf(true);
@@ -1404,9 +1439,18 @@ useEffect(() => {
               type="button"
               className="relatorio-alimentacao-imprimir"
               onClick={imprimirRelatorio}
+              disabled={
+                imprimindoRelatorio ||
+                gerandoPdf ||
+                compartilhandoPdf ||
+                carregandoDados ||
+                Boolean(erroCarregamento)
+              }
             >
               <FaPrint />
-              Imprimir relatório
+              {imprimindoRelatorio
+                ? 'Preparando impressão...'
+                : 'Imprimir relatório'}
             </button>
 
             <button
@@ -1414,6 +1458,7 @@ useEffect(() => {
               className="relatorio-alimentacao-pdf"
               onClick={gerarPdfRelatorio}
               disabled={
+                imprimindoRelatorio ||
                 gerandoPdf ||
                 compartilhandoPdf ||
                 carregandoDados ||
@@ -1429,6 +1474,7 @@ useEffect(() => {
               className="relatorio-alimentacao-pdf"
               onClick={compartilharPdfRelatorio}
               disabled={
+                imprimindoRelatorio ||
                 gerandoPdf ||
                 compartilhandoPdf ||
                 carregandoDados ||

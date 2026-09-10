@@ -136,17 +136,12 @@ function ConferenciaMateriais({
     material?.Conferido === 1;
 
 const materialEstaAtivo = (material) =>
-  normalizarTexto(material?.situacao) !==
-  'inativo';
+  normalizarTexto(material?.situacao) ===
+  'ativo';
 
 const materiaisDaConferencia =
   useMemo(() => {
     return materiais.filter((material) => {
-      const materialAtivo =
-        normalizarTexto(
-          material?.situacao
-        ) !== 'inativo';
-
       const mesmaUnidade =
         normalizarTexto(
           material?.unidade
@@ -155,21 +150,33 @@ const materiaisDaConferencia =
           usuario?.unidade
         );
 
-      if (
-        !materialAtivo ||
-        !mesmaUnidade
-      ) {
+      if (!mesmaUnidade) {
         return false;
       }
 
+      /*
+       * Na opção "Todos os materiais", exibe todos
+       * os registros patrimoniais da unidade,
+       * independentemente da situação.
+       *
+       * Isso mantém o total da conferência coerente
+       * com o cadastro patrimonial completo.
+       */
       if (
         configuracao?.tipo === 'TODOS'
       ) {
         return true;
       }
 
+      /*
+       * Na conferência por setor, somente materiais
+       * ATIVOS entram no escopo operacional.
+       */
       return (
         configuracao?.tipo === 'SETOR' &&
+        normalizarTexto(
+          material?.situacao
+        ) === 'ativo' &&
         normalizarTexto(
           material?.setor
         ) ===
@@ -295,6 +302,32 @@ const materiaisDaConferencia =
       );
 
     if (materialNaLista) {
+      /*
+       * Materiais não ativos continuam visíveis na
+       * opção "Todos os materiais", mas não podem
+       * ser conferidos operacionalmente.
+       */
+      if (
+        !materialEstaAtivo(
+          materialNaLista
+        )
+      ) {
+        const situacaoMaterial =
+          String(
+            materialNaLista?.situacao ??
+              'não informada'
+          ).trim();
+
+        setMensagem(
+          `Material localizado, mas não pode ser conferido porque está com situação ${situacaoMaterial}.`
+        );
+
+        setCodigoLido('');
+        setCodigoPendente('');
+
+        return;
+      }
+
       /*
        * Impede nova requisição para um material
        * que já está marcado como conferido.

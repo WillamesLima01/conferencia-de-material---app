@@ -4,6 +4,7 @@ import {
   FaArrowLeft,
   FaBarcode,
   FaBuilding,
+  FaCamera,
   FaFloppyDisk,
   FaLayerGroup,
   FaPenToSquare,
@@ -12,6 +13,11 @@ import {
 import {
   listarSetoresAtivos,
 } from '../services/setorService';
+
+import {
+  leitorNativoDisponivel,
+  lerCodigoNativo,
+} from '../services/scannerService';
 
 import '../styles/CadastroMaterial.css';
 
@@ -59,6 +65,7 @@ function CadastroMaterial({
 
   const [carregandoSetores, setCarregandoSetores] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [lendoCodigo, setLendoCodigo] = useState(false);
   const [mensagem, setMensagem] = useState('');
 
   const unidadeUsuario = useMemo(() => {
@@ -199,6 +206,51 @@ function CadastroMaterial({
     }
   };
 
+  const abrirLeitorCodigo = async () => {
+    if (
+      !cadastroManual ||
+      salvando ||
+      lendoCodigo
+    ) {
+      return;
+    }
+
+    if (!leitorNativoDisponivel()) {
+      setMensagem(
+        'O leitor de código está disponível no aplicativo Android.'
+      );
+      return;
+    }
+
+    try {
+      setLendoCodigo(true);
+      setMensagem('');
+
+      const codigoLido =
+        await lerCodigoNativo();
+
+      if (!codigoLido) {
+        return;
+      }
+
+      setNSerie(
+        String(codigoLido).trim()
+      );
+    } catch (erro) {
+      console.error(
+        'Erro ao ler código no cadastro de material:',
+        erro
+      );
+
+      setMensagem(
+        erro?.message ||
+          'Não foi possível ler o código. Tente novamente.'
+      );
+    } finally {
+      setLendoCodigo(false);
+    }
+  };
+
   const salvarMaterial = async () => {
     const numeroSerieTratado = nSerie.trim();
     const nomeTratado = nome.trim();
@@ -336,13 +388,17 @@ function CadastroMaterial({
           <label className="cadastro-material-label">
             Nº Série / Código
 
-            <div className="input-com-icone">
+            <div className="input-com-icone input-com-leitor">
               <FaBarcode />
 
               <input
                 type="text"
                 value={nSerie}
-                disabled={!cadastroManual || salvando}
+                disabled={
+                  !cadastroManual ||
+                  salvando ||
+                  lendoCodigo
+                }
                 maxLength={100}
                 placeholder="Ex.: 00494550"
                 onChange={(event) => {
@@ -350,7 +406,30 @@ function CadastroMaterial({
                   limparMensagem();
                 }}
               />
+
+              {cadastroManual && (
+                <button
+                  type="button"
+                  className="cadastro-leitor-button"
+                  onClick={abrirLeitorCodigo}
+                  disabled={
+                    salvando ||
+                    lendoCodigo
+                  }
+                  aria-label="Ler código com a câmera"
+                  title="Ler código com a câmera"
+                >
+                  <FaCamera />
+                </button>
+              )}
             </div>
+
+            {cadastroManual &&
+              lendoCodigo && (
+                <span className="cadastro-leitor-status">
+                  Abrindo leitor...
+                </span>
+              )}
           </label>
 
           {cadastroManual && (
@@ -471,6 +550,7 @@ function CadastroMaterial({
             onClick={salvarMaterial}
             disabled={
               salvando ||
+              lendoCodigo ||
               (cadastroManual &&
                 (carregandoSetores ||
                   setoresDaUnidade.length === 0))
@@ -489,7 +569,10 @@ function CadastroMaterial({
             type="button"
             className="cancelar-material-button"
             onClick={onCancelar}
-            disabled={salvando}
+            disabled={
+              salvando ||
+              lendoCodigo
+            }
           >
             Cancelar
           </button>
