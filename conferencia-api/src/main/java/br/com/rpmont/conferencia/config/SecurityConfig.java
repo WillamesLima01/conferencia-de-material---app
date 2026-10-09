@@ -118,9 +118,10 @@ public class SecurityConfig {
                 List.of(
                         "http://localhost",
                         "https://localhost",
+                        "capacitor://localhost",
                         "http://localhost:5173",
                         "http://192.168.0.4:5173",
-                        "http://192.168.0.8:5173"
+                        "http://192.168.0.8:5173",
                 )
         );
 
