@@ -98,6 +98,19 @@ public class MaterialPatrimonialServiceImpl
                 numeroSerie
         );
 
+        material.setNome(
+                normalizarTextoObrigatorio(
+                        request.nome(),
+                        "O nome do material é obrigatório."
+                )
+        );
+
+        material.setMarca(
+                normalizarTextoOpcional(
+                        request.marca()
+                )
+        );
+
         material.setDescricao(
                 normalizarTextoObrigatorio(
                         request.descricao(),
@@ -355,6 +368,19 @@ public class MaterialPatrimonialServiceImpl
 
         material.setNumeroSerie(
                 numeroSerie
+        );
+
+        material.setNome(
+                normalizarTextoObrigatorio(
+                        request.nome(),
+                        "O nome do material é obrigatório."
+                )
+        );
+
+        material.setMarca(
+                normalizarTextoOpcional(
+                        request.marca()
+                )
         );
 
         material.setDescricao(
@@ -1084,6 +1110,78 @@ public class MaterialPatrimonialServiceImpl
 
     /*
      * ==========================================
+     * ATIVAR
+     * ==========================================
+     */
+
+    @Override
+    @Transactional
+    public MaterialPatrimonialResponseDTO ativar(
+            Long id,
+            String matriculaUsuario
+    ) {
+        Usuario usuarioLogado =
+                buscarUsuarioAutenticado(
+                        matriculaUsuario
+                );
+
+        validarAcessoPatrimonio(
+                usuarioLogado
+        );
+
+        MaterialPatrimonial material =
+                buscarMaterialPorId(
+                        id
+                );
+
+        validarAcessoUnidade(
+                usuarioLogado,
+                material
+        );
+
+        if (material.getSituacao() == null) {
+            throw new ConflictException(
+                    "O material não possui uma situação válida cadastrada."
+            );
+        }
+
+        if (material.getSituacao() != SituacaoMaterial.INATIVO) {
+            throw new ConflictException(
+                    "Somente materiais inativos podem ser ativados. " +
+                            "Situação atual: " +
+                            material.getSituacao().name() +
+                            "."
+            );
+        }
+
+        material.setSituacao(
+                SituacaoMaterial.ATIVO
+        );
+
+        material.setConferido(
+                false
+        );
+
+        material.setDataModificacao(
+                LocalDateTime.now()
+        );
+
+        material.setUsuarioModificadorId(
+                usuarioLogado.getId()
+        );
+
+        MaterialPatrimonial atualizado =
+                materialRepository.save(
+                        material
+                );
+
+        return converterParaResponse(
+                atualizado
+        );
+    }
+
+    /*
+     * ==========================================
      * INATIVAR
      * ==========================================
      */
@@ -1467,11 +1565,12 @@ public class MaterialPatrimonialServiceImpl
         }
 
         if (
-                material.getSituacao() != SituacaoMaterial.EXTRAVIADO &&
+                material.getSituacao() != SituacaoMaterial.INATIVO &&
+                        material.getSituacao() != SituacaoMaterial.EXTRAVIADO &&
                         material.getSituacao() != SituacaoMaterial.FURTADO
         ) {
             throw new ConflictException(
-                    "Somente materiais extraviados ou furtados podem ser reativados. " +
+                    "Somente materiais inativos, extraviados ou furtados podem ser reativados. " +
                             "Situação atual: " +
                             material.getSituacao().name() +
                             "."
@@ -1521,6 +1620,19 @@ public class MaterialPatrimonialServiceImpl
         return valor.trim();
     }
 
+    private String normalizarTextoOpcional(
+            String valor
+    ) {
+        if (
+                valor == null ||
+                        valor.isBlank()
+        ) {
+            return null;
+        }
+
+        return valor.trim();
+    }
+
     private String normalizarObservacao(
             String observacao
     ) {
@@ -1543,6 +1655,22 @@ public class MaterialPatrimonialServiceImpl
     private MaterialPatrimonialResponseDTO converterParaResponse(
             MaterialPatrimonial material
     ) {
+        String usuarioNome =
+                material.getUsuarioId() != null
+                        ? usuarioRepository
+                        .findById(material.getUsuarioId())
+                        .map(Usuario::getNomeCompleto)
+                        .orElse("Usuário não encontrado")
+                        : "Não informado";
+
+        String usuarioModificadorNome =
+                material.getUsuarioModificadorId() != null
+                        ? usuarioRepository
+                        .findById(material.getUsuarioModificadorId())
+                        .map(Usuario::getNomeCompleto)
+                        .orElse("Usuário não encontrado")
+                        : "Não informado";
+
         return new MaterialPatrimonialResponseDTO(
                 material.getId(),
                 material.getNumeroSerie(),
@@ -1554,8 +1682,10 @@ public class MaterialPatrimonialServiceImpl
                 material.getUnidade(),
                 material.getDataCadastro(),
                 material.getUsuarioId(),
+                usuarioNome,
                 material.getDataModificacao(),
                 material.getUsuarioModificadorId(),
+                usuarioModificadorNome,
                 material.getConferido(),
                 material.getSituacao() != null
                         ? material.getSituacao().name()

@@ -44,6 +44,7 @@ function ConferenciaMateriais({
   onAbrirCadastro,
   onEditarMaterial,
   onExcluirMaterial,
+  onReativarMaterial,
   onConferirMaterial,
   onZerarConferencia,
 }) {
@@ -63,6 +64,26 @@ function ConferenciaMateriais({
 
   const [modalExcluir, setModalExcluir] =
     useState(null);
+
+  const [
+    modalReativar,
+    setModalReativar,
+  ] = useState(null);
+
+  const [
+    motivoReativacao,
+    setMotivoReativacao,
+  ] = useState('');
+
+  const [
+    numeroDocumentoReativacao,
+    setNumeroDocumentoReativacao,
+  ] = useState('');
+
+  const [
+    observacaoReativacao,
+    setObservacaoReativacao,
+  ] = useState('');
 
   const [
     materialDetalhes,
@@ -1116,6 +1137,99 @@ const materiaisDaConferencia =
     setModalExcluir(null);
   };
 
+  const abrirModalReativar = (
+    material
+  ) => {
+    setModalReativar(material);
+    setMotivoReativacao('');
+    setNumeroDocumentoReativacao('');
+    setObservacaoReativacao('');
+  };
+
+  const fecharModalReativar = () => {
+    setModalReativar(null);
+    setMotivoReativacao('');
+    setNumeroDocumentoReativacao('');
+    setObservacaoReativacao('');
+  };
+
+  const confirmarReativacao =
+  async () => {
+    if (!modalReativar) {
+      return;
+    }
+
+    if (
+      typeof onReativarMaterial !==
+      'function'
+    ) {
+      setMensagem(
+        'O serviço de reativação não está disponível.'
+      );
+
+      return;
+    }
+
+    const motivo =
+      motivoReativacao.trim();
+
+    const numeroDocumento =
+      numeroDocumentoReativacao.trim();
+
+    const observacao =
+      observacaoReativacao.trim();
+
+    if (!motivo) {
+      setMensagem(
+        'Informe o motivo da ativação.'
+      );
+
+      return;
+    }
+
+    if (!numeroDocumento) {
+      setMensagem(
+        'Informe o número do documento.'
+      );
+
+      return;
+    }
+
+    try {
+      await onReativarMaterial(
+        modalReativar,
+        {
+          motivo,
+          numeroDocumento,
+          observacao,
+        }
+      );
+
+      const identificacaoMaterial =
+        modalReativar?.nome ||
+        modalReativar?.descricao ||
+        obterNumeroSerie(
+          modalReativar
+        );
+
+      setMensagem(
+        `Material ativado: ${identificacaoMaterial}`
+      );
+
+      fecharModalReativar();
+    } catch (error) {
+      console.error(
+        'Erro ao ativar material:',
+        error
+      );
+
+      setMensagem(
+        error?.message ||
+          'Não foi possível ativar o material.'
+      );
+    }
+  };
+
   const confirmarExclusao =
     async () => {
       if (!modalExcluir) {
@@ -1446,21 +1560,42 @@ const materiaisDaConferencia =
                           </button>
                         )}
 
-                        {typeof onExcluirMaterial ===
-                          'function' && (
-                          <button
-                            type="button"
-                            className="excluir-material-button"
-                            onClick={() =>
-                              abrirModalExcluir(
-                                material
-                              )
-                            }
-                          >
-                            <FaTrashCan />
+                        {String(
+                          material?.situacao ?? ''
+                        ).toUpperCase() === 'INATIVO' ? (
+                          typeof onReativarMaterial ===
+                            'function' && (
+                            <button
+                              type="button"
+                              className="reativar-material-button"
+                              onClick={() =>
+                                abrirModalReativar(
+                                  material
+                                )
+                              }
+                            >
+                              <FaRotateRight />
 
-                            Inativar
-                          </button>
+                              Ativar
+                            </button>
+                          )
+                        ) : (
+                          typeof onExcluirMaterial ===
+                            'function' && (
+                            <button
+                              type="button"
+                              className="excluir-material-button"
+                              onClick={() =>
+                                abrirModalExcluir(
+                                  material
+                                )
+                              }
+                            >
+                              <FaTrashCan />
+
+                              Inativar
+                            </button>
+                          )
                         )}
                       </div>
                     </div>
@@ -1798,6 +1933,130 @@ const materiaisDaConferencia =
                     fecharModalExcluir
                   }
                 >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {modalReativar && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <div className="modal-icon alerta">
+                <FaRotateRight />
+              </div>
+
+              <h2>
+                Ativar material?
+              </h2>
+
+              <p>
+                Informe os dados necessários para
+                reativar este material.
+              </p>
+
+              <div className="divergencia-box">
+                <span>Nº Série</span>
+
+                <strong>
+                  {obterNumeroSerie(
+                    modalReativar
+                  )}
+                </strong>
+
+                <span>Nome</span>
+
+                <strong>
+                  {modalReativar?.nome ||
+                    'Não informado'}
+                </strong>
+
+                <span>Descrição</span>
+
+                <strong>
+                  {modalReativar?.descricao ||
+                    'Não informada'}
+                </strong>
+
+                <span>Setor</span>
+
+                <strong>
+                  {modalReativar?.setor ||
+                    'Não informado'}
+                </strong>
+
+                <span>Unidade</span>
+
+                <strong>
+                  {modalReativar?.unidade ||
+                    'Não informada'}
+                </strong>
+              </div>
+
+              <label className="cadastro-label">
+                Motivo da ativação
+
+                <input
+                  type="text"
+                  value={motivoReativacao}
+                  onChange={(event) =>
+                    setMotivoReativacao(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Informe o motivo"
+                />
+              </label>
+
+              <label className="cadastro-label">
+                Número do documento
+
+                <input
+                  type="text"
+                  value={numeroDocumentoReativacao}
+                  onChange={(event) =>
+                    setNumeroDocumentoReativacao(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Informe o número do documento"
+                />
+              </label>
+
+              <label className="cadastro-label">
+                Observação
+
+                <textarea
+                  value={observacaoReativacao}
+                  onChange={(event) =>
+                    setObservacaoReativacao(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Observação opcional"
+                  rows={3}
+                />
+              </label>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-primary"
+                  onClick={confirmarReativacao}
+                >
+                  <FaRotateRight />
+
+                  Ativar material
+                </button>
+
+                <button
+                  type="button"
+                  className="modal-cancel"
+                  onClick={fecharModalReativar}
+                >
+                  <FaXmark />
+
                   Cancelar
                 </button>
               </div>

@@ -246,6 +246,12 @@ export async function registrarFurtoMaterial(
   );
 }
 
+export async function ativarMaterial(id) {
+  return api(`${BASE_URL}/${id}/ativar`, {
+    method: 'PATCH',
+  });
+}
+
 export async function reativarMaterial(
   id,
   dados

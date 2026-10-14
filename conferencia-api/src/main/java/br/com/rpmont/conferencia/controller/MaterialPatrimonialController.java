@@ -300,6 +300,26 @@ public class MaterialPatrimonialController {
 
     /*
      * ==========================================
+     * ATIVAR MATERIAL
+     * ==========================================
+     */
+
+    @PatchMapping("/{id}/ativar")
+    @ResponseStatus(HttpStatus.OK)
+    public MaterialPatrimonialResponseDTO ativar(
+            @PathVariable
+            Long id,
+
+            Authentication authentication
+    ) {
+        return materialPatrimonialService.ativar(
+                id,
+                obterMatriculaUsuario(authentication)
+        );
+    }
+
+    /*
+     * ==========================================
      * INATIVAR MATERIAL
      * ==========================================
      */

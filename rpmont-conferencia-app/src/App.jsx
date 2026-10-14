@@ -15,6 +15,8 @@ import {
   conferirMaterial,
   inativarMaterial,
   listarMateriais,
+  ativarMaterial,
+  reativarMaterial,
   zerarConferencia,
 } from './services/materialPatrimonialService';
 
@@ -488,7 +490,7 @@ function AppConteudo() {
    * =====================================================
    */
 
-  const normalizarUsuarioLogado = (usuario) => {    
+  const normalizarUsuarioLogado = (usuario) => {
     const nivelRecebido = Number(
       usuario?.nivel ??
         usuario?.NIVEL ??
@@ -1184,6 +1186,136 @@ function AppConteudo() {
       window.alert(
         obterMensagemErro(error)
       );
+    }
+  };
+
+  const reativarMaterialPatrimonial = async (
+    materialParaReativar,
+    dadosReativacao
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
+      window.alert(
+        'Acesso negado. Somente usuários do setor P4 podem reativar material patrimonial.'
+      );
+
+      return;
+    }
+
+    const idMaterial =
+      obterIdMaterial(
+        materialParaReativar
+      );
+
+    if (
+      idMaterial === null ||
+      idMaterial === undefined
+    ) {
+      window.alert(
+        'Não foi possível identificar o material que será reativado.'
+      );
+
+      return;
+    }
+
+    try {
+      const materialReativado =
+        await reativarMaterial(
+          idMaterial,
+          dadosReativacao
+        );
+
+      setMateriais(
+        (materiaisAtuais) =>
+          materiaisAtuais.map(
+            (material) =>
+              obterIdMaterial(
+                material
+              ) === idMaterial
+                ? materialReativado
+                : material
+          )
+      );
+
+      return materialReativado;
+    } catch (error) {
+      console.error(
+        'Erro ao reativar material:',
+        error
+      );
+
+      window.alert(
+        obterMensagemErro(error)
+      );
+
+      throw error;
+    }
+  };
+
+  const ativarMaterialPatrimonial = async (
+    materialParaAtivar
+  ) => {
+    if (
+      !usuarioPodeAcessarPatrimonio(
+        usuarioLogado
+      )
+    ) {
+      window.alert(
+        'Acesso negado. Somente usuários do setor P4 podem ativar material patrimonial.'
+      );
+
+      return;
+    }
+
+    const idMaterial =
+      obterIdMaterial(
+        materialParaAtivar
+      );
+
+    if (
+      idMaterial === null ||
+      idMaterial === undefined
+    ) {
+      window.alert(
+        'Não foi possível identificar o material que será ativado.'
+      );
+
+      return;
+    }
+
+    try {
+      const materialAtivado =
+        await ativarMaterial(
+          idMaterial
+        );
+
+      setMateriais(
+        (materiaisAtuais) =>
+          materiaisAtuais.map(
+            (material) =>
+              obterIdMaterial(
+                material
+              ) === idMaterial
+                ? materialAtivado
+                : material
+          )
+      );
+
+      return materialAtivado;
+    } catch (error) {
+      console.error(
+        'Erro ao ativar material:',
+        error
+      );
+
+      window.alert(
+        obterMensagemErro(error)
+      );
+
+      throw error;
     }
   };
 
@@ -2166,6 +2298,9 @@ function AppConteudo() {
       }
       onExcluirMaterial={
         excluirMaterial
+      }
+      onReativarMaterial={
+        ativarMaterialPatrimonial
       }
       onConferirMaterial={
         conferirMaterialPatrimonial

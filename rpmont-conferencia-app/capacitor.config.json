@@ -6,6 +6,7 @@
     "allowMixedContent": true
   },
   "server": {
+    "androidScheme": "http",
     "cleartext": true
   }
 }

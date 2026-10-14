@@ -72,6 +72,11 @@ public interface MaterialPatrimonialService {
             String matriculaUsuario
     );
 
+    MaterialPatrimonialResponseDTO ativar(
+            Long id,
+            String matriculaUsuario
+    );
+
     MaterialPatrimonialResponseDTO inativar(
             Long id,
             String matriculaUsuario

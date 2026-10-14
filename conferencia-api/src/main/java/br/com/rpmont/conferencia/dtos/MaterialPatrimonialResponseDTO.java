@@ -25,9 +25,13 @@ public record MaterialPatrimonialResponseDTO(
 
         Long usuarioId,
 
+        String usuarioNome,
+
         LocalDateTime dataModificacao,
 
         Long usuarioModificadorId,
+
+        String usuarioModificadorNome,
 
         Boolean conferido,
 

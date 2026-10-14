@@ -142,19 +142,17 @@ function MaterialDetalhesModal({
   };
 
   const obterUsuarioCadastro = () =>
+    material?.usuarioNome ??
     material?.usuarioCadastro?.nomeExibicao ??
     material?.usuarioCadastro?.nome ??
     material?.usuario?.nomeExibicao ??
     material?.usuario?.nome ??
-    material?.userID ??
-    material?.usuarioId ??
     'Não informado';
 
   const obterUsuarioModificador = () =>
+    material?.usuarioModificadorNome ??
     material?.usuarioModificador?.nomeExibicao ??
     material?.usuarioModificador?.nome ??
-    material?.userModificador ??
-    material?.usuarioModificadorId ??
     'Não informado';
 
   const fecharAoClicarFora = (event) => {
