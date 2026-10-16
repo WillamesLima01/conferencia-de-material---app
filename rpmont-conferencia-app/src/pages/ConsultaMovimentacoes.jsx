@@ -34,6 +34,13 @@ import {
   listarUnidadesAtivas,
 } from '../services/unidadeService';
 
+import { Capacitor } from '@capacitor/core';
+import {
+  Directory,
+  Filesystem,
+} from '@capacitor/filesystem';
+import { FileViewer } from '@capacitor/file-viewer';
+
 import '../styles/ConsultaMateriais.css';
 import '../styles/ConsultaMovimentacoes.css';
 
@@ -739,7 +746,55 @@ function ConsultaMovimentacoes({
     usuarioEhAdminMaster,
   ]);
 
-  const gerarPdfMovimentacoes = () => {
+  const salvarOuAbrirPdf = async (
+    doc,
+    nomeArquivo
+  ) => {
+    if (!Capacitor.isNativePlatform()) {
+      doc.save(nomeArquivo);
+      return;
+    }
+  
+    const pdfDataUri =
+      doc.output('datauristring');
+  
+    const pdfBase64 =
+      pdfDataUri.split(',')[1];
+  
+    if (!pdfBase64) {
+      throw new Error(
+        'Não foi possível gerar os dados do PDF.'
+      );
+    }
+  
+    await Filesystem.writeFile({
+      path: nomeArquivo,
+      data: pdfBase64,
+      directory: Directory.Cache,
+      recursive: true,
+    });
+  
+    const arquivo =
+      await Filesystem.getUri({
+        path: nomeArquivo,
+        directory: Directory.Cache,
+      });
+  
+    const uriArquivo =
+      arquivo?.uri;
+  
+    if (!uriArquivo) {
+      throw new Error(
+        'Não foi possível obter o endereço do PDF gerado.'
+      );
+    }
+  
+    await FileViewer.openDocumentFromLocalPath({
+      path: uriArquivo,
+    });
+  };
+
+  const gerarPdfMovimentacoes = async () => {
     if (movimentacoes.length === 0) {
       setErroPdf(
         'Não existem movimentações filtradas para gerar o PDF.'
@@ -1034,7 +1089,8 @@ function ConsultaMovimentacoes({
           .toISOString()
           .slice(0, 10);
 
-      pdf.save(
+      await salvarOuAbrirPdf(
+        pdf,
         `movimentacoes-patrimoniais-${dataArquivo}.pdf`
       );
     } catch (error) {
