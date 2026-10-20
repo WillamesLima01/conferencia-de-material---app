@@ -246,7 +246,36 @@ const usuarioEhUnidadeEquina = (usuario) => {
 };
 
 const usuarioPodeAcessarPatrimonio = (usuario) => {
-  return usuarioEhP4(usuario);
+  if (usuarioEhP4(usuario)) {
+    return true;
+  }
+
+  const nivel =
+    obterNivelUsuario(usuario);
+
+  const usuarioEhAdminDaUnidade =
+    nivel === NIVEIS_USUARIO.ADMIN;
+
+  return (
+    usuarioEhAdminDaUnidade &&
+    (
+      usuarioEhComando(usuario) ||
+      usuarioEhSubComando(usuario)
+    )
+  );
+};
+
+const usuarioEhComando = (usuario) => {
+  return obterSetorUsuario(usuario) === 'COMANDO';
+};
+
+const usuarioEhSubComando = (usuario) => {
+  const setor = obterSetorUsuario(usuario);
+
+  return (
+    setor === 'SUBCOMANDO' ||
+    setor === 'SUB-COMANDO'
+  );
 };
 
 const usuarioPodeAcessarFenoRacao = (usuario) => {

@@ -38,6 +38,10 @@ public class MaterialPatrimonialServiceImpl
 
     private static final String SETOR_P4 = "P4";
 
+    private static final String SETOR_COMANDO = "COMANDO";
+
+    private static final String SETOR_SUB_COMANDO = "SUB-COMANDO";
+
     private static final String STATUS_LIBERADO = "LIBERADO";
 
     private final MaterialPatrimonialRepository materialRepository;
@@ -1432,12 +1436,45 @@ public class MaterialPatrimonialServiceImpl
 
         if (
                 usuario.getSetor() == null ||
-                        !SETOR_P4.equalsIgnoreCase(
-                                usuario.getSetor().trim()
-                        )
+                        usuario.getSetor().isBlank()
         ) {
             throw new ForbiddenException(
-                    "Acesso permitido somente para usuários do setor P4."
+                    "O usuário não possui setor cadastrado."
+            );
+        }
+
+        String setorUsuario =
+                usuario.getSetor()
+                        .trim()
+                        .toUpperCase();
+
+        boolean usuarioDoP4 =
+                SETOR_P4.equals(setorUsuario);
+
+        boolean usuarioDoComando =
+                SETOR_COMANDO.equals(setorUsuario);
+
+        boolean usuarioDoSubComando =
+                SETOR_SUB_COMANDO.equals(setorUsuario) ||
+                        "SUBCOMANDO".equals(setorUsuario);
+
+        boolean administradorDaUnidade =
+                usuario.getNivel() != null &&
+                        usuario.getNivel() == NIVEL_ADMIN;
+
+        boolean comandoComAcessoAdministrativo =
+                administradorDaUnidade &&
+                        (
+                                usuarioDoComando ||
+                                        usuarioDoSubComando
+                        );
+
+        if (
+                !usuarioDoP4 &&
+                        !comandoComAcessoAdministrativo
+        ) {
+            throw new ForbiddenException(
+                    "Acesso ao patrimônio permitido somente para usuários do P4 ou administradores do Comando/Sub-Comando."
             );
         }
     }

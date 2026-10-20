@@ -1139,10 +1139,6 @@ public class MovimentacaoFenoRacaoServiceImpl
                 usuarioLogado
         );
 
-        validarUsuarioAdministrador(
-                usuarioLogado
-        );
-
         validarPeriodo(
                 dataInicial,
                 dataFinal

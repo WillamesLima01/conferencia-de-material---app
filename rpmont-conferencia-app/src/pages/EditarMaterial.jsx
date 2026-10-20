@@ -63,39 +63,56 @@ function EditarMaterial({
     const descricaoTratada = descricao.trim();
     const observacaoTratada = observacao.trim();
     const setorTratado = setor.trim();
-
+  
+    const camposObrigatoriosPendentes = [];
+  
     if (!numeroSerieTratado) {
-      setMensagem('Informe o Nº Série / código do material.');
-      return;
+      camposObrigatoriosPendentes.push(
+        'Nº Série / Código'
+      );
     }
-
+  
+    if (!nomeTratado) {
+      camposObrigatoriosPendentes.push(
+        'Nome do material'
+      );
+    }
+  
+    if (!marcaTratada) {
+      camposObrigatoriosPendentes.push(
+        'Marca'
+      );
+    }
+  
     if (!descricaoTratada) {
-      setMensagem('Informe a descrição do material.');
-      return;
+      camposObrigatoriosPendentes.push(
+        'Descrição do material'
+      );
     }
-
+  
     if (!setorTratado) {
-      setMensagem('Selecione o setor do material.');
+      camposObrigatoriosPendentes.push(
+        'Setor'
+      );
+    }
+  
+    if (camposObrigatoriosPendentes.length > 0) {
+      setMensagem(
+        `Preencha os campos obrigatórios: ${camposObrigatoriosPendentes.join(', ')}.`
+      );
       return;
     }
-
-    /*
-     * Envia somente os campos aceitos pelo
-     * MaterialPatrimonialRequestDTO.
-     *
-     * Unidade, auditoria, datas e situação
-     * são controladas pelo backend.
-     */
+  
     const materialAtualizado = {
       numeroSerie: numeroSerieTratado,
-      nome: nomeTratado || null,
-      marca: marcaTratada || null,
+      nome: nomeTratado,
+      marca: marcaTratada,
       descricao: descricaoTratada,
       observacao: observacaoTratada || null,
       setor: setorTratado,
       conferido: Boolean(material?.conferido),
     };
-
+  
     onSalvar(materialAtualizado);
   };
 

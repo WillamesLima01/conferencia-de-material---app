@@ -37,6 +37,7 @@ const normalizarTexto = (valor) => {
     .replace(/[^A-Z0-9]/g, '');
 };
 
+
 const obterNivelUsuario = (usuario) => {
   return Number(
     usuario?.nivel ??
@@ -47,20 +48,36 @@ const obterNivelUsuario = (usuario) => {
   );
 };
 
+
 const obterSetorUsuario = (usuario) => {
-  return normalizarTexto(usuario?.setor ?? usuario?.SETOR ?? '');
+  return normalizarTexto(
+    usuario?.setor ??
+      usuario?.SETOR ??
+      ''
+  );
 };
+
 
 const obterUnidadeUsuario = (usuario) => {
-  return normalizarTexto(usuario?.unidade ?? usuario?.UNIDADE ?? '');
+  return normalizarTexto(
+    usuario?.unidade ??
+      usuario?.UNIDADE ??
+      ''
+  );
 };
+
 
 const usuarioEhAdminMaster = (usuario) => {
-  return obterNivelUsuario(usuario) === NIVEIS_USUARIO.ADMIN_MASTER;
+  return (
+    obterNivelUsuario(usuario) ===
+    NIVEIS_USUARIO.ADMIN_MASTER
+  );
 };
 
+
 const usuarioEhAdminSistema = (usuario) => {
-  const nivel = obterNivelUsuario(usuario);
+  const nivel =
+    obterNivelUsuario(usuario);
 
   return (
     nivel === NIVEIS_USUARIO.ADMIN_MASTER ||
@@ -68,23 +85,55 @@ const usuarioEhAdminSistema = (usuario) => {
   );
 };
 
+
 const usuarioEhSetorP4 = (usuario) => {
-  return obterSetorUsuario(usuario) === 'P4';
+  return (
+    obterSetorUsuario(usuario) === 'P4'
+  );
 };
+
+
+const usuarioEhSetorComando = (usuario) => {
+  return (
+    obterSetorUsuario(usuario) ===
+    'COMANDO'
+  );
+};
+
+
+const usuarioEhSetorSubComando = (usuario) => {
+  return (
+    obterSetorUsuario(usuario) ===
+    'SUBCOMANDO'
+  );
+};
+
 
 const usuarioEhSetorBaia = (usuario) => {
-  return obterSetorUsuario(usuario) === 'BAIA';
+  return (
+    obterSetorUsuario(usuario) ===
+    'BAIA'
+  );
 };
+
 
 const usuarioEhFuncaoFiscalDeDia = (usuario) => {
-  return obterSetorUsuario(usuario) === 'FISCALDEDIA';
+  return (
+    obterSetorUsuario(usuario) ===
+    'FISCALDEDIA'
+  );
 };
+
 
 const usuarioEhUnidadeEquina = (usuario) => {
-  const unidade = obterUnidadeUsuario(usuario);
+  const unidade =
+    obterUnidadeUsuario(usuario);
 
-  return UNIDADES_EQUINAS.includes(unidade);
+  return UNIDADES_EQUINAS.includes(
+    unidade
+  );
 };
+
 
 function SelecionarConferencia({
   usuario,
@@ -98,24 +147,68 @@ function SelecionarConferencia({
   onAbrirCadastroAlimentacao,
   onAbrirSaidaFenoRacao,
 }) {
-  const [modoConferencia, setModoConferencia] = useState('');
-  const [setorSelecionado, setSetorSelecionado] = useState('');
+  const [
+    modoConferencia,
+    setModoConferencia,
+  ] = useState('');
 
-  const [setoresCadastrados, setSetoresCadastrados] = useState([]);
-  const [carregandoSetores, setCarregandoSetores] = useState(true);
-  const [erroSetores, setErroSetores] = useState('');
+  const [
+    setorSelecionado,
+    setSetorSelecionado,
+  ] = useState('');
 
-  const usuarioEhAdmin = usuarioEhAdminSistema(usuario);
-  const usuarioMaster = usuarioEhAdminMaster(usuario);
-  const usuarioEhP4 = usuarioEhSetorP4(usuario);
-  const usuarioEhBaia = usuarioEhSetorBaia(usuario);
+  const [
+    setoresCadastrados,
+    setSetoresCadastrados,
+  ] = useState([]);
+
+  const [
+    carregandoSetores,
+    setCarregandoSetores,
+  ] = useState(true);
+
+  const [
+    erroSetores,
+    setErroSetores,
+  ] = useState('');
+
+
+  const usuarioEhAdmin =
+    usuarioEhAdminSistema(usuario);
+
+  const usuarioMaster =
+    usuarioEhAdminMaster(usuario);
+
+  const usuarioEhP4 =
+    usuarioEhSetorP4(usuario);
+
+  const usuarioEhComando =
+    usuarioEhSetorComando(usuario);
+
+  const usuarioEhSubComando =
+    usuarioEhSetorSubComando(usuario);
+
+  const usuarioEhBaia =
+    usuarioEhSetorBaia(usuario);
+
   const usuarioEhFiscalDeDia =
     usuarioEhFuncaoFiscalDeDia(usuario);
 
   const usuarioEhUnidadeComEquinos =
     usuarioEhUnidadeEquina(usuario);
 
-  const usuarioPodeAcessarPatrimonio = usuarioEhP4;
+
+  const usuarioPodeAcessarPatrimonio =
+    usuarioEhP4 ||
+    (
+      obterNivelUsuario(usuario) ===
+        NIVEIS_USUARIO.ADMIN &&
+      (
+        usuarioEhComando ||
+        usuarioEhSubComando
+      )
+    );
+
 
   const usuarioPodeAcessarFenoRacao =
     usuarioEhUnidadeComEquinos &&
@@ -131,13 +224,15 @@ function SelecionarConferencia({
 
     const buscarSetoresAtivos = async () => {
       try {
-        const resposta = await listarSetoresAtivos();
+        const resposta =
+          await listarSetoresAtivos();
 
-        const lista = Array.isArray(resposta)
-          ? resposta
-          : Array.isArray(resposta?.data)
-            ? resposta.data
-            : [];
+        const lista =
+          Array.isArray(resposta)
+            ? resposta
+            : Array.isArray(resposta?.data)
+              ? resposta.data
+              : [];
 
         if (componenteAtivo) {
           setSetoresCadastrados(lista);
@@ -164,26 +259,43 @@ function SelecionarConferencia({
     };
   }, []);
 
-  const setoresDaUnidade = useMemo(() => {
-    const unidadeUsuario = normalizarTexto(
-      usuario?.unidade ?? usuario?.UNIDADE ?? ''
-    );
 
-    return setoresCadastrados.filter((setor) => {
-      const unidadeNome = normalizarTexto(
-        setor?.unidadeNome ?? setor?.unidade?.nome ?? ''
-      );
+  const setoresDaUnidade =
+    useMemo(() => {
+      const unidadeUsuario =
+        normalizarTexto(
+          usuario?.unidade ??
+            usuario?.UNIDADE ??
+            ''
+        );
 
-      const unidadeSigla = normalizarTexto(
-        setor?.unidadeSigla ?? setor?.unidade?.sigla ?? ''
-      );
+      return setoresCadastrados.filter(
+        (setor) => {
+          const unidadeNome =
+            normalizarTexto(
+              setor?.unidadeNome ??
+                setor?.unidade?.nome ??
+                ''
+            );
 
-      return (
-        unidadeNome === unidadeUsuario ||
-        unidadeSigla === unidadeUsuario
+          const unidadeSigla =
+            normalizarTexto(
+              setor?.unidadeSigla ??
+                setor?.unidade?.sigla ??
+                ''
+            );
+
+          return (
+            unidadeNome === unidadeUsuario ||
+            unidadeSigla === unidadeUsuario
+          );
+        }
       );
-    });
-  }, [setoresCadastrados, usuario]);
+    }, [
+      setoresCadastrados,
+      usuario,
+    ]);
+
 
   const handleSair = () => {
     if (typeof onSair === 'function') {
@@ -191,14 +303,18 @@ function SelecionarConferencia({
       return;
     }
 
-    window.alert('A função de sair não foi configurada no App.jsx.');
+    window.alert(
+      'A função de sair não foi configurada no App.jsx.'
+    );
   };
+
 
   const selecionarTodosMateriais = () => {
     if (!usuarioPodeAcessarPatrimonio) {
       window.alert(
-        'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
+        'Acesso negado. Você não possui permissão para realizar conferência patrimonial.'
       );
+
       return;
     }
 
@@ -206,11 +322,13 @@ function SelecionarConferencia({
     setSetorSelecionado('');
   };
 
+
   const abrirSelecaoSetor = () => {
     if (!usuarioPodeAcessarPatrimonio) {
       window.alert(
-        'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
+        'Acesso negado. Você não possui permissão para realizar conferência patrimonial.'
       );
+
       return;
     }
 
@@ -218,11 +336,13 @@ function SelecionarConferencia({
     setSetorSelecionado('');
   };
 
+
   const continuarConferencia = () => {
     if (!usuarioPodeAcessarPatrimonio) {
       window.alert(
-        'Acesso negado. A conferência patrimonial é permitida somente para usuários do setor P4.'
+        'Acesso negado. Você não possui permissão para realizar conferência patrimonial.'
       );
+
       return;
     }
 
@@ -235,7 +355,10 @@ function SelecionarConferencia({
       return;
     }
 
-    if (modoConferencia === 'SETOR' && setorSelecionado) {
+    if (
+      modoConferencia === 'SETOR' &&
+      setorSelecionado
+    ) {
       onIniciarConferencia({
         tipo: 'SETOR',
         setor: setorSelecionado,
@@ -243,84 +366,127 @@ function SelecionarConferencia({
     }
   };
 
-  const abrirCadastroManualComPermissao = () => {
-    if (!usuarioPodeAcessarPatrimonio) {
+
+  const abrirCadastroManualComPermissao =
+    () => {
+      if (
+        !usuarioPodeAcessarPatrimonio
+      ) {
+        window.alert(
+          'Acesso negado. Você não possui permissão para cadastrar material patrimonial.'
+        );
+
+        return;
+      }
+
+      if (
+        typeof onAbrirCadastroManual ===
+        'function'
+      ) {
+        onAbrirCadastroManual();
+        return;
+      }
+
       window.alert(
-        'Acesso negado. O cadastro de material patrimonial é permitido somente para usuários do setor P4.'
+        'A função de cadastro manual não foi configurada no App.jsx.'
       );
-      return;
-    }
+    };
 
-    if (typeof onAbrirCadastroManual === 'function') {
-      onAbrirCadastroManual();
-      return;
-    }
-
-    window.alert('A função de cadastro manual não foi configurada no App.jsx.');
-  };
 
   const abrirConsultaComPermissao = () => {
     if (!usuarioPodeAcessarPatrimonio) {
       window.alert(
-        'Acesso negado. A consulta patrimonial é permitida somente para usuários do setor P4.'
+        'Acesso negado. Você não possui permissão para consultar materiais patrimoniais.'
       );
+
       return;
     }
 
-    if (typeof onAbrirConsulta === 'function') {
+    if (
+      typeof onAbrirConsulta ===
+      'function'
+    ) {
       onAbrirConsulta();
       return;
     }
 
-    window.alert('A função de consulta não foi configurada no App.jsx.');
-  };
-
-  const abrirConsultaMovimentacoesComPermissao = () => {
-    if (!usuarioPodeAcessarPatrimonio) {
-      window.alert(
-        'Acesso negado. A consulta de movimentações patrimoniais é permitida somente para usuários do setor P4.'
-      );
-      return;
-    }
-
-    if (typeof onAbrirConsultaMovimentacoes === 'function') {
-      onAbrirConsultaMovimentacoes();
-      return;
-    }
-
     window.alert(
-      'A função de consulta de movimentações não foi configurada no App.jsx.'
+      'A função de consulta não foi configurada no App.jsx.'
     );
   };
 
+
+  const abrirConsultaMovimentacoesComPermissao =
+    () => {
+      if (
+        !usuarioPodeAcessarPatrimonio
+      ) {
+        window.alert(
+          'Acesso negado. Você não possui permissão para consultar movimentações patrimoniais.'
+        );
+
+        return;
+      }
+
+      if (
+        typeof onAbrirConsultaMovimentacoes ===
+        'function'
+      ) {
+        onAbrirConsultaMovimentacoes();
+        return;
+      }
+
+      window.alert(
+        'A função de consulta de movimentações não foi configurada no App.jsx.'
+      );
+    };
+
+
   const abrirAdministracao = () => {
     if (!usuarioEhAdmin) {
-      window.alert('Acesso negado. Apenas administradores podem acessar esta área.');
+      window.alert(
+        'Acesso negado. Apenas administradores podem acessar esta área.'
+      );
+
       return;
     }
 
-    if (typeof onAbrirAdmin === 'function') {
+    if (
+      typeof onAbrirAdmin ===
+      'function'
+    ) {
       onAbrirAdmin();
       return;
     }
 
-    window.alert('A função de administração não foi configurada no App.jsx.');
+    window.alert(
+      'A função de administração não foi configurada no App.jsx.'
+    );
   };
+
 
   const abrirFenoRacao = () => {
     if (!usuarioPodeAcessarFenoRacao) {
       window.alert(
         'Você não tem permissão para acessar Feno e Ração. Para usuário comum, o acesso é permitido somente para Baia ou Fiscal-de-dia no RPMont ou 3º EPMont.'
       );
+
       return;
     }
 
-    if (typeof onAbrirFenoRacao === 'function') {
+    if (
+      typeof onAbrirFenoRacao ===
+      'function'
+    ) {
       onAbrirFenoRacao();
       return;
     }
 
-    if (usuarioEhAdmin && typeof onAbrirCadastroAlimentacao === 'function') {
+    if (
+      usuarioEhAdmin &&
+      typeof onAbrirCadastroAlimentacao ===
+        'function'
+    ) {
       onAbrirCadastroAlimentacao();
       return;
     }
@@ -331,13 +497,16 @@ function SelecionarConferencia({
         usuarioEhBaia ||
         usuarioEhFiscalDeDia
       ) &&
-      typeof onAbrirSaidaFenoRacao === 'function'
+      typeof onAbrirSaidaFenoRacao ===
+        'function'
     ) {
       onAbrirSaidaFenoRacao();
       return;
     }
 
-    window.alert('A função de Feno e Ração não foi configurada no App.jsx.');
+    window.alert(
+      'A função de Feno e Ração não foi configurada no App.jsx.'
+    );
   };
 
 
@@ -374,29 +543,42 @@ function SelecionarConferencia({
             </button>
 
             <div className="usuario-chip">
-              {usuario?.postGrad?.toUpperCase()} {usuario?.nome}
+              {usuario?.postGrad?.toUpperCase()}{' '}
+              {usuario?.nome}
             </div>
           </div>
         </header>
 
+
         <section className="usuario-card">
           <p>Seja bem-vindo,</p>
 
-          <h2>{usuario?.nomeExibicao}</h2>
+          <h2>
+            {usuario?.nomeExibicao}
+          </h2>
 
           <div className="usuario-info-grid">
             <div>
               <span>Unidade</span>
-              <strong>{usuario?.unidade || usuario?.UNIDADE}</strong>
+
+              <strong>
+                {usuario?.unidade ||
+                  usuario?.UNIDADE}
+              </strong>
             </div>
 
             <div>
               <span>Setor/Função</span>
-              <strong>{usuario?.setor || usuario?.SETOR}</strong>
+
+              <strong>
+                {usuario?.setor ||
+                  usuario?.SETOR}
+              </strong>
             </div>
 
             <div>
               <span>Nível</span>
+
               <strong>
                 {usuarioMaster
                   ? 'Admin Master'
@@ -408,45 +590,65 @@ function SelecionarConferencia({
           </div>
         </section>
 
+
         {usuarioEhAdmin && (
           <section className="admin-card admin-card-duplo">
             <div className="admin-card-texto">
-              <span>Ações administrativas</span>
+              <span>
+                Ações administrativas
+              </span>
 
-              <h3>Gerenciar o sistema</h3>
+              <h3>
+                Gerenciar o sistema
+              </h3>
 
               <p>
-                {usuarioEhP4
+                {usuarioPodeAcessarPatrimonio
                   ? `Gerencie materiais patrimoniais, administração${
-                      usuarioPodeAcessarFenoRacao ? ', feno e ração' : ''
+                      usuarioPodeAcessarFenoRacao
+                        ? ', feno e ração'
+                        : ''
                     } da unidade ${
-                      usuario?.unidade || usuario?.UNIDADE
+                      usuario?.unidade ||
+                      usuario?.UNIDADE
                     }.`
                   : usuarioPodeAcessarFenoRacao
-                    ? 'Você possui acesso administrativo ao módulo de Feno e Ração da unidade equina. A conferência patrimonial é exclusiva do setor P4.'
-                    : 'Você possui acesso administrativo, mas a conferência patrimonial é exclusiva do setor P4 e o módulo de Feno e Ração é exclusivo do RPMont e 3º EPMont.'}
+                    ? 'Você possui acesso administrativo ao módulo de Feno e Ração da unidade equina.'
+                    : 'Você possui acesso administrativo, mas não possui acesso aos módulos operacionais disponíveis.'}
               </p>
             </div>
+
 
             <div className="admin-card-acoes">
               {usuarioPodeAcessarPatrimonio && (
                 <>
                   <button
                     type="button"
-                    onClick={abrirCadastroManualComPermissao}
+                    onClick={
+                      abrirCadastroManualComPermissao
+                    }
                   >
                     <FaBoxesStacked />
                     Cadastrar material
                   </button>
 
-                  <button type="button" onClick={abrirConsultaComPermissao}>
+
+                  <button
+                    type="button"
+                    onClick={
+                      abrirConsultaComPermissao
+                    }
+                  >
                     <FaMagnifyingGlassChart />
                     Filtros avançados
                   </button>
 
+
                   <button
                     type="button"
-                    onClick={abrirConsultaMovimentacoesComPermissao}
+                    onClick={
+                      abrirConsultaMovimentacoesComPermissao
+                    }
                   >
                     <FaClockRotateLeft />
                     Movimentações patrimoniais
@@ -454,10 +656,17 @@ function SelecionarConferencia({
                 </>
               )}
 
-              <button type="button" onClick={abrirAdministracao}>
+
+              <button
+                type="button"
+                onClick={
+                  abrirAdministracao
+                }
+              >
                 <FaUserGear />
                 Administração
               </button>
+
 
               {usuarioPodeAcessarFenoRacao && (
                 <button
@@ -473,91 +682,132 @@ function SelecionarConferencia({
           </section>
         )}
 
+
         {!usuarioEhAdmin &&
-          (usuarioEhBaia || usuarioEhFiscalDeDia) &&
+          (
+            usuarioEhBaia ||
+            usuarioEhFiscalDeDia
+          ) &&
           usuarioPodeAcessarFenoRacao && (
-          <section className="admin-card admin-card-duplo">
-            <div className="admin-card-texto">
-              <span>Alimentação equina</span>
+            <section className="admin-card admin-card-duplo">
+              <div className="admin-card-texto">
+                <span>
+                  Alimentação equina
+                </span>
 
-              <h3>Feno e Ração</h3>
+                <h3>
+                  Feno e Ração
+                </h3>
 
-              <p>
-                Registre saída e extravio de feno e ração para o serviço
-                operacional da unidade {usuario?.unidade || usuario?.UNIDADE}.
-              </p>
-            </div>
+                <p>
+                  Registre saída e extravio
+                  de feno e ração para o
+                  serviço operacional da
+                  unidade{' '}
+                  {usuario?.unidade ||
+                    usuario?.UNIDADE}.
+                </p>
+              </div>
 
-            <div className="admin-card-acoes">
-              <button
-                type="button"
-                className="admin-acao-alimentacao"
-                onClick={abrirFenoRacao}
-              >
-                <FaWheatAwn />
-                Feno e Ração
-              </button>
-            </div>
-          </section>
-        )}
+
+              <div className="admin-card-acoes">
+                <button
+                  type="button"
+                  className="admin-acao-alimentacao"
+                  onClick={abrirFenoRacao}
+                >
+                  <FaWheatAwn />
+                  Feno e Ração
+                </button>
+              </div>
+            </section>
+          )}
+
 
         {usuarioPodeAcessarPatrimonio && (
           <>
             <section className="resumo-card">
-              <span>Próximo passo</span>
+              <span>
+                Próximo passo
+              </span>
 
-              <h3>Escolha o tipo de conferência</h3>
+              <h3>
+                Escolha o tipo de conferência
+              </h3>
 
               <p>
-                O sistema carregará somente os materiais vinculados à unidade{' '}
-                <strong>{usuario?.unidade || usuario?.UNIDADE}</strong>.
+                O sistema carregará somente
+                os materiais vinculados à
+                unidade{' '}
+                <strong>
+                  {usuario?.unidade ||
+                    usuario?.UNIDADE}
+                </strong>.
               </p>
             </section>
 
-            {modoConferencia !== 'SETOR' && (
+
+            {modoConferencia !==
+              'SETOR' && (
               <section className="opcoes-conferencia">
                 <button
                   type="button"
                   className={`opcao-card ${
-                    modoConferencia === 'TODOS' ? 'opcao-card-ativa' : ''
+                    modoConferencia ===
+                    'TODOS'
+                      ? 'opcao-card-ativa'
+                      : ''
                   }`}
-                  onClick={selecionarTodosMateriais}
+                  onClick={
+                    selecionarTodosMateriais
+                  }
                 >
                   <div className="opcao-icon vermelho">
                     <FaBoxesStacked />
                   </div>
 
                   <div className="opcao-texto">
-                    <h3>Todos os materiais</h3>
+                    <h3>
+                      Todos os materiais
+                    </h3>
 
                     <p>
-                      Conferir todos os materiais da unidade{' '}
-                      {usuario?.unidade || usuario?.UNIDADE}.
+                      Conferir todos os
+                      materiais da unidade{' '}
+                      {usuario?.unidade ||
+                        usuario?.UNIDADE}.
                     </p>
                   </div>
 
-                  {modoConferencia === 'TODOS' ? (
+                  {modoConferencia ===
+                  'TODOS' ? (
                     <FaCheck className="opcao-check" />
                   ) : (
                     <FaChevronRight className="opcao-seta" />
                   )}
                 </button>
 
+
                 <button
                   type="button"
                   className="opcao-card"
-                  onClick={abrirSelecaoSetor}
+                  onClick={
+                    abrirSelecaoSetor
+                  }
                 >
                   <div className="opcao-icon amarelo">
                     <FaBuildingUser />
                   </div>
 
                   <div className="opcao-texto">
-                    <h3>Por setor</h3>
+                    <h3>
+                      Por setor
+                    </h3>
 
                     <p>
-                      Selecionar um setor específico para realizar a
-                      conferência.
+                      Selecionar um setor
+                      específico para realizar
+                      a conferência.
                     </p>
                   </div>
 
@@ -566,7 +816,9 @@ function SelecionarConferencia({
               </section>
             )}
 
-            {modoConferencia === 'SETOR' && (
+
+            {modoConferencia ===
+              'SETOR' && (
               <section className="setores-area">
                 <div className="setores-topo">
                   <button
@@ -581,10 +833,16 @@ function SelecionarConferencia({
                   </button>
 
                   <div>
-                    <span>Conferência por setor</span>
-                    <h3>Selecione o setor</h3>
+                    <span>
+                      Conferência por setor
+                    </span>
+
+                    <h3>
+                      Selecione o setor
+                    </h3>
                   </div>
                 </div>
+
 
                 {carregandoSetores ? (
                   <div className="setores-vazio">
@@ -594,42 +852,64 @@ function SelecionarConferencia({
                   <div className="setores-vazio">
                     {erroSetores}
                   </div>
-                ) : setoresDaUnidade.length === 0 ? (
+                ) : setoresDaUnidade.length ===
+                  0 ? (
                   <div className="setores-vazio">
-                    Nenhum setor ativo cadastrado para a unidade{' '}
-                    {usuario?.unidade || usuario?.UNIDADE}.
+                    Nenhum setor ativo
+                    cadastrado para a unidade{' '}
+                    {usuario?.unidade ||
+                      usuario?.UNIDADE}.
                   </div>
                 ) : (
                   <div className="setores-lista">
-                    {setoresDaUnidade.map((setor) => (
-                      <button
-                        key={setor.id}
-                        type="button"
-                        className={`setor-item ${
-                          setorSelecionado === setor.nome
-                            ? 'setor-item-ativo'
-                            : ''
-                        }`}
-                        onClick={() => setSetorSelecionado(setor.nome)}
-                      >
-                        <span>{setor.nome}</span>
+                    {setoresDaUnidade.map(
+                      (setor) => (
+                        <button
+                          key={setor.id}
+                          type="button"
+                          className={`setor-item ${
+                            setorSelecionado ===
+                            setor.nome
+                              ? 'setor-item-ativo'
+                              : ''
+                          }`}
+                          onClick={() =>
+                            setSetorSelecionado(
+                              setor.nome
+                            )
+                          }
+                        >
+                          <span>
+                            {setor.nome}
+                          </span>
 
-                        {setorSelecionado === setor.nome && <FaCheck />}
-                      </button>
-                    ))}
+                          {setorSelecionado ===
+                            setor.nome && (
+                            <FaCheck />
+                          )}
+                        </button>
+                      )
+                    )}
                   </div>
                 )}
               </section>
             )}
 
+
             {(modoConferencia === 'TODOS' ||
-              (modoConferencia === 'SETOR' && setorSelecionado)) && (
+              (
+                modoConferencia === 'SETOR' &&
+                setorSelecionado
+              )) && (
               <button
                 type="button"
                 className="continuar-conferencia-button"
-                onClick={continuarConferencia}
+                onClick={
+                  continuarConferencia
+                }
               >
-                {modoConferencia === 'TODOS'
+                {modoConferencia ===
+                'TODOS'
                   ? 'Continuar com todos os materiais'
                   : `Continuar com ${setorSelecionado}`}
               </button>
@@ -637,21 +917,34 @@ function SelecionarConferencia({
           </>
         )}
 
-        {!usuarioPodeAcessarPatrimonio && !usuarioPodeAcessarFenoRacao && (
-          <section className="resumo-card">
-            <span>Acesso restrito</span>
 
-            <h3>Nenhum módulo disponível para o seu setor</h3>
+        {!usuarioPodeAcessarPatrimonio &&
+          !usuarioPodeAcessarFenoRacao && (
+            <section className="resumo-card">
+              <span>
+                Acesso restrito
+              </span>
 
-            <p>
-              A conferência patrimonial é exclusiva do setor P4. O módulo de
-              Feno e Ração é exclusivo do RPMont e 3º EPMont, sendo permitido
-              apenas para administradores dessas unidades ou usuários comuns
-              cadastrados como Baia ou Fiscal-de-dia nessas unidades.
-            </p>
-          </section>
-        )}
+              <h3>
+                Nenhum módulo disponível para
+                o seu setor
+              </h3>
 
+              <p>
+                O acesso ao patrimônio é
+                permitido ao setor P4 e aos
+                administradores do Comando ou
+                Sub-Comando da própria
+                unidade. O módulo de Feno e
+                Ração é exclusivo do RPMont e
+                3º EPMont, sendo permitido
+                para administradores dessas
+                unidades ou usuários comuns
+                cadastrados como Baia ou
+                Fiscal-de-dia.
+              </p>
+            </section>
+          )}
       </section>
     </main>
   );

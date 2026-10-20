@@ -235,19 +235,17 @@ function SaidaFenoRacao({
   const [servico, setServico] =
     useState('Serviço de 24 horas');
 
-  const [responsavel, setResponsavel] =
-    useState(
-      usuario?.nomeExibicao ||
-        `${
-          usuario?.postGrad ||
-          usuario?.POSTGRAD ||
-          ''
-        } ${
-          usuario?.nome ||
-          usuario?.NOME ||
-          ''
-        }`.trim()
-    );
+  const responsavel =
+  usuario?.nomeExibicao ||
+  `${
+    usuario?.postGrad ||
+    usuario?.POSTGRAD ||
+    ''
+  } ${
+    usuario?.nome ||
+    usuario?.NOME ||
+    ''
+  }`.trim();
 
   const [observacao, setObservacao] =
     useState('');
@@ -1126,14 +1124,8 @@ function SaidaFenoRacao({
                 type="text"
                 maxLength={150}
                 value={responsavel}
-                onChange={(event) =>
-                  setResponsavel(
-                    event.target.value
-                  )
-                }
-                disabled={
-                  registrandoSaida
-                }
+                readOnly
+                disabled
               />
             </div>
 
