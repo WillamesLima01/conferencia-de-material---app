@@ -668,6 +668,16 @@ public class UsuarioServiceImpl implements UsuarioService {
                         );
     }
 
+    private boolean isAdminP4(
+            Usuario usuario
+    ) {
+        return isAdmin(usuario) &&
+                usuario.getSetor() != null &&
+                "P4".equalsIgnoreCase(
+                        usuario.getSetor().trim()
+                );
+    }
+
     private boolean isUsuarioComum(
             Usuario usuario
     ) {
@@ -782,10 +792,10 @@ public class UsuarioServiceImpl implements UsuarioService {
             return;
         }
 
-        if (!isAdmin(usuarioLogado)) {
+        if (!isAdminP4(usuarioLogado)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Você não tem permissão para editar usuários."
+                    "Somente Administrador do setor P4 pode editar usuários."
             );
         }
 
@@ -824,10 +834,10 @@ public class UsuarioServiceImpl implements UsuarioService {
             return;
         }
 
-        if (!isAdmin(usuarioLogado)) {
+        if (!isAdminP4(usuarioLogado)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Você não tem permissão para alterar status de usuários."
+                    "Somente Administrador do setor P4 pode liberar ou bloquear acesso de usuários."
             );
         }
 

@@ -92,6 +92,10 @@ const obterUnidadeUsuario = (usuario) => {
   return usuario?.UNIDADE || usuario?.unidade || '';
 };
 
+const obterSetorUsuario = (usuario) => {
+  return usuario?.SETOR || usuario?.setor || '';
+};
+
 const obterEmailUsuario = (usuario) => {
   const emailUsuario = usuario?.EMAIL || usuario?.email || '';
 
@@ -240,6 +244,11 @@ function AdminUsuarios({ usuario, onVoltar }) {
 
   const adminLogadoEhMaster =
     usuarioEhAdminMaster(usuario);
+
+  const setorAdmin = obterSetorUsuario(usuario);
+
+  const adminLogadoEhP4 =
+    normalizarTexto(setorAdmin) === 'P4';
 
   const unidadeFormulario = adminLogadoEhMaster
     ? unidadeSelecionada
@@ -415,6 +424,10 @@ function AdminUsuarios({ usuario, onVoltar }) {
       return true;
     }
 
+    if (!adminLogadoEhP4) {
+      return false;
+    }
+
     if (!adminPodeVerUsuario(usuarioAlvo)) {
       return false;
     }
@@ -425,6 +438,10 @@ function AdminUsuarios({ usuario, onVoltar }) {
   const adminPodeAlterarStatus = (usuarioAlvo) => {
     if (adminLogadoEhMaster) {
       return true;
+    }
+
+    if (!adminLogadoEhP4) {
+      return false;
     }
 
     if (!adminPodeVerUsuario(usuarioAlvo)) {
@@ -697,13 +714,13 @@ function AdminUsuarios({ usuario, onVoltar }) {
         usuarioEditando.UNIDADE ||
         usuarioEditando.unidade ||
         '';
-    
+
       const nivelAnterior =
         obterNivelUsuario(usuarioEditando);
-    
+
       const novoNivel =
         converterNivelParaSalvar(nivelFinal);
-    
+
       try {
         let usuarioAtualizado = await atualizarUsuario(
           obterIdUsuario(usuarioEditando),
@@ -721,7 +738,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
               obterStatusUsuario(usuarioEditando),
           }
         );
-    
+
         if (nivelAnterior !== novoNivel) {
           usuarioAtualizado =
             await alterarNivelUsuario(
@@ -729,7 +746,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
               novoNivel
             );
         }
-    
+
         setUsuarios((listaAtual) =>
           listaAtual.map((item) =>
             String(obterIdUsuario(item)) ===
@@ -738,9 +755,9 @@ function AdminUsuarios({ usuario, onVoltar }) {
               : item
           )
         );
-    
+
         limparFormulario();
-    
+
         if (
           adminLogadoEhMaster &&
           normalizarTexto(unidadeAnterior) !==
@@ -749,18 +766,18 @@ function AdminUsuarios({ usuario, onVoltar }) {
           mostrarMensagem(
             `Usuário atualizado e transferido para ${unidadeFinal}.`
           );
-    
+
           return;
         }
-    
+
         if (nivelAnterior !== novoNivel) {
           mostrarMensagem(
             'Usuário atualizado e nível alterado com sucesso.'
           );
-    
+
           return;
         }
-    
+
         mostrarMensagem(
           'Usuário atualizado com sucesso.'
         );
@@ -770,7 +787,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
             'Não foi possível atualizar o usuário.'
         );
       }
-    
+
       return;
     }
 
@@ -901,7 +918,7 @@ function AdminUsuarios({ usuario, onVoltar }) {
     if (!usuarioParaExcluir) {
       return;
     }
-  
+
     if (
       !adminPodeExcluirUsuario(
         usuarioParaExcluir
@@ -910,18 +927,18 @@ function AdminUsuarios({ usuario, onVoltar }) {
       mostrarMensagem(
         'Acesso negado para excluir este usuário.'
       );
-  
+
       cancelarExclusao();
-  
+
       return;
     }
-  
+
     try {
       const idUsuarioExcluir =
         obterIdUsuario(usuarioParaExcluir);
-  
+
       await excluirUsuario(idUsuarioExcluir);
-  
+
       setUsuarios((listaAtual) =>
         listaAtual.filter(
           (item) =>
@@ -929,12 +946,12 @@ function AdminUsuarios({ usuario, onVoltar }) {
             String(idUsuarioExcluir)
         )
       );
-  
+
       limparFormulario();
-  
+
       setModalExcluirAberto(false);
       setUsuarioParaExcluir(null);
-  
+
       mostrarMensagem(
         'Usuário excluído com sucesso.'
       );
@@ -982,29 +999,29 @@ function AdminUsuarios({ usuario, onVoltar }) {
     if (!usuarioParaStatus) {
       return;
     }
-  
+
     if (!adminPodeAlterarStatus(usuarioParaStatus)) {
       mostrarMensagem(
         'Você não tem permissão para alterar o status deste usuário.'
       );
-  
+
       cancelarStatus();
-  
+
       return;
     }
-  
+
     const novoStatus = String(
       statusSelecionado || STATUS_ACESSO.PENDENTE
     )
       .trim()
       .toUpperCase();
-  
+
     try {
       const usuarioAtualizado = await alterarStatusUsuario(
         obterIdUsuario(usuarioParaStatus),
         novoStatus
       );
-  
+
       setUsuarios((listaAtual) =>
         listaAtual.map((item) =>
           String(obterIdUsuario(item)) ===
@@ -1013,19 +1030,19 @@ function AdminUsuarios({ usuario, onVoltar }) {
             : item
         )
       );
-  
+
       cancelarStatus();
-  
+
       if (novoStatus === STATUS_ACESSO.LIBERADO) {
         mostrarMensagem('Acesso liberado com sucesso.');
         return;
       }
-  
+
       if (novoStatus === STATUS_ACESSO.BLOQUEADO) {
         mostrarMensagem('Acesso bloqueado com sucesso.');
         return;
       }
-  
+
       mostrarMensagem('Status atualizado para pendente.');
     } catch (erro) {
       mostrarMensagem(
