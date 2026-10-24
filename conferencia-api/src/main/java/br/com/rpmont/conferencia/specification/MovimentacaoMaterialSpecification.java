@@ -18,6 +18,24 @@ public final class MovimentacaoMaterialSpecification {
     private MovimentacaoMaterialSpecification() {
     }
 
+    public static Specification<MovimentacaoMaterial> daUnidadeAtualDoMaterial(
+            String unidadeAutorizada
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            if (!temTexto(unidadeAutorizada)) {
+                return criteriaBuilder.disjunction();
+            }
+
+            Join<MovimentacaoMaterial, MaterialPatrimonial> material =
+                    root.join("material", JoinType.INNER);
+
+            return criteriaBuilder.equal(
+                    criteriaBuilder.lower(criteriaBuilder.trim(material.<String>get("unidade"))),
+                    unidadeAutorizada.trim().toLowerCase(Locale.ROOT)
+            );
+        };
+    }
+
     public static Specification<MovimentacaoMaterial> comFiltros(
             MovimentacaoMaterialFiltroDTO filtro
     ) {
