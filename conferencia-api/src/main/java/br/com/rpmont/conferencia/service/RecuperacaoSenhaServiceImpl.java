@@ -3,6 +3,7 @@ package br.com.rpmont.conferencia.service;
 import br.com.rpmont.conferencia.dtos.RedefinirSenhaRequestDTO;
 import br.com.rpmont.conferencia.dtos.SolicitarRecuperacaoSenhaRequestDTO;
 import br.com.rpmont.conferencia.dtos.ValidarCodigoRecuperacaoRequestDTO;
+import br.com.rpmont.conferencia.exception.RecuperacaoSenhaRejeitadaException;
 import br.com.rpmont.conferencia.model.RecuperacaoSenha;
 import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.repository.RecuperacaoSenhaRepository;
@@ -53,7 +54,7 @@ public class RecuperacaoSenhaServiceImpl
      * =====================================================
      */
 
-    @Transactional
+    @Transactional(noRollbackFor = RecuperacaoSenhaRejeitadaException.class)
     @Override
     public void solicitarRecuperacao(
             SolicitarRecuperacaoSenhaRequestDTO request
@@ -68,7 +69,7 @@ public class RecuperacaoSenhaServiceImpl
         );
 
         Usuario usuario = usuarioRepository
-                .findByEmail(email)
+                .buscarPorEmailComBloqueio(email)
                 .orElse(null);
 
         /*
@@ -119,7 +120,7 @@ public class RecuperacaoSenhaServiceImpl
      * =====================================================
      */
 
-    @Transactional
+    @Transactional(noRollbackFor = RecuperacaoSenhaRejeitadaException.class)
     @Override
     public void validarCodigo(
             ValidarCodigoRecuperacaoRequestDTO request
@@ -166,7 +167,7 @@ public class RecuperacaoSenhaServiceImpl
      * =====================================================
      */
 
-    @Transactional
+    @Transactional(noRollbackFor = RecuperacaoSenhaRejeitadaException.class)
     @Override
     public void redefinirSenha(
             RedefinirSenhaRequestDTO request
@@ -314,7 +315,7 @@ public class RecuperacaoSenhaServiceImpl
     ) {
 
         return usuarioRepository
-                .findByEmail(email)
+                .buscarPorEmailComBloqueio(email)
                 .orElseThrow(
                         () -> new ResponseStatusException(
                                 HttpStatus.BAD_REQUEST,
@@ -585,9 +586,9 @@ public class RecuperacaoSenhaServiceImpl
                     recuperacao
             );
 
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Código de recuperação inválido ou expirado."
+            throw new RecuperacaoSenhaRejeitadaException(
+                HttpStatus.BAD_REQUEST,
+                "Código de recuperação inválido ou expirado."
             );
         }
     }
@@ -621,9 +622,9 @@ public class RecuperacaoSenhaServiceImpl
                     recuperacao
             );
 
-            throw new ResponseStatusException(
-                    HttpStatus.TOO_MANY_REQUESTS,
-                    "Limite de tentativas excedido. Solicite um novo código."
+            throw new RecuperacaoSenhaRejeitadaException(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Limite de tentativas excedido. Solicite um novo código."
             );
         }
     }
@@ -654,7 +655,7 @@ public class RecuperacaoSenhaServiceImpl
                 recuperacao
         );
 
-        throw new ResponseStatusException(
+        throw new RecuperacaoSenhaRejeitadaException(
                 HttpStatus.BAD_REQUEST,
                 "Código de recuperação inválido ou expirado."
         );

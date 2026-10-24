@@ -1,6 +1,8 @@
 package br.com.rpmont.conferencia.repository;
 
 import br.com.rpmont.conferencia.model.Usuario;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,6 +22,11 @@ public interface UsuarioRepository
     Optional<Usuario> findByEmail(
             String email
     );
+
+    // Adquirir antes de consultar/alterar recuperações, inclusive quando ainda não há código.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM Usuario u WHERE u.email = :email")
+    Optional<Usuario> buscarPorEmailComBloqueio(@Param("email") String email);
 
     List<Usuario> findByUnidade(
             String unidade
