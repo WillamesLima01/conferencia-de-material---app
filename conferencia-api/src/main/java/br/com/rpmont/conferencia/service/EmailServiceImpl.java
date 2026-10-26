@@ -1,6 +1,5 @@
 package br.com.rpmont.conferencia.service;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -16,100 +15,6 @@ public class EmailServiceImpl implements EmailService {
 
     @Value("${app.mail.remetente}")
     private String remetente;
-
-    @Value("${spring.mail.username}")
-    private String smtpUsername;
-
-    @Value("${spring.mail.password}")
-    private String smtpPassword;
-
-
-    /*
-     * =====================================================
-     * DIAGNÓSTICO DA CONFIGURAÇÃO SMTP
-     * =====================================================
-     */
-
-    @PostConstruct
-    public void verificarConfiguracaoSmtp() {
-
-        int tamanhoSenha =
-                smtpPassword == null
-                        ? 0
-                        : smtpPassword.length();
-
-        String finalSenha =
-                obterFinalSeguroSenha(
-                        smtpPassword
-                );
-
-        System.out.println();
-        System.out.println(
-                "====================================================="
-        );
-        System.out.println(
-                "DIAGNÓSTICO DA CONFIGURAÇÃO SMTP"
-        );
-        System.out.println(
-                "====================================================="
-        );
-        System.out.println(
-                "Login SMTP carregado: "
-                        + smtpUsername
-        );
-        System.out.println(
-                "Tamanho da chave SMTP: "
-                        + tamanhoSenha
-        );
-        System.out.println(
-                "Final da chave SMTP: "
-                        + finalSenha
-        );
-        System.out.println(
-                "Remetente configurado: "
-                        + remetente
-        );
-        System.out.println(
-                "====================================================="
-        );
-        System.out.println();
-    }
-
-
-    /*
-     * =====================================================
-     * OBTER FINAL SEGURO DA SENHA
-     * =====================================================
-     */
-
-    private String obterFinalSeguroSenha(
-            String senha
-    ) {
-
-        if (
-                !StringUtils.hasText(
-                        senha
-                )
-        ) {
-
-            return "NÃO INFORMADA";
-        }
-
-        String senhaLimpa =
-                senha.trim();
-
-        if (
-                senhaLimpa.length() < 6
-        ) {
-
-            return "CHAVE INVÁLIDA";
-        }
-
-        return senhaLimpa.substring(
-                senhaLimpa.length() - 6
-        );
-    }
-
 
     /*
      * =====================================================
