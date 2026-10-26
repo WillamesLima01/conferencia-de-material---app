@@ -304,6 +304,99 @@ Durante o desenvolvimento são aplicados conhecimentos relacionados a:
 
 ---
 
+## Timeouts de e-mail do backend
+
+O backend aplica limites de conexão, leitura e escrita para os transportes SMTP e SMTPS.
+Os valores são inteiros em **milissegundos**, com padrão de **5.000 ms** para cada operação:
+
+| Variável de ambiente | Operação | Padrão |
+|---|---|---|
+| `RPMONT_SMTP_CONNECTION_TIMEOUT_MS` | Conexão do socket | `5000` |
+| `RPMONT_SMTP_READ_TIMEOUT_MS` | Leitura do socket | `5000` |
+| `RPMONT_SMTP_WRITE_TIMEOUT_MS` | Escrita do socket | `5000` |
+
+As variáveis são opcionais e devem ser fornecidas ao processo Java pelo ambiente de
+execução, IDE ou contêiner. Use valores positivos e finitos. O funcionamento é o mesmo
+no Windows e no macOS; Android e iOS continuam acessando a API, sem configuração SMTP
+nos aplicativos. As configurações existentes de perfil, servidor, autenticação e TLS
+permanecem independentes desses limites. Propriedades específicas de perfil ou externas
+podem substituir os padrões; confirme os valores efetivos do transporte em cada ambiente.
+
+Esses limites são por operação de rede e não representam um prazo total para a requisição.
+O envio continua dentro da transação: uma falha SMTP provoca rollback das alterações no
+banco, mas não permite desfazer uma mensagem que já tenha sido aceita pelo servidor.
+Esta mitigação não oferece garantia de entrega nem elimina essa ambiguidade.
+
+Não registre credenciais, códigos de recuperação ou propriedades completas da sessão
+de e-mail nos logs. Os testes de configuração utilizam apenas dados fictícios e não
+abrem conexão SMTP; os testes de rollback usam envio simulado e o MySQL local de homologação.
+
+---
+
+## Empacotamento seguro e perfis do backend
+
+O JAR inclui as classes compiladas e o `application.properties` público. Configurações
+locais ou de produção com segredos, arquivos `.env` e chaves não devem fazer parte do
+artefato. Os recursos filtrados e não filtrados possuem exclusões explícitas; o JAR usa
+uma lista de recursos permitidos e é recriado antes do reempacotamento, inclusive sem
+`clean`. Recursos legítimos adicionais precisam ser aprovados no POM e na verificação.
+Certificados públicos também precisam dessa aprovação; contêineres de chaves devem
+permanecer externos. Essas regras não apagam arquivos antigos de `target/classes`.
+
+Não existe perfil ativo fixado na configuração pública. Selecione o ambiente de forma
+explícita. Os comandos abaixo devem ser executados a partir de `conferencia-api` e não
+contêm credenciais. Use JDK 25.
+
+### Desenvolvimento no Windows (PowerShell)
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = 'local'
+$env:SPRING_CONFIG_ADDITIONAL_LOCATION = 'file:./src/main/resources/'
+.\mvnw.cmd spring-boot:run
+```
+
+### Desenvolvimento no macOS
+
+```sh
+SPRING_PROFILES_ACTIVE=local \
+SPRING_CONFIG_ADDITIONAL_LOCATION=file:./src/main/resources/ \
+sh ./mvnw spring-boot:run
+```
+
+O diretório adicional permite que o Spring leia a configuração local existente como
+arquivo externo, sem copiá-la para o JAR. Na IDE, configure as mesmas variáveis e use
+`conferencia-api` como diretório de trabalho. Não ative simultaneamente `local` e `prod`.
+
+### Produção
+
+Defina `SPRING_PROFILES_ACTIVE=prod` no ambiente de implantação. Forneça as configurações
+necessárias por variáveis de ambiente ou por um diretório externo protegido, indicado
+por `SPRING_CONFIG_ADDITIONAL_LOCATION`. Não reutilize o diretório de desenvolvimento
+em produção. Não é obrigatório existir `application-prod.properties` dentro do JAR.
+O perfil Maven de build e o perfil Spring de execução são mecanismos diferentes.
+
+### Validação do artefato
+
+Após autorização para builds e testes, executar no PowerShell:
+
+```powershell
+.\mvnw.cmd "-Dtest=EmpacotamentoSeguroTest" "-Djunit.jupiter.execution.parallel.enabled=false" verify
+```
+
+No macOS, substituir `.\mvnw.cmd` por `sh ./mvnw`. O comando seleciona somente os novos
+testes unitários de empacotamento; o Failsafe verifica o JAR final depois do `repackage`.
+Não inicia a aplicação, não abre conexão com banco ou SMTP e não executa `clean`.
+Os relatórios dos 123 testes anteriores não são apagados por essa seleção. Preserve as
+evidências antes de qualquer limpeza ou nova execução dos mesmos testes.
+
+Somente `package` não executa a checagem final: o artefato de liberação deve passar por
+`verify`. A inspeção usa nomes de entradas e informa apenas a regra violada, sem ler
+valores de configuração. Ela não procura segredos dentro de arquivos permitidos,
+bytecode ou bibliotecas dependentes; a revisão desses conteúdos continua necessária.
+Não publique o JAR simples `.jar.original` nem diretórios de build ou configurações externas.
+
+---
+
 ## Status do projeto
 
 Projeto em desenvolvimento contínuo, com implementação e evolução de novos módulos, regras de negócio, consultas e integrações.
