@@ -6,9 +6,19 @@ import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,9 +26,13 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String ERRO_INTERNO = "Ocorreu um erro interno inesperado.";
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiError> handleBusinessException(
@@ -75,7 +89,7 @@ public class GlobalExceptionHandler {
     ) {
         return criarResposta(
                 HttpStatus.BAD_REQUEST,
-                exception.getMessage(),
+                "Requisição inválida.",
                 request
         );
     }
@@ -87,7 +101,7 @@ public class GlobalExceptionHandler {
     ) {
         return criarResposta(
                 HttpStatus.FORBIDDEN,
-                exception.getMessage(),
+                "Acesso negado.",
                 request
         );
     }
@@ -189,6 +203,11 @@ public class GlobalExceptionHandler {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
 
+        if (status.is5xxServerError()) {
+            registrarFalhaInterna();
+            return criarResposta(status, ERRO_INTERNO, request);
+        }
+
         String mensagem = exception.getReason();
 
         if (mensagem == null || mensagem.isBlank()) {
@@ -202,18 +221,65 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleCorpoInvalido(
+            HttpMessageNotReadableException exception, HttpServletRequest request
+    ) {
+        return criarResposta(HttpStatus.BAD_REQUEST, "Corpo da requisição ausente ou inválido.", request);
+    }
+
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
+    public ResponseEntity<ApiError> handleParametroInvalido(Exception exception, HttpServletRequest request) {
+        return criarResposta(HttpStatus.BAD_REQUEST, "Parâmetro da requisição ausente ou inválido.", request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMetodoNaoPermitido(
+            HttpRequestMethodNotSupportedException exception, HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .headers(exception.getHeaders())
+                .body(criarResposta(HttpStatus.METHOD_NOT_ALLOWED, "Método HTTP não permitido.", request).getBody());
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleTipoDeConteudoInvalido(
+            HttpMediaTypeNotSupportedException exception, HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .headers(exception.getHeaders())
+                .body(criarResposta(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Tipo de conteúdo não suportado.", request).getBody());
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ApiError> handleRespostaNaoAceitavel(
+            HttpMediaTypeNotAcceptableException exception, HttpServletRequest request
+    ) {
+        return criarResposta(HttpStatus.NOT_ACCEPTABLE, "Formato de resposta não suportado.", request);
+    }
+
+    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
+    public ResponseEntity<ApiError> handleRotaNaoEncontrada(Exception exception, HttpServletRequest request) {
+        return criarResposta(HttpStatus.NOT_FOUND, "Recurso não encontrado.", request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleException(
             Exception exception,
             HttpServletRequest request
     ) {
-        exception.printStackTrace();
+        registrarFalhaInterna();
 
         return criarResposta(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                "Ocorreu um erro interno inesperado.",
+                ERRO_INTERNO,
                 request
         );
+    }
+
+    private void registrarFalhaInterna() {
+        // Somente constantes e um identificador local: nunca anexar a excecao ou dados da requisicao.
+        LOGGER.error("categoria=FALHA_INTERNA ocorrencia={}", UUID.randomUUID());
     }
 
     private ResponseEntity<ApiError> criarResposta(
