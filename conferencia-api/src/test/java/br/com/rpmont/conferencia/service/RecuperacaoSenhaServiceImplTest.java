@@ -11,15 +11,23 @@ import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.MockedStatic;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import br.com.rpmont.conferencia.dtos.RedefinirSenhaRequestDTO;
+import br.com.rpmont.conferencia.dtos.SolicitarRecuperacaoSenhaRequestDTO;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -248,5 +256,105 @@ class RecuperacaoSenhaServiceImplTest {
                 .encode(novaSenha);
     }
 
+    private static Stream<Arguments> estadosEIntervalos() {
+        return Stream.of("ATIVO", "UTILIZADO", "INVALIDADO", "EXPIRADO", "EXPIRADO_INVALIDADO")
+                .flatMap(estado -> Stream.of(59L, 60L, 61L)
+                        .map(segundos -> Arguments.of(estado, segundos)));
+    }
 
+    @ParameterizedTest
+    @MethodSource("estadosEIntervalos")
+    void intervaloDeveConsiderarUltimaSolicitacaoEmQualquerEstado(String estado, long segundos) {
+        LocalDateTime agora = LocalDateTime.of(2026, 10, 25, 12, 0);
+        recuperacao.setDataCriacao(agora.minusSeconds(segundos));
+        recuperacao.setUtilizado(estado.equals("UTILIZADO") || estado.contains("INVALIDADO"));
+        recuperacao.setTentativas(estado.contains("INVALIDADO") ? 5 : 0);
+        recuperacao.setDataExpiracao(estado.startsWith("EXPIRADO")
+                ? agora.minusSeconds(1) : agora.plusMinutes(10));
+        usuario.setEmail(EMAIL);
+        usuario.setSenha("senha-ficticia-original");
+
+        when(usuarioRepository.buscarPorEmailComBloqueio(EMAIL)).thenReturn(Optional.of(usuario));
+        when(recuperacaoSenhaRepository.findTopByUsuarioOrderByDataCriacaoDescIdDesc(usuario))
+                .thenReturn(Optional.of(recuperacao));
+        if (segundos >= 60) {
+            when(recuperacaoSenhaRepository.findAllByUsuarioAndUtilizadoFalse(usuario))
+                    .thenReturn(List.of());
+            when(passwordEncoder.encode(anyString())).thenReturn("hash-ficticio-novo");
+        }
+
+        LocalDateTime criacaoAnterior = recuperacao.getDataCriacao();
+        LocalDateTime expiracaoAnterior = recuperacao.getDataExpiracao();
+        Boolean utilizadoAnterior = recuperacao.getUtilizado();
+        Integer tentativasAnteriores = recuperacao.getTentativas();
+        try (MockedStatic<LocalDateTime> tempo = mockStatic(LocalDateTime.class, CALLS_REAL_METHODS)) {
+            tempo.when(LocalDateTime::now).thenReturn(agora);
+            if (segundos < 60) {
+                ResponseStatusException rejeicao = assertThrows(ResponseStatusException.class,
+                        () -> service.solicitarRecuperacao(new SolicitarRecuperacaoSenhaRequestDTO(EMAIL)));
+                assertEquals(HttpStatus.TOO_MANY_REQUESTS, rejeicao.getStatusCode());
+                verifyNoInteractions(passwordEncoder, emailService);
+                verify(recuperacaoSenhaRepository).findTopByUsuarioOrderByDataCriacaoDescIdDesc(usuario);
+                verifyNoMoreInteractions(recuperacaoSenhaRepository);
+            } else {
+                service.solicitarRecuperacao(new SolicitarRecuperacaoSenhaRequestDTO(EMAIL));
+                verify(recuperacaoSenhaRepository).save(argThat(nova ->
+                        nova != recuperacao && agora.equals(nova.getDataCriacao())
+                                && Boolean.FALSE.equals(nova.getUtilizado())
+                                && Integer.valueOf(0).equals(nova.getTentativas())));
+                verify(emailService).enviarCodigoRecuperacao(eq(EMAIL), anyString());
+            }
+        }
+        // A consulta usada para validar codigos nao deve ser usada pelo intervalo.
+        verify(recuperacaoSenhaRepository, never())
+                .findTopByUsuarioAndUtilizadoFalseOrderByDataCriacaoDesc(any());
+        verify(usuarioRepository).buscarPorEmailComBloqueio(EMAIL);
+        verifyNoMoreInteractions(usuarioRepository);
+        assertTrue("senha-ficticia-original".equals(usuario.getSenha()));
+        assertNull(usuario.getDataModificacao());
+        assertTrue(HASH.equals(recuperacao.getCodigoHash()));
+        assertEquals(criacaoAnterior, recuperacao.getDataCriacao());
+        assertEquals(expiracaoAnterior, recuperacao.getDataExpiracao());
+        assertEquals(utilizadoAnterior, recuperacao.getUtilizado());
+        assertEquals(tentativasAnteriores, recuperacao.getTentativas());
+    }
+
+    @Test
+    void primeiraSolicitacaoDeveSerPermitidaSemHistorico() {
+        LocalDateTime agora = LocalDateTime.of(2026, 10, 25, 12, 0);
+        usuario.setEmail(EMAIL);
+        when(usuarioRepository.buscarPorEmailComBloqueio(EMAIL)).thenReturn(Optional.of(usuario));
+        when(recuperacaoSenhaRepository.findTopByUsuarioOrderByDataCriacaoDescIdDesc(usuario))
+                .thenReturn(Optional.empty());
+        when(recuperacaoSenhaRepository.findAllByUsuarioAndUtilizadoFalse(usuario)).thenReturn(List.of());
+        when(passwordEncoder.encode(anyString())).thenReturn("hash-ficticio-novo");
+        try (MockedStatic<LocalDateTime> tempo = mockStatic(LocalDateTime.class, CALLS_REAL_METHODS)) {
+            tempo.when(LocalDateTime::now).thenReturn(agora);
+            service.solicitarRecuperacao(new SolicitarRecuperacaoSenhaRequestDTO(EMAIL));
+            verify(recuperacaoSenhaRepository).save(argThat(nova -> agora.equals(nova.getDataCriacao())));
+            verify(emailService).enviarCodigoRecuperacao(eq(EMAIL), anyString());
+        }
+    }
+
+    @Test
+    void rejeicoesRepetidasNaoDevemReiniciarPrazo() {
+        LocalDateTime agora = LocalDateTime.of(2026, 10, 25, 12, 0);
+        LocalDateTime criacao = agora.minusSeconds(30);
+        recuperacao.setDataCriacao(criacao);
+        when(usuarioRepository.buscarPorEmailComBloqueio(EMAIL)).thenReturn(Optional.of(usuario));
+        when(recuperacaoSenhaRepository.findTopByUsuarioOrderByDataCriacaoDescIdDesc(usuario))
+                .thenReturn(Optional.of(recuperacao));
+        try (MockedStatic<LocalDateTime> tempo = mockStatic(LocalDateTime.class, CALLS_REAL_METHODS)) {
+            tempo.when(LocalDateTime::now).thenReturn(agora, agora.plusSeconds(29));
+            for (int i = 0; i < 2; i++) {
+                ResponseStatusException rejeicao = assertThrows(ResponseStatusException.class,
+                        () -> service.solicitarRecuperacao(new SolicitarRecuperacaoSenhaRequestDTO(EMAIL)));
+                assertEquals(HttpStatus.TOO_MANY_REQUESTS, rejeicao.getStatusCode());
+            }
+        }
+        assertEquals(criacao, recuperacao.getDataCriacao());
+        verify(recuperacaoSenhaRepository, times(2)).findTopByUsuarioOrderByDataCriacaoDescIdDesc(usuario);
+        verifyNoMoreInteractions(recuperacaoSenhaRepository);
+        verifyNoInteractions(passwordEncoder, emailService);
+    }
 }

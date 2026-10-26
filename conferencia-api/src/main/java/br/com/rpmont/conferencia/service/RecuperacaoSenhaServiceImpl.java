@@ -421,7 +421,7 @@ public class RecuperacaoSenhaServiceImpl
     ) {
 
         recuperacaoSenhaRepository
-                .findTopByUsuarioAndUtilizadoFalseOrderByDataCriacaoDesc(
+                .findTopByUsuarioOrderByDataCriacaoDescIdDesc(
                         usuario
                 )
                 .ifPresent(
