@@ -2,6 +2,8 @@ package br.com.rpmont.conferencia.controller;
 
 import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialFiltroDTO;
 import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialResponseDTO;
+import br.com.rpmont.conferencia.exception.ForbiddenException;
+import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.service.MovimentacaoMaterialService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,14 +35,13 @@ public class MovimentacaoMaterialController {
             @ModelAttribute MovimentacaoMaterialFiltroDTO filtro,
             Authentication authentication
     ) {
-        String matriculaUsuario =
-                authentication.getName();
+        Long usuarioId = obterUsuarioId(authentication);
 
         List<MovimentacaoMaterialResponseDTO> movimentacoes =
                 movimentacaoMaterialService
                         .listarMovimentacoes(
                                 filtro,
-                                matriculaUsuario
+                                usuarioId
                         );
 
         return ResponseEntity.ok(
@@ -60,18 +61,27 @@ public class MovimentacaoMaterialController {
             @PathVariable Long materialId,
             Authentication authentication
     ) {
-        String matriculaUsuario =
-                authentication.getName();
+        Long usuarioId = obterUsuarioId(authentication);
 
         List<MovimentacaoMaterialResponseDTO> historico =
                 movimentacaoMaterialService
                         .listarHistoricoPorMaterial(
                                 materialId,
-                                matriculaUsuario
+                                usuarioId
                         );
 
         return ResponseEntity.ok(
                 historico
         );
+    }
+
+    private Long obterUsuarioId(Authentication authentication) {
+        if (authentication != null && authentication.isAuthenticated() &&
+                authentication.getPrincipal() instanceof Usuario usuario &&
+                usuario.getId() != null) {
+            return usuario.getId();
+        }
+
+        throw new ForbiddenException("Usuário autenticado não identificado.");
     }
 }

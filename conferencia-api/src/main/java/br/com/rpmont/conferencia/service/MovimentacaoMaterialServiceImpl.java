@@ -2,15 +2,18 @@ package br.com.rpmont.conferencia.service;
 
 import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialFiltroDTO;
 import br.com.rpmont.conferencia.dtos.MovimentacaoMaterialResponseDTO;
+import br.com.rpmont.conferencia.enums.NivelUsuario;
 import br.com.rpmont.conferencia.enums.SituacaoMaterial;
 import br.com.rpmont.conferencia.enums.TipoMovimentacaoMaterial;
 import br.com.rpmont.conferencia.exception.BusinessException;
+import br.com.rpmont.conferencia.exception.ForbiddenException;
 import br.com.rpmont.conferencia.exception.ResourceNotFoundException;
 import br.com.rpmont.conferencia.model.MaterialPatrimonial;
 import br.com.rpmont.conferencia.model.MovimentacaoMaterial;
 import br.com.rpmont.conferencia.model.Usuario;
 import br.com.rpmont.conferencia.repository.MaterialPatrimonialRepository;
 import br.com.rpmont.conferencia.repository.MovimentacaoMaterialRepository;
+import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -18,8 +21,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 import static br.com.rpmont.conferencia.specification.MovimentacaoMaterialSpecification.comFiltros;
+import static br.com.rpmont.conferencia.specification.MovimentacaoMaterialSpecification.daUnidadeAtualDoMaterial;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +34,8 @@ public class MovimentacaoMaterialServiceImpl
     private final MovimentacaoMaterialRepository movimentacaoRepository;
 
     private final MaterialPatrimonialRepository materialRepository;
+
+    private final UsuarioRepository usuarioRepository;
 
     /*
      * ==========================================
@@ -442,20 +449,13 @@ public class MovimentacaoMaterialServiceImpl
     @Transactional(readOnly = true)
     public List<MovimentacaoMaterialResponseDTO> listarHistoricoPorMaterial(
             Long materialId,
-            String matriculaUsuario
+            Long usuarioId
     ) {
+        String unidadeAutorizada = obterUnidadeAutorizada(usuarioId);
+
         if (materialId == null) {
             throw new BusinessException(
                     "O ID do material é obrigatório."
-            );
-        }
-
-        if (
-                matriculaUsuario == null ||
-                        matriculaUsuario.isBlank()
-        ) {
-            throw new BusinessException(
-                    "Usuário autenticado não identificado."
             );
         }
 
@@ -469,6 +469,11 @@ public class MovimentacaoMaterialServiceImpl
                                         "Material patrimonial não encontrado."
                                 )
                         );
+
+        if (unidadeAutorizada != null &&
+                !unidadeAutorizada.equals(normalizarAcesso(material.getUnidade()))) {
+            throw new ResourceNotFoundException("Material patrimonial não encontrado.");
+        }
 
         return movimentacaoRepository
                 .findByMaterialIdOrderByDataMovimentacaoDesc(
@@ -491,16 +496,9 @@ public class MovimentacaoMaterialServiceImpl
     @Transactional(readOnly = true)
     public List<MovimentacaoMaterialResponseDTO> listarMovimentacoes(
             MovimentacaoMaterialFiltroDTO filtro,
-            String matriculaUsuario
+            Long usuarioId
     ) {
-        if (
-                matriculaUsuario == null ||
-                        matriculaUsuario.isBlank()
-        ) {
-            throw new BusinessException(
-                    "Usuário autenticado não identificado."
-            );
-        }
+        String unidadeAutorizada = obterUnidadeAutorizada(usuarioId);
 
         validarPeriodo(
                 filtro
@@ -513,7 +511,9 @@ public class MovimentacaoMaterialServiceImpl
 
         return movimentacaoRepository
                 .findAll(
-                        comFiltros(filtro),
+                        unidadeAutorizada == null
+                                ? comFiltros(filtro)
+                                : daUnidadeAtualDoMaterial(unidadeAutorizada).and(comFiltros(filtro)),
                         ordenacao
                 )
                 .stream()
@@ -521,6 +521,49 @@ public class MovimentacaoMaterialServiceImpl
                         this::converterParaResponse
                 )
                 .toList();
+    }
+
+    /*
+     * ==========================================
+     * AUTORIZAÇÃO DAS CONSULTAS PATRIMONIAIS
+     * ==========================================
+     */
+
+    // null representa consulta global, exclusivamente para ADMIN_MASTER validado.
+    private String obterUnidadeAutorizada(Long usuarioId) {
+        if (usuarioId == null) {
+            throw new ForbiddenException("Usuário autenticado não identificado.");
+        }
+
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ForbiddenException("Usuário autenticado não autorizado."));
+
+        if (!Boolean.TRUE.equals(usuario.getAtivo()) ||
+                !"liberado".equals(normalizarAcesso(usuario.getStatusAcesso()))) {
+            throw new ForbiddenException("Usuário sem acesso liberado às consultas patrimoniais.");
+        }
+
+        if (NivelUsuario.ADMIN_MASTER.getCodigo().equals(usuario.getNivel())) {
+            return null;
+        }
+
+        String setor = normalizarAcesso(usuario.getSetor());
+        boolean p4 = "p4".equals(setor);
+        boolean comando = "comando".equals(setor) ||
+                "sub-comando".equals(setor) || "subcomando".equals(setor);
+        boolean admin = NivelUsuario.ADMIN.getCodigo().equals(usuario.getNivel());
+        boolean comum = NivelUsuario.USUARIO_COMUM.getCodigo().equals(usuario.getNivel());
+        String unidade = normalizarAcesso(usuario.getUnidade());
+
+        if (!((admin && (p4 || comando)) || (comum && p4)) || unidade.isEmpty()) {
+            throw new ForbiddenException("Usuário sem permissão para consultar movimentações patrimoniais.");
+        }
+
+        return unidade;
+    }
+
+    private String normalizarAcesso(String valor) {
+        return valor == null ? "" : valor.trim().toLowerCase(Locale.ROOT);
     }
 
     /*

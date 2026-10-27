@@ -64,11 +64,11 @@ public interface MovimentacaoMaterialService {
 
     List<MovimentacaoMaterialResponseDTO> listarHistoricoPorMaterial(
             Long materialId,
-            String matriculaUsuario
+            Long usuarioId
     );
 
     List<MovimentacaoMaterialResponseDTO> listarMovimentacoes(
             MovimentacaoMaterialFiltroDTO filtro,
-            String matriculaUsuario
+            Long usuarioId
     );
 }
