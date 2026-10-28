@@ -12,6 +12,11 @@ public interface RecuperacaoSenhaRepository
         extends JpaRepository<RecuperacaoSenha, Long> {
 
     Optional<RecuperacaoSenha>
+    findTopByUsuarioOrderByDataCriacaoDescIdDesc(
+            Usuario usuario
+    );
+
+    Optional<RecuperacaoSenha>
     findTopByUsuarioAndUtilizadoFalseOrderByDataCriacaoDesc(
             Usuario usuario
     );
