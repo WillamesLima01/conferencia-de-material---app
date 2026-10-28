@@ -130,7 +130,9 @@ public class GlobalExceptionHandler {
 
             fields.put(
                     fieldError.getField(),
-                    fieldError.getDefaultMessage()
+                    fieldError.isBindingFailure()
+                            ? "Valor inválido."
+                            : fieldError.getDefaultMessage()
             );
         }
 

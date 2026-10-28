@@ -186,6 +186,25 @@ class GlobalExceptionHandlerTest {
         assertEquals(Map.of("senha", "A senha é obrigatória."), resposta.getBody().fields());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"typeMismatch", "methodInvocation"})
+    void bindingDeveSanitizarMensagemSemAlterarValidacaoDeliberada(String codigo, CapturedOutput output)
+            throws Exception {
+        BeanPropertyBindingResult binding = new BeanPropertyBindingResult(new Object(), "request");
+        binding.addError(new FieldError("request", "materialId", DETALHE, true,
+                new String[]{codigo}, null, "java.lang.String java.lang.Long " + DETALHE));
+        binding.addError(new FieldError("request", "email", DETALHE, false,
+                new String[]{"NotBlank"}, null, "O e-mail é obrigatório."));
+        MethodParameter parametro = new MethodParameter(
+                getClass().getDeclaredMethod("endpointDeTeste", String.class), 0);
+        ResponseEntity<ApiError> resposta = handler.handleMethodArgumentNotValidException(
+                new MethodArgumentNotValidException(parametro, binding), request);
+        verificarResposta(resposta, HttpStatus.BAD_REQUEST, "Existem campos inválidos na requisição.", output);
+        assertEquals(Map.of("materialId", "Valor inválido.", "email", "O e-mail é obrigatório."),
+                resposta.getBody().fields());
+        assertTrue(appender.list.isEmpty(), "Binding invalido nao deve registrar detalhes.");
+    }
+
     @Test
     void validacaoDeParametroDevePreservarContrato(CapturedOutput output) {
         ConstraintViolation<?> violacao = mock(ConstraintViolation.class);
