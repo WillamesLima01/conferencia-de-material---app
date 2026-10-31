@@ -1,6 +1,7 @@
 package br.com.rpmont.conferencia.security;
 
 import br.com.rpmont.conferencia.model.Usuario;
+import br.com.rpmont.conferencia.enums.StatusAcessoUsuario;
 import br.com.rpmont.conferencia.repository.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -50,7 +51,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         Usuario usuario = usuarioRepository.findByMatricula(matricula)
                 .orElse(null);
 
-        if (usuario == null) {
+        if (usuario == null
+                || !Boolean.TRUE.equals(usuario.getAtivo())
+                || !StatusAcessoUsuario.LIBERADO.name()
+                        .equalsIgnoreCase(usuario.getStatusAcesso())) {
+            SecurityContextHolder.clearContext();
             filterChain.doFilter(request, response);
             return;
         }
