@@ -232,6 +232,16 @@ class GlobalExceptionHandlerTest {
                 HttpStatus.FORBIDDEN, "Você não possui permissão para realizar esta operação.", output);
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void conflitoOtimistaDeveSer409SemDetalhes(boolean jpa, CapturedOutput output) {
+        Exception falha = jpa ? new jakarta.persistence.OptimisticLockException(DETALHE)
+                : new org.springframework.orm.ObjectOptimisticLockingFailureException(DETALHE, new RuntimeException(DETALHE));
+        verificarResposta(handler.handleConflitoConcorrencia(falha, request), HttpStatus.CONFLICT,
+                "Os dados foram alterados por outra operação. Recarregue e tente novamente.", output);
+        assertTrue(appender.list.isEmpty());
+    }
+
     private void endpointDeTeste(String valor) {
     }
 

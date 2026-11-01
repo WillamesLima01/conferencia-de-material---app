@@ -107,7 +107,10 @@ public abstract class PatrimonioHomologacaoFixture {
             u.setNivel(nivel); u.setSetor(setor); u.setUnidade(unidade);
             u.setAtivo(true); u.setStatusAcesso("liberado");
             u.setDataCadastro(LocalDate.now()); u.setDataModificacao(LocalDateTime.now());
-            em.persist(u); usuarios.add(u.getId()); em.flush(); return u;
+            em.persist(u); usuarios.add(u.getId()); em.flush();
+            assertEquals(0L, u.getCredencialVersao());
+            assertNotNull(u.getVersaoRegistro());
+            return u;
         });
     }
 

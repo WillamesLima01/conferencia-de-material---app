@@ -761,7 +761,7 @@ public class RecuperacaoSenhaServiceImpl
                         novaSenha
                 );
 
-        usuario.setSenha(
+        usuario.trocarSenha(
                 senhaCriptografada
         );
 

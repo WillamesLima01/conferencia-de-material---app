@@ -88,6 +88,28 @@ class RecuperacaoSenhaServiceImplTest {
     }
 
     @Test
+    void redefinicaoDeveIncrementarCredencialSomenteAposValidacao() {
+        configurarBusca();
+        when(passwordEncoder.matches(CODIGO, HASH)).thenReturn(true);
+        when(passwordEncoder.encode("nova-senha-sintetica")).thenReturn("hash-novo-sintetico");
+        service.redefinirSenha(new RedefinirSenhaRequestDTO(EMAIL, CODIGO,
+                "nova-senha-sintetica", "nova-senha-sintetica"));
+        assertEquals(1L, usuario.getCredencialVersao());
+        assertTrue(recuperacao.getUtilizado());
+        verify(usuarioRepository).save(usuario);
+    }
+
+    @Test
+    void codigoRejeitadoNaoAlteraVersaoDaCredencial() {
+        configurarBusca();
+        when(passwordEncoder.matches(CODIGO, HASH)).thenReturn(false);
+        assertThrows(RecuperacaoSenhaRejeitadaException.class, () -> service.redefinirSenha(
+                new RedefinirSenhaRequestDTO(EMAIL, CODIGO, "nova-sintetica", "nova-sintetica")));
+        assertEquals(0L, usuario.getCredencialVersao());
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
     void codigoIncorretoDeveIncrementarTentativas() {
         configurarBusca();
 

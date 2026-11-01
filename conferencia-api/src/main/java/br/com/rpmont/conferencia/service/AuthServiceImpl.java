@@ -43,9 +43,11 @@ public class AuthServiceImpl implements AuthService {
                         )
                 );
 
+        String hashVerificado = usuario.getSenha();
+        JwtService.DadosEmissao emissao = JwtService.DadosEmissao.de(usuario);
         if (!senhaValida(
                 senha,
-                usuario.getSenha()
+                hashVerificado
         )) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
@@ -76,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String token =
-                jwtService.gerarToken(usuario);
+                jwtService.gerarToken(emissao);
 
         return new LoginResponseDTO(
                 token,

@@ -176,6 +176,8 @@ class JwtBloqueioMySqlIntegracaoTest {
             u.setAtivo(true); u.setStatusAcesso("LIBERADO");
             u.setDataCadastro(LocalDate.now()); u.setDataModificacao(LocalDateTime.now());
             em.persist(u); ids.add(u.getId()); em.flush();
+            assertEquals(0L, u.getCredencialVersao());
+            assertNotNull(u.getVersaoRegistro());
             return u;
         });
     }

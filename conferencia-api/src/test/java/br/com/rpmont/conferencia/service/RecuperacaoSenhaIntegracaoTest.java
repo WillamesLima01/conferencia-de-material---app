@@ -493,7 +493,9 @@ class RecuperacaoSenhaIntegracaoTest {
         DadosTeste dados = criarDadosTeste(0);
         try {
             String hashAnterior = usuarioDoTeste(dados).getSenha();
+            Long versaoAnterior = usuarioDoTeste(dados).getCredencialVersao();
             redefinir(dados, "123456", "NovaSenhaHomologA123");
+            assertEquals(versaoAnterior + 1, usuarioDoTeste(dados).getCredencialVersao());
             String hashAtual = usuarioDoTeste(dados).getSenha();
             assertTrue(!hashAnterior.equals(hashAtual), "O hash deve mudar.");
             assertTrue(hashAtual.matches("^\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}$"),
@@ -916,7 +918,8 @@ class RecuperacaoSenhaIntegracaoTest {
                 .map(r -> new EstadoCodigoIntervalo(r.getId(), r.getCodigoHash(), r.getDataCriacao(),
                         r.getDataExpiracao(), r.getUtilizado(), r.getTentativas()))
                 .toList();
-        return new EstadoIntervalo(usuario.getSenha(), usuario.getDataModificacao(), codigos);
+        return new EstadoIntervalo(usuario.getSenha(), usuario.getDataModificacao(),
+                usuario.getCredencialVersao(), usuario.getVersaoRegistro(), codigos);
     }
 
     private void verificarRejeicaoSemAlteracoes(DadosTeste dados, EstadoIntervalo antes) {
@@ -936,7 +939,8 @@ class RecuperacaoSenhaIntegracaoTest {
         assertEquals(1, mockingDetails(emailService).getInvocations().size(), "Deve ocorrer somente um envio.");
     }
 
-    private record EstadoIntervalo(String senha, LocalDateTime modificacao, List<EstadoCodigoIntervalo> codigos) {
+    private record EstadoIntervalo(String senha, LocalDateTime modificacao, Long credencialVersao,
+                                  Long versaoRegistro, List<EstadoCodigoIntervalo> codigos) {
     }
 
     private record EstadoCodigoIntervalo(Long id, String hash, LocalDateTime criacao, LocalDateTime expiracao,

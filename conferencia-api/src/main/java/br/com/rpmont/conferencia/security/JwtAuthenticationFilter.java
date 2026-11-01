@@ -41,17 +41,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authorizationHeader.substring(7);
 
-        if (!jwtService.tokenValido(token)) {
+        var identidade = jwtService.validarIdentidade(token).orElse(null);
+        if (identidade == null) {
+            SecurityContextHolder.clearContext();
             filterChain.doFilter(request, response);
             return;
         }
 
-        String matricula = jwtService.extrairMatricula(token);
+        String matricula = identidade.matricula();
 
         Usuario usuario = usuarioRepository.findByMatricula(matricula)
                 .orElse(null);
 
         if (usuario == null
+                || !identidade.id().equals(usuario.getId())
+                || !matricula.equals(usuario.getMatricula())
+                || usuario.getCredencialVersao() == null
+                || usuario.getCredencialVersao() != identidade.credencialVersao()
                 || !Boolean.TRUE.equals(usuario.getAtivo())
                 || !StatusAcessoUsuario.LIBERADO.name()
                         .equalsIgnoreCase(usuario.getStatusAcesso())) {

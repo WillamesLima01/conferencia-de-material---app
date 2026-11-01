@@ -103,6 +103,21 @@ class JwtHttpSegurancaTest {
     private void limparInvocacoes() {
         clearInvocations(usuarios, unidades, usuarioController, unidadeController);
     }
+    @ParameterizedTest @MethodSource("rotasENiveis")
+    void trocaDeSenhaRevogaJwtMesmoAposDesbloqueio(String rota, int nivel) throws Exception {
+        Usuario u = usuario(nivel);
+        encontrado(u);
+        String anterior = jwt.gerarToken(u);
+        autorizado(rota, anterior);
+        u.trocarSenha("hash-sintetico-novo");
+        negado(rota, anterior);
+        u.setStatusAcesso("BLOQUEADO");
+        negado(rota, jwt.gerarToken(u));
+        u.setStatusAcesso("LIBERADO");
+        negado(rota, anterior);
+        autorizado(rota, jwt.gerarToken(u));
+    }
+
     private Usuario usuario(int nivel) {
         Usuario usuario = new Usuario();
         usuario.setId(91L);
