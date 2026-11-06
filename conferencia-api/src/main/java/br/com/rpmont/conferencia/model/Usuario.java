@@ -32,6 +32,22 @@ public class Usuario implements Serializable {
     @Column(name = "SENHA", nullable = false, length = 100)
     private String senha;
 
+    @Column(name = "`credencialVersao`", nullable = false)
+    private Long credencialVersao = 0L;
+
+    @Version
+    @Column(name = "`versaoRegistro`", nullable = false)
+    private Long versaoRegistro;
+
+    public void trocarSenha(String hash) {
+        if (hash == null || credencialVersao == null || credencialVersao < 0) {
+            throw new IllegalStateException("Estado de credencial inválido.");
+        }
+        long proxima = Math.incrementExact(credencialVersao);
+        senha = hash;
+        credencialVersao = proxima;
+    }
+
     @Column(name = "EMAIL", nullable = false, length = 50)
     private String email;
 

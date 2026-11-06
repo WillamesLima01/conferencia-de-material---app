@@ -31,6 +31,13 @@ import java.util.UUID;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler({org.springframework.dao.OptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class})
+    public ResponseEntity<ApiError> handleConflitoConcorrencia(Exception exception, HttpServletRequest request) {
+        return criarResposta(HttpStatus.CONFLICT,
+                "Os dados foram alterados por outra operação. Recarregue e tente novamente.", request);
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String ERRO_INTERNO = "Ocorreu um erro interno inesperado.";
 

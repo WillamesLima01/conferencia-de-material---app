@@ -169,6 +169,21 @@ class GlobalExceptionHandlerMvcTest {
         verificarAusenciaDeDados(resultado, output);
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void conflitoTransacionalDeveRetornar409Seguro(boolean jpa, CapturedOutput output) throws Exception {
+        RuntimeException falha = jpa ? new jakarta.persistence.OptimisticLockException(DETALHE)
+                : new org.springframework.orm.ObjectOptimisticLockingFailureException(DETALHE, new RuntimeException(DETALHE));
+        when(authService.login(any())).thenThrow(falha);
+        var resultado = mvc.perform(requisicao("/auth/login")
+                        .content("{\"matricula\":\"SINTETICO\",\"senha\":\"" + SENHA + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "Os dados foram alterados por outra operação. Recarregue e tente novamente."))
+                .andReturn();
+        verificarAusenciaDeDados(resultado, output);
+    }
+
     @Test
     void validacaoDoLoginDevePreservarCamposSemExporEntrada(CapturedOutput output) throws Exception {
         MvcResult resultado = mvc.perform(requisicao("/auth/login")

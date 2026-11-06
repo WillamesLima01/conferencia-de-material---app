@@ -109,7 +109,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         preencherDadosAdministrativos(
                 usuario,
-                usuarioAdminRequestDTO
+                usuarioAdminRequestDTO,
+                true
         );
 
         usuario.setNivel(nivel);
@@ -260,7 +261,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         preencherDadosAdministrativos(
                 usuarioExistente,
-                usuarioAdminRequestDTO
+                usuarioAdminRequestDTO,
+                false
         );
 
         usuarioExistente.setDataModificacao(
@@ -575,7 +577,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     private void preencherDadosAdministrativos(
             Usuario usuario,
-            UsuarioAdminRequestDTO dto
+            UsuarioAdminRequestDTO dto,
+            boolean cadastro
     ) {
         usuario.setMatricula(
                 limparTexto(dto.matricula())
@@ -589,11 +592,9 @@ public class UsuarioServiceImpl implements UsuarioService {
                 limparTexto(dto.senha());
 
         if (senhaTratada != null) {
-            usuario.setSenha(
-                    passwordEncoder.encode(
-                            senhaTratada
-                    )
-            );
+            String hash = passwordEncoder.encode(senhaTratada);
+            if (cadastro) usuario.setSenha(hash);
+            else usuario.trocarSenha(hash);
         }
 
         usuario.setEmail(

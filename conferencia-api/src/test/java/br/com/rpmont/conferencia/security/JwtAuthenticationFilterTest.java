@@ -35,6 +35,7 @@ class JwtAuthenticationFilterTest {
 
     private Usuario usuario(int nivel, Boolean ativo, String status) {
         Usuario usuario = new Usuario();
+        usuario.setId(1L);
         usuario.setMatricula("JWT-SINTETICO");
         usuario.setNivel(nivel);
         usuario.setAtivo(ativo);
@@ -42,8 +43,8 @@ class JwtAuthenticationFilterTest {
         return usuario;
     }
     private void tokenValido() {
-        when(jwt.tokenValido(TOKEN)).thenReturn(true);
-        when(jwt.extrairMatricula(TOKEN)).thenReturn("JWT-SINTETICO");
+        when(jwt.validarIdentidade(TOKEN)).thenReturn(Optional.of(
+                new JwtService.Identidade(1L, "JWT-SINTETICO", 0L)));
     }
     private void requisitar(String authorization) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/usuario");
@@ -98,11 +99,25 @@ class JwtAuthenticationFilterTest {
     }
     @ParameterizedTest @ValueSource(strings = {"invalido", "expirado"})
     void tokenRejeitadoNaoConsultaUsuario(String token) throws Exception {
-        when(jwt.tokenValido(token)).thenReturn(false);
+        when(jwt.validarIdentidade(token)).thenReturn(Optional.empty());
         requisitar("Bearer " + token);
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verifyNoInteractions(repository);
         verify(jwt, never()).extrairMatricula(anyString());
+    }
+    @ParameterizedTest @ValueSource(strings = {"id", "matricula", "versao", "nula"})
+    void identidadeOuVersaoDivergenteNaoAutentica(String divergencia) throws Exception {
+        tokenValido();
+        Usuario u = usuario(1, true, "LIBERADO");
+        switch (divergencia) {
+            case "id" -> u.setId(2L);
+            case "matricula" -> u.setMatricula("OUTRA-CONTA");
+            case "versao" -> u.setCredencialVersao(1L);
+            default -> u.setCredencialVersao(null);
+        }
+        when(repository.findByMatricula("JWT-SINTETICO")).thenReturn(Optional.of(u));
+        requisitar("Bearer " + TOKEN);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
     @Test void semBearerNaoConsultaJwtOuUsuario() throws Exception {
         requisitar(null);
