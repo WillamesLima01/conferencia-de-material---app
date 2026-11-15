@@ -32,9 +32,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -73,6 +75,8 @@ public class MovimentacaoFenoRacaoServiceImpl
         validarAcessoAoModulo(
                 usuarioLogado
         );
+
+        validarUsuarioPodeRegistrarSaida(usuarioLogado);
 
         validarRequestSaida(
                 request
@@ -1579,6 +1583,47 @@ public class MovimentacaoFenoRacaoServiceImpl
                     "O usuário não possui unidade cadastrada."
             );
         }
+    }
+
+    private void validarUsuarioPodeRegistrarSaida(Usuario usuario) {
+        Integer nivel = usuario.getNivel();
+        String unidade = normalizarUnidadeSaida(usuario.getUnidade());
+        if (nivel == null
+                || !("RPMONT".equals(unidade) || "3º EPMONT".equals(unidade) || "3EPMONT".equals(unidade))) {
+            throw new ForbiddenException("O usuário não possui permissão para registrar saída de feno e ração.");
+        }
+
+        if (nivel == NIVEL_ADMIN_MASTER || nivel == NIVEL_ADMIN) {
+            return;
+        }
+
+        String setor = normalizarIdentificadorSaida(usuario.getSetor());
+        if (nivel == NIVEL_USUARIO_COMUM
+                && ("BAIA".equals(setor) || "BAIAS".equals(setor)
+                || "FISCAL DE DIA".equals(setor) || "FISCALDEDIA".equals(setor))) {
+            return;
+        }
+        throw new ForbiddenException("O usuário não possui permissão para registrar saída de feno e ração.");
+    }
+
+    // Preserva conteudo e ordinal: somente caixa, acentos e espacos sao normalizados.
+    private String normalizarUnidadeSaida(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        return Normalizer.normalize(valor.trim().toUpperCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replaceAll("\\s+", " ");
+    }
+
+    // Lista fechada aplicada somente à saída; não modifica as demais políticas do módulo.
+    private String normalizarIdentificadorSaida(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        return Normalizer.normalize(valor.trim().toUpperCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replaceAll("[\\s_-]+", " ");
     }
 
     private boolean usuarioEhAdministrador(
